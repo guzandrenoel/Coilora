@@ -1,0 +1,34 @@
+# Dependencies
+/node_modules/
+
+# Next.js output
+/.next/
+/out/
+
+# Production output
+/build/
+
+# Local environment files
+.env*
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test output
+/coverage/
+/playwright-report/
+/test-results/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.obsidian/
+.idea/
+.vscode/
+
+# TypeScript
+*.tsbuildinfo
