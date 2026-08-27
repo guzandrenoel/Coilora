@@ -199,67 +199,14 @@ h1 {
   color: var(--navy);
 }
 
-.status-line {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 1.4rem 0 0;
-  color: var(--muted);
-  font-size: 0.86rem;
-}
-
-.status-line span {
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 999px;
-  background: var(--mint);
-  box-shadow: 0 0 0 5px rgb(99 212 168 / 16%);
-}
-
 .hero-visual {
-  position: relative;
   display: grid;
   place-items: center;
-}
-
-.hero-visual::before,
-.hero-visual::after {
-  position: absolute;
-  border-radius: 999px;
-  content: "";
-}
-
-.hero-visual::before {
-  width: 88%;
-  aspect-ratio: 1;
-  background: var(--mint-soft);
-}
-
-.hero-visual::after {
-  right: 0;
-  bottom: 4%;
-  width: 34%;
-  aspect-ratio: 1;
-  border: 1px solid rgb(99 212 168 / 45%);
-}
-
-.mark-frame {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  width: min(100%, 34rem);
-  aspect-ratio: 1;
-  place-items: center;
-  border: 1px solid rgb(255 255 255 / 80%);
-  border-radius: 32% 68% 56% 44% / 45% 38% 62% 55%;
-  background: rgb(255 255 255 / 70%);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(12px);
 }
 
 .hero-mark {
-  width: 82%;
-  height: 82%;
+  width: min(100%, 31rem);
+  height: auto;
   object-fit: contain;
 }
 

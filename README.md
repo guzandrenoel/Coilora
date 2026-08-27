@@ -11,15 +11,16 @@ The project is currently in its foundation phase. This repository contains the i
 Implemented:
 
 - Responsive Next.js application shell.
-- Initial Coilora visual direction and landing page.
+- Restrained Coilora visual direction and landing page.
+- Library route with local file selection, duplicate prevention, type checks, and size validation.
 - Strict TypeScript, ESLint, and production-build checks.
 - Product and technical documentation for the web-first MVP.
 
 Planned next:
 
-- Application navigation and account flows.
-- Local development services and database migrations.
-- Notebook and document-import foundations.
+- Supabase local services, database migrations, authentication, and private storage.
+- NestJS upload-intent API and server-side ownership checks.
+- Persistent notebooks and secure document uploads.
 - PDF reading and manual annotations.
 
 Detailed scope and sequencing are maintained in the [development roadmap](./docs/coilora/10_DEVELOPMENT_ROADMAP.md).
@@ -60,6 +61,7 @@ npm run check
 docs/                 Product and technical documentation
 public/brand/         Runtime brand assets
 src/app/              Next.js application routes and global styles
+src/features/         Feature components and domain helpers
 ```
 
 Start with the [documentation index](./docs/coilora/README.md) for product scope, architecture, security boundaries, API design, and the implementation roadmap.

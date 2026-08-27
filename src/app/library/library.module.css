@@ -1,0 +1,119 @@
+.page {
+  min-height: 100vh;
+  background: #f5f8f7;
+}
+
+.header,
+.content {
+  width: min(1180px, calc(100% - 3rem));
+  margin-inline: auto;
+}
+
+.header {
+  display: flex;
+  min-height: 5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  border-bottom: 1px solid #d7e3df;
+}
+
+.content {
+  padding-block: 4.5rem 7rem;
+}
+
+.pageHeading {
+  max-width: 48rem;
+  margin-bottom: 3rem;
+}
+
+.pageHeading p,
+.asideLabel {
+  margin: 0 0 0.75rem;
+  color: #39755f;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pageHeading h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(2.75rem, 7vw, 5rem);
+}
+
+.pageHeading span {
+  color: #57707a;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.34fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.guidance {
+  padding: 2rem;
+  border: 1px solid #d7e3df;
+  background: #eef5f2;
+}
+
+.guidance h2 {
+  margin-bottom: 1rem;
+  font-size: 1.55rem;
+  letter-spacing: -0.03em;
+}
+
+.guidance > p:not(.asideLabel) {
+  margin-bottom: 2rem;
+  color: #57707a;
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.guidance dl {
+  margin: 0;
+}
+
+.guidance dl div {
+  display: grid;
+  gap: 0.25rem;
+  padding-block: 1rem;
+  border-top: 1px solid #cbdcd5;
+}
+
+.guidance dt {
+  color: #57707a;
+  font-size: 0.76rem;
+}
+
+.guidance dd {
+  margin: 0;
+  color: #173c4d;
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+@media (max-width: 820px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .header,
+  .content {
+    width: min(100% - 2rem, 1180px);
+  }
+
+  .content {
+    padding-block: 3.5rem 5rem;
+  }
+
+  .header nav > a:first-child {
+    display: none;
+  }
+}

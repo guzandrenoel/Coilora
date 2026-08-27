@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 const workflowSteps = [
   {
@@ -50,9 +51,9 @@ export default function HomePage() {
         <nav aria-label="Primary navigation">
           <a href="#workflow">Workflow</a>
           <a href="#principles">Principles</a>
-          <a className="nav-action" href="#early-access">
-            Early access
-          </a>
+          <Link className="nav-action" href="/library">
+            Library
+          </Link>
         </nav>
       </header>
 
@@ -65,29 +66,24 @@ export default function HomePage() {
             continuous workspace for medical and allied-health students.
           </p>
           <div className="hero-actions">
-            <a className="button button-primary" href="#workflow">
-              Explore the workflow
-            </a>
+            <Link className="button button-primary" href="/library">
+              Open the library
+            </Link>
             <a className="button button-secondary" href="#principles">
               See the product principles
             </a>
           </div>
-          <p className="status-line">
-            <span aria-hidden="true" /> Web-first foundation in development
-          </p>
         </div>
 
-        <div className="hero-visual" aria-label="Coilora serpent and book emblem">
-          <div className="mark-frame">
-            <Image
-              className="hero-mark"
-              src="/brand/coilora-mark.png"
-              width={560}
-              height={560}
-              priority
-              alt="Coilora emblem: a serpent forming the letter C around an open book"
-            />
-          </div>
+        <div className="hero-visual">
+          <Image
+            className="hero-mark"
+            src="/brand/coilora-mark.png"
+            width={560}
+            height={560}
+            priority
+            alt="Coilora emblem: a serpent forming the letter C around an open book"
+          />
         </div>
       </section>
 
