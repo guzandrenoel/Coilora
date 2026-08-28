@@ -1,4 +1,15 @@
 # Coilora
+<p align="center">
+  <img
+    src="public/brand/coilora-mark.png"
+    alt="Coilora logo"
+    width="180"
+  />
+</p>
+
+<p align="center">
+  <em>Shed the overload. Keep what matters.</em>
+</p>
 
 Coilora is a source-grounded study workspace for medical and allied-health students. It is designed around one continuous learning loop:
 
@@ -15,12 +26,16 @@ Implemented:
 - Library route with local file selection, duplicate prevention, type checks, and size validation.
 - Strict TypeScript, ESLint, and production-build checks.
 - Product and technical documentation for the web-first MVP.
+- Supabase Cloud development environment.
+- Versioned PostgreSQL foundation schema with profiles, courses, and notebooks.
+- Row Level Security and authenticated ownership policies.
+- Typed browser and server Supabase clients.
 
 Planned next:
 
-- Supabase local services, database migrations, authentication, and private storage.
-- NestJS upload-intent API and server-side ownership checks.
-- Persistent notebooks and secure document uploads.
+- Authentication screens and server-side session handling.
+- Persistent course and notebook interfaces.
+- Private document storage and secure uploads.
 - PDF reading and manual annotations.
 
 Detailed scope and sequencing are maintained in the [development roadmap](./docs/coilora/10_DEVELOPMENT_ROADMAP.md).
