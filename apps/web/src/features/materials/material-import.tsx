@@ -2,12 +2,9 @@
 
 import { ChangeEvent, DragEvent, useRef, useState } from "react";
 
-import {
-  formatFileSize,
-  inspectMaterial,
-  MATERIAL_INPUT_ACCEPT,
-  MaterialSelection,
-} from "./material-file";
+import { FileIcon, UploadIcon } from "@/components/ui/icons";
+
+import { formatFileSize, inspectMaterial, MATERIAL_INPUT_ACCEPT, MaterialSelection } from "./material-file";
 import styles from "./material-import.module.css";
 
 export function MaterialImport() {
@@ -16,19 +13,14 @@ export function MaterialImport() {
 
   function addFiles(files: FileList | File[]) {
     const incoming = Array.from(files).map(inspectMaterial);
-
     setMaterials((current) => {
       const existingIds = new Set(current.map((material) => material.id));
-      const uniqueIncoming = incoming.filter((material) => !existingIds.has(material.id));
-      return [...current, ...uniqueIncoming];
+      return [...current, ...incoming.filter((material) => !existingIds.has(material.id))];
     });
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
-    if (event.target.files) {
-      addFiles(event.target.files);
-    }
-
+    if (event.target.files) addFiles(event.target.files);
     event.target.value = "";
   }
 
@@ -45,18 +37,6 @@ export function MaterialImport() {
 
   return (
     <section className={styles.panel} aria-labelledby="material-import-title">
-      <div className={styles.heading}>
-        <div>
-          <p className={styles.kicker}>Import preparation</p>
-          <h2 id="material-import-title">Select study materials</h2>
-        </div>
-        {materials.length > 0 ? (
-          <button className={styles.clearButton} type="button" onClick={() => setMaterials([])}>
-            Clear all
-          </button>
-        ) : null}
-      </div>
-
       <div
         className={styles.dropzone}
         onDragOver={(event) => event.preventDefault()}
@@ -70,38 +50,35 @@ export function MaterialImport() {
           accept={MATERIAL_INPUT_ACCEPT}
           onChange={handleInputChange}
         />
-        <p className={styles.dropTitle}>Drop files here or choose them from your device.</p>
-        <p className={styles.dropHelp}>PDF, PNG, JPG, WEBP, TXT, or Markdown · Up to 50 MB each</p>
+        <span className={styles.uploadIcon}><UploadIcon /></span>
+        <h2 id="material-import-title">Drop a source here</h2>
+        <p>PDF, PNG, JPG, WEBP, TXT, or Markdown up to 50 MB</p>
         <button className={styles.chooseButton} type="button" onClick={() => inputRef.current?.click()}>
+          <UploadIcon />
           Choose files
         </button>
+        <small>Files stay on this device until secure uploads are connected.</small>
       </div>
 
-      <p className={styles.privacyNote}>
-        Files remain on this device. Secure storage and account uploads will be connected in the
-        backend phase.
-      </p>
-
-      <p className={styles.selectionSummary} aria-live="polite">
-        {materials.length === 0
-          ? "No files selected."
-          : `${materials.length} selected · ${validCount} ready for a future upload`}
-      </p>
+      <div className={styles.selectionBar} aria-live="polite">
+        <span>{materials.length === 0 ? "No files selected" : `${validCount} of ${materials.length} ready`}</span>
+        {materials.length > 0 ? (
+          <button type="button" onClick={() => setMaterials([])}>Clear selection</button>
+        ) : null}
+      </div>
 
       {materials.length > 0 ? (
         <ul className={styles.fileList}>
           {materials.map((material) => (
             <li className={styles.fileRow} key={material.id}>
+              <span className={styles.fileIcon}><FileIcon /></span>
               <div className={styles.fileDetails}>
                 <p>{material.file.name}</p>
-                <span>
-                  {material.kind} · {formatFileSize(material.file.size)}
-                </span>
+                <span>{material.kind} · {formatFileSize(material.file.size)}</span>
                 {material.error ? <strong>{material.error}</strong> : null}
               </div>
               <button type="button" onClick={() => removeMaterial(material.id)}>
-                Remove
-                <span className="sr-only"> {material.file.name}</span>
+                Remove<span className="sr-only"> {material.file.name}</span>
               </button>
             </li>
           ))}

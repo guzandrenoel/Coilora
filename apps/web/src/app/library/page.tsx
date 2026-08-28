@@ -3,6 +3,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { signOut } from "@/app/auth/actions";
+import {
+  HighlighterIcon,
+  HomeIcon,
+  LibraryIcon,
+  LockIcon,
+  LogOutIcon,
+  PenIcon,
+  PracticeIcon,
+  ReviewIcon,
+  SparkIcon,
+  UploadIcon,
+} from "@/components/ui/icons";
 import { ApiIdentityStatus } from "@/features/auth/api-identity-status";
 import { MaterialImport } from "@/features/materials/material-import";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +25,14 @@ export const metadata = {
   title: "Library",
 };
 
-const studyFlow = ["Import", "Annotate", "Highlight", "Understand", "Practice", "Review"];
+const studyFlow = [
+  { name: "Import", icon: UploadIcon, tone: "mint" },
+  { name: "Annotate", icon: PenIcon, tone: "blue" },
+  { name: "Highlight", icon: HighlighterIcon, tone: "yellow" },
+  { name: "Understand", icon: SparkIcon, tone: "lilac" },
+  { name: "Practice", icon: PracticeIcon, tone: "coral" },
+  { name: "Review", icon: ReviewIcon, tone: "mint" },
+] as const;
 
 export default async function LibraryPage() {
   const supabase = await createClient();
@@ -31,6 +50,7 @@ export default async function LibraryPage() {
     .maybeSingle();
 
   const displayName = profile?.display_name ?? "Student";
+  const firstName = displayName.split(" ")[0] ?? displayName;
   const initial = displayName.slice(0, 1).toUpperCase();
 
   return (
@@ -41,32 +61,42 @@ export default async function LibraryPage() {
 
       <aside className={styles.sidebar}>
         <Link className={styles.sidebarBrand} href="/" aria-label="Coilora home">
-          <Image src="/brand/coilora-mark.png" width={72} height={72} alt="" priority />
+          <span className={styles.brandMark}>
+            <Image src="/brand/coilora-mark.png" width={96} height={96} alt="" priority />
+          </span>
           <span>Coilora</span>
         </Link>
 
         <nav className={styles.sidebarNav} aria-label="Workspace navigation">
           <p>Workspace</p>
           <Link className={styles.activeNavItem} href="/library" aria-current="page">
-            <span aria-hidden="true">L</span>
-            Library
+            <LibraryIcon />
+            <span>Library</span>
           </Link>
           <Link href="/">
-            <span aria-hidden="true">O</span>
-            Overview
+            <HomeIcon />
+            <span>Overview</span>
           </Link>
         </nav>
 
+        <div className={styles.sidebarTip}>
+          <SparkIcon />
+          <p>Every note stays connected to the source it came from.</p>
+        </div>
+
         <div className={styles.sidebarAccount}>
-          <div className={styles.avatar} aria-hidden="true">
-            {initial}
-          </div>
-          <div className={styles.accountCopy}>
-            <strong>{displayName}</strong>
-            <span>Private workspace</span>
+          <div className={styles.accountIdentity}>
+            <div className={styles.avatar} aria-hidden="true">{initial}</div>
+            <div className={styles.accountCopy}>
+              <strong>{displayName}</strong>
+              <span>Personal workspace</span>
+            </div>
           </div>
           <form action={signOut}>
-            <button type="submit">Sign out</button>
+            <button type="submit">
+              <LogOutIcon />
+              <span>Sign out</span>
+            </button>
           </form>
         </div>
       </aside>
@@ -74,89 +104,64 @@ export default async function LibraryPage() {
       <main className={styles.workspace} id="library-content">
         <header className={styles.topbar}>
           <div>
-            <p>Coilora workspace</p>
-            <span>Your source-grounded study library</span>
+            <LibraryIcon />
+            <span>Library</span>
           </div>
-          <div className={styles.privacyStatus}>
-            <span aria-hidden="true" />
-            Private
-          </div>
+          <a className={styles.importAction} href="#material-import-title">
+            <UploadIcon />
+            Import material
+          </a>
         </header>
 
         <div className={styles.content}>
-          <section className={styles.welcome}>
+          <header className={styles.libraryHeader}>
             <div>
-              <p>Welcome back</p>
-              <h1>{displayName}&apos;s library</h1>
-              <span>
-                Start with the material you already have. Coilora will keep each study step
-                connected to its source.
-              </span>
+              <p>Welcome back, {firstName}</p>
+              <h1>Your library</h1>
+              <span>Bring in a source and keep the whole study process in one calm workspace.</span>
             </div>
+          </header>
 
-            <div className={styles.flowSummary} aria-label="Coilora study flow">
-              {studyFlow.map((step, index) => (
-                <div key={step}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <strong>{step}</strong>
-                </div>
-              ))}
-            </div>
+          <section className={styles.flowRail} aria-label="Coilora study flow">
+            {studyFlow.map(({ name, icon: StepIcon, tone }) => (
+              <div className={styles[tone]} key={name}>
+                <span><StepIcon /></span>
+                <strong>{name}</strong>
+              </div>
+            ))}
           </section>
 
           <div className={styles.workspaceGrid}>
             <section className={styles.materialsArea} aria-labelledby="materials-title">
               <header className={styles.sectionHeader}>
                 <div>
-                  <p>Your materials</p>
-                  <h2 id="materials-title">Start from a source</h2>
+                  <p>Study materials</p>
+                  <h2 id="materials-title">Add your first source</h2>
                 </div>
-                <span>Local preparation</span>
+                <span>PDF, images, and notes</span>
               </header>
               <MaterialImport />
             </section>
 
             <aside className={styles.detailsColumn}>
-              <section className={styles.infoPanel} aria-labelledby="study-flow-title">
-                <p>Study flow</p>
-                <h2 id="study-flow-title">One connected workspace</h2>
+              <section className={styles.guidePanel} aria-labelledby="guide-title">
+                <div className={styles.panelIcon}><SparkIcon /></div>
+                <h2 id="guide-title">Start small</h2>
+                <p>Choose one useful lecture or note. You can organize it after the upload workflow is connected.</p>
                 <ol>
-                  {studyFlow.map((step, index) => (
-                    <li key={step}>
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      {step}
-                    </li>
-                  ))}
+                  <li><span>1</span><div><strong>Choose a source</strong><small>PDF, image, text, or Markdown</small></div></li>
+                  <li><span>2</span><div><strong>Check the file</strong><small>Coilora validates it locally</small></div></li>
+                  <li><span>3</span><div><strong>Keep studying</strong><small>Your source stays unchanged</small></div></li>
                 </ol>
               </section>
 
-              <section className={styles.readinessPanel} aria-labelledby="readiness-title">
-                <p>Current foundation</p>
-                <h2 id="readiness-title">Before secure uploads</h2>
-                <span>
-                  File checks run in the browser. Private storage, extraction, and indexing will be
-                  connected through the backend.
-                </span>
-                <dl>
-                  <div>
-                    <dt>Secure API</dt>
-                    <dd>
-                      <ApiIdentityStatus />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Source files</dt>
-                    <dd>Remain unchanged</dd>
-                  </div>
-                  <div>
-                    <dt>Selection limit</dt>
-                    <dd>50 MB per file</dd>
-                  </div>
-                  <div>
-                    <dt>Upload status</dt>
-                    <dd>Not connected yet</dd>
-                  </div>
-                </dl>
+              <section className={styles.securityPanel} aria-labelledby="security-title">
+                <LockIcon />
+                <div>
+                  <h2 id="security-title">Private by default</h2>
+                  <p>Your account is verified through the secure Coilora API.</p>
+                  <ApiIdentityStatus />
+                </div>
               </section>
             </aside>
           </div>

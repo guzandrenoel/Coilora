@@ -1,17 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #102f3e;
-  --navy: #103b55;
-  --navy-deep: #092d42;
-  --mint: #63d4a8;
-  --mint-soft: #e4f7ef;
-  --surface: #f5f8f7;
+  --ink: #132f3f;
+  --ink-soft: #294957;
+  --navy: #123d56;
+  --navy-deep: #0b2f43;
+  --blue: #4d7cff;
+  --mint: #66d6aa;
+  --mint-deep: #25866a;
+  --mint-soft: #e8f8f1;
+  --lilac: #8f7cf6;
+  --lilac-soft: #f0edff;
+  --coral: #f58b76;
+  --coral-soft: #fff0ec;
+  --paper-yellow: #fff2ae;
+  --sky-soft: #eaf5ff;
+  --surface: #f7f8f8;
+  --surface-muted: #f0f3f3;
   --surface-strong: #ffffff;
-  --line: #d9e5e1;
-  --line-strong: #c8d7d2;
-  --muted: #5d727b;
-  --shadow: 0 24px 70px rgb(12 52 68 / 12%);
+  --line: #dbe4e4;
+  --line-strong: #cbd7d7;
+  --muted: #657a83;
+  --shadow-sm: 0 8px 24px rgb(18 61 86 / 7%);
+  --shadow: 0 24px 70px rgb(18 61 86 / 12%);
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.4rem;
 }
 
 * {
@@ -27,13 +41,18 @@ body {
   background: var(--surface);
   color: var(--ink);
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    Inter, Aptos, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-rendering: optimizeLegibility;
 }
 
 button,
 input {
   font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
 }
 
 img {
@@ -52,13 +71,25 @@ h3 {
   margin-top: 0;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .skip-link {
   position: fixed;
   top: 0.75rem;
   left: 0.75rem;
-  z-index: 30;
-  padding: 0.65rem 0.9rem;
-  border-radius: 0.55rem;
+  z-index: 100;
+  padding: 0.7rem 1rem;
+  border-radius: 0.7rem;
   background: var(--navy-deep);
   color: white;
   transform: translateY(-160%);
@@ -69,48 +100,10 @@ h3 {
   transform: translateY(0);
 }
 
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  border-radius: 0.4rem;
-  color: var(--navy-deep);
-  font-size: 1.15rem;
-  font-weight: 760;
-  letter-spacing: -0.025em;
-}
-
-.brand img,
-.brand-mark {
-  width: 2.75rem;
-  height: 2.75rem;
-  object-fit: contain;
-}
-
-nav {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 650;
-}
-
-nav a:hover {
-  color: var(--navy-deep);
-}
-
-.nav-action {
-  padding: 0.65rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 0.6rem;
-  background: white;
-}
-
 a:focus-visible,
 button:focus-visible,
 input:focus-visible {
-  outline: 3px solid rgb(99 212 168 / 50%);
+  outline: 3px solid rgb(77 124 255 / 35%);
   outline-offset: 3px;
 }
 
@@ -123,6 +116,8 @@ input:focus-visible {
   *::before,
   *::after {
     scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
