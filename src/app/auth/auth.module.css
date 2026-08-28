@@ -1,0 +1,224 @@
+.page {
+  display: grid;
+  min-height: 100svh;
+  grid-template-columns: minmax(22rem, 0.9fr) minmax(30rem, 1.1fr);
+  background: white;
+}
+
+.context {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(2rem, 5vw, 5rem);
+  border-right: 1px solid var(--line);
+  background: #edf5f2;
+  color: var(--ink);
+}
+
+.brand {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.9rem;
+  border-radius: 0.4rem;
+  color: var(--navy-deep);
+  font-size: 1.5rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.brand img {
+  width: 5rem;
+  height: 5rem;
+  object-fit: contain;
+}
+
+.contextCopy {
+  max-width: 31rem;
+  padding-block: 5rem;
+}
+
+.contextCopy > p,
+.eyebrow {
+  margin-bottom: 1rem;
+  color: #287a5f;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.contextCopy h1 {
+  max-width: 10ch;
+  margin-bottom: 1.5rem;
+  color: var(--navy-deep);
+  font-size: clamp(2.7rem, 4.8vw, 4.4rem);
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.contextCopy > span {
+  display: block;
+  max-width: 30rem;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.backLink {
+  width: fit-content;
+  border-bottom: 1px solid rgb(16 59 85 / 35%);
+  color: var(--navy);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.formPanel {
+  display: grid;
+  place-items: center;
+  padding: clamp(2rem, 6vw, 6rem);
+  background: white;
+}
+
+.formContainer {
+  width: min(100%, 29rem);
+}
+
+.eyebrow {
+  color: #2a8e6b;
+}
+
+.formContainer h2 {
+  margin-bottom: 0.8rem;
+  color: var(--navy-deep);
+  font-size: clamp(2.15rem, 4vw, 3rem);
+  letter-spacing: -0.05em;
+  line-height: 1.05;
+}
+
+.summary {
+  margin-bottom: 2rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.nameFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+  color: var(--navy-deep);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.field input {
+  width: 100%;
+  min-height: 3.15rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+}
+
+.field input:focus {
+  border-color: #3aa47f;
+  outline: 3px solid rgb(99 212 168 / 25%);
+}
+
+.field small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.submitButton {
+  min-height: 3.15rem;
+  margin-top: 0.25rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: var(--navy);
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 750;
+}
+
+.submitButton:hover {
+  background: var(--navy-deep);
+}
+
+.errorMessage {
+  margin-bottom: 1.5rem;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid #b74343;
+  background: #fff1f1;
+  color: #7d2929;
+  line-height: 1.5;
+}
+
+.successMessage {
+  margin-bottom: 1.5rem;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid #2a8e6b;
+  background: #e9f8f2;
+  color: #1e654f;
+  line-height: 1.5;
+}
+
+.switchPrompt {
+  margin: 1.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.switchPrompt a {
+  color: var(--navy);
+  font-weight: 750;
+}
+
+.switchPrompt a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 820px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .context {
+    min-height: auto;
+    padding: 1.5rem;
+  }
+
+  .contextCopy {
+    display: none;
+  }
+
+  .backLink {
+    display: none;
+  }
+
+  .formPanel {
+    min-height: calc(100svh - 6rem);
+    padding: 3rem 1.5rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .nameFields {
+    grid-template-columns: 1fr;
+  }
+}
