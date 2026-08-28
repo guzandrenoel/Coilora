@@ -13,13 +13,18 @@
     "start": "npm run start --workspace @coilora/web",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "check": "npm run lint && npm run typecheck && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run test:e2e && npm run build",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspaces --if-present"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=20.11.0"
   },
-  "packageManager": "npm@11.9.0",
+  "packageManager": "npm@11.19.0",
   "devDependencies": {
     "supabase": "^2.116.0"
+  },
+  "allowScripts": {
+    "unrs-resolver": false
   }
 }

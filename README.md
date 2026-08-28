@@ -1,4 +1,5 @@
 # Coilora
+
 <p align="center">
   <img
     src="apps/web/public/brand/coilora-mark.png"
@@ -15,7 +16,7 @@ Coilora is a source-grounded study workspace for medical and allied-health stude
 
 **Import → Annotate → Highlight → Understand → Practice → Review**
 
-The project is currently in its foundation phase. This repository contains the initial web application shell and the product, architecture, security, and delivery documentation that will guide implementation.
+The project is currently in its foundation phase. This repository contains the initial web and API foundations alongside the product, architecture, security, and delivery documentation that guides implementation.
 
 ## Current state
 
@@ -31,7 +32,8 @@ Implemented:
 - Versioned PostgreSQL foundation schema with profiles, courses, and notebooks.
 - Row Level Security and authenticated ownership policies.
 - Typed browser and server Supabase clients.
-- Strict TypeScript, ESLint, and production-build checks.
+- NestJS API foundation with a versioned health endpoint, local CORS configuration, unit tests, and end-to-end tests.
+- Strict TypeScript, linting, testing, and production-build checks across the monorepo.
 - Product and technical documentation for the web-first MVP.
 
 Planned next:
@@ -47,16 +49,16 @@ Detailed scope and sequencing are maintained in the [development roadmap](./docs
 
 Requirements:
 
-- Node.js 20.9 or newer
+- Node.js 20.11 or newer
 - npm 11 or a compatible npm release
 
-Install dependencies:
+Install dependencies from the repository root:
 
 ```bash
 npm install
 ```
 
-Create the local environment file:
+Create the web environment file:
 
 ```bash
 cp apps/web/.env.example apps/web/.env.local
@@ -72,23 +74,36 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 
 The Supabase URL and publishable key are available from the Supabase project dashboard. Never commit `apps/web/.env.local`.
 
-Start the development server:
+Start the Next.js web application:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+In a second terminal, start the NestJS API:
+
+```bash
+npm run start:dev --workspace @coilora/api
+```
+
+Local services are available at:
+
+- Web application: [http://localhost:3000](http://localhost:3000)
+- API health check: [http://localhost:4000/v1/health](http://localhost:4000/v1/health)
 
 ## Quality checks
+
+Run individual checks from the repository root:
 
 ```bash
 npm run lint
 npm run typecheck
+npm run test
+npm run test:e2e
 npm run build
 ```
 
-Run all three checks together with:
+Run the complete suite with:
 
 ```bash
 npm run check
@@ -97,19 +112,19 @@ npm run check
 ## Repository structure
 
 ```text
-apps/web/                 Next.js frontend application
-  public/brand/           Runtime brand assets
-  src/app/                Routes, authentication screens, and styles
-  src/features/           Feature and interactive interface components
-  src/lib/supabase/       Browser, server, and session Supabase clients
-  src/types/              Generated database types
+apps/
+  api/                    NestJS HTTP API
+  web/                    Next.js frontend application
+    public/brand/         Runtime brand assets
+    src/app/              Routes, authentication screens, and styles
+    src/features/         Feature and interactive interface components
+    src/lib/supabase/     Browser, server, and session Supabase clients
+    src/types/            Generated database types
 docs/                     Product and technical documentation
 supabase/                 Supabase configuration and database migrations
 ```
 
-The repository uses npm workspaces. The planned NestJS API and worker will be added as
-`apps/api` and `apps/worker` when their implementation begins; empty application scaffolding
-is intentionally avoided.
+The repository uses npm workspaces. The web application and API are implemented as separate workspaces; a worker will be added under `apps/worker` when background processing begins.
 
 Start with the [documentation index](./docs/coilora/README.md) for product scope, architecture, security boundaries, API design, and the implementation roadmap.
 
