@@ -1,12 +1,12 @@
 # Dependencies
-/node_modules/
+**/node_modules/
 
 # Next.js output
-/.next/
-/out/
+**/.next/
+**/out/
 
 # Production output
-/build/
+**/build/
 
 # Local environment files
 .env*

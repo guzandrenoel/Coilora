@@ -1,7 +1,7 @@
 # Coilora
 <p align="center">
   <img
-    src="public/brand/coilora-mark.png"
+    src="apps/web/public/brand/coilora-mark.png"
     alt="Coilora logo"
     width="180"
   />
@@ -21,22 +21,25 @@ The project is currently in its foundation phase. This repository contains the i
 
 Implemented:
 
-- Responsive Next.js application shell.
-- Restrained Coilora visual direction and landing page.
-- Library route with local file selection, duplicate prevention, type checks, and size validation.
-- Strict TypeScript, ESLint, and production-build checks.
-- Product and technical documentation for the web-first MVP.
+- Responsive Next.js application shell and product landing page.
+- Interactive preview of the Import → Annotate → Highlight → Understand → Practice → Review workflow.
+- Email and password authentication with email confirmation.
+- Server-side session refresh, protected library access, and sign-out.
+- Automatic user profile creation after registration.
+- Responsive library workspace with local file selection, duplicate prevention, type checks, and size validation.
 - Supabase Cloud development environment.
 - Versioned PostgreSQL foundation schema with profiles, courses, and notebooks.
 - Row Level Security and authenticated ownership policies.
 - Typed browser and server Supabase clients.
+- Strict TypeScript, ESLint, and production-build checks.
+- Product and technical documentation for the web-first MVP.
 
 Planned next:
 
-- Authentication screens and server-side session handling.
 - Persistent course and notebook interfaces.
 - Private document storage and secure uploads.
 - PDF reading and manual annotations.
+- Source-grounded explanations and study-item generation.
 
 Detailed scope and sequencing are maintained in the [development roadmap](./docs/coilora/10_DEVELOPMENT_ROADMAP.md).
 
@@ -47,10 +50,31 @@ Requirements:
 - Node.js 20.9 or newer
 - npm 11 or a compatible npm release
 
-Install dependencies and start the development server:
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Create the local environment file:
+
+```bash
+cp apps/web/.env.example apps/web/.env.local
+```
+
+Provide the following values in `apps/web/.env.local`:
+
+```env
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+```
+
+The Supabase URL and publishable key are available from the Supabase project dashboard. Never commit `apps/web/.env.local`.
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
@@ -73,11 +97,19 @@ npm run check
 ## Repository structure
 
 ```text
-docs/                 Product and technical documentation
-public/brand/         Runtime brand assets
-src/app/              Next.js application routes and global styles
-src/features/         Feature components and domain helpers
+apps/web/                 Next.js frontend application
+  public/brand/           Runtime brand assets
+  src/app/                Routes, authentication screens, and styles
+  src/features/           Feature and interactive interface components
+  src/lib/supabase/       Browser, server, and session Supabase clients
+  src/types/              Generated database types
+docs/                     Product and technical documentation
+supabase/                 Supabase configuration and database migrations
 ```
+
+The repository uses npm workspaces. The planned NestJS API and worker will be added as
+`apps/api` and `apps/worker` when their implementation begins; empty application scaffolding
+is intentionally avoided.
 
 Start with the [documentation index](./docs/coilora/README.md) for product scope, architecture, security boundaries, API design, and the implementation roadmap.
 

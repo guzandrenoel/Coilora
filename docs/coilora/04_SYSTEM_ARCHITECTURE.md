@@ -109,30 +109,31 @@ A managed free Supabase project may accelerate development, but the application 
 coilora/
   apps/
     web/                   Next.js application
-    api/                   NestJS HTTP application
-    worker/                NestJS worker
+    api/                   NestJS HTTP application, added in Phase 1
+    worker/                NestJS worker, added when background jobs begin
   packages/
-    contracts/             OpenAPI and generated TypeScript types
-    ui/                    Web components and design tokens
-    study-engine/          ts-fsrs rules and review policies
-    ai-contracts/          Prompts, Zod schemas, and model ports
-    test-fixtures/         Synthetic source and citation fixtures
+    contracts/             OpenAPI and generated TypeScript types, when shared
+    ui/                    Shared components and design tokens, when shared
+    study-engine/          ts-fsrs rules and review policies, when implemented
+    ai-contracts/          Prompts, Zod schemas, and model ports, when implemented
+    test-fixtures/         Synthetic source and citation fixtures, when needed
   services/
-    document-intelligence/ Docling and PaddleOCR wrapper
-    model-runtime/         Ollama configuration and approved model manifest
-  database/
+    document-intelligence/ Docling and PaddleOCR wrapper, added in Phase 2
+    model-runtime/         Ollama configuration and model manifest, added in Phase 3
+  supabase/
+    config.toml
     migrations/
-    policies/
-    seeds/
   deploy/
-    compose/
-    caddy/
-    backup/
+    compose/               Added with the self-hosted development stack
+    caddy/                 Added when an ingress proxy is required
+    backup/                Added with production backup automation
   docs/
     coilora/
 ```
 
-Native-client directories are created only when their phases begin.
+Only `apps/web`, `supabase`, and the documentation exist during the current foundation
+phase. API, worker, shared-package, service, deployment, and native-client directories are
+created only when their implementation begins.
 
 ## 5. Request flows
 
