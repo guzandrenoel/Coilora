@@ -23,7 +23,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const isPasswordRecovery = next === "/auth/update-password";
+  const pathname = isPasswordRecovery
+    ? "/auth/forgot-password"
+    : "/auth/sign-in";
+  const message = isPasswordRecovery
+    ? "This reset link is invalid or has expired. Request a new one."
+    : "This confirmation link is invalid or has expired.";
+  const searchParams = new URLSearchParams({ error: message });
+
   return NextResponse.redirect(
-    new URL("/auth/sign-in?error=confirmation_failed", request.url),
+    new URL(`${pathname}?${searchParams.toString()}`, request.url),
   );
 }

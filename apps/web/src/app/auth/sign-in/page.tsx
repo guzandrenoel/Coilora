@@ -11,13 +11,14 @@ export const metadata = {
 type SignInPageProps = {
   searchParams: Promise<{
     error?: string;
+    message?: string;
   }>;
 };
 
 export default async function SignInPage({
   searchParams,
 }: SignInPageProps) {
-  const { error } = await searchParams;
+  const { error, message } = await searchParams;
 
   return (
     <div className={styles.formContainer} aria-labelledby="sign-in-title">
@@ -30,6 +31,12 @@ export default async function SignInPage({
       {error ? (
         <p className={styles.errorMessage} role="alert">
           {error}
+        </p>
+      ) : null}
+
+      {message ? (
+        <p className={styles.successMessage} role="status">
+          {message}
         </p>
       ) : null}
 
@@ -48,6 +55,10 @@ export default async function SignInPage({
             required
           />
         </label>
+
+        <p className={styles.formUtility}>
+          <Link href="/auth/forgot-password">Forgot your password?</Link>
+        </p>
 
         <button className={styles.submitButton} type="submit">
           Sign in

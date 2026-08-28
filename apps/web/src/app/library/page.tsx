@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { signOut } from "@/app/auth/actions";
+import { ApiIdentityStatus } from "@/features/auth/api-identity-status";
 import { MaterialImport } from "@/features/materials/material-import";
 import { createClient } from "@/lib/supabase/server";
 
@@ -137,6 +138,12 @@ export default async function LibraryPage() {
                   connected through the backend.
                 </span>
                 <dl>
+                  <div>
+                    <dt>Secure API</dt>
+                    <dd>
+                      <ApiIdentityStatus />
+                    </dd>
+                  </div>
                   <div>
                     <dt>Source files</dt>
                     <dd>Remain unchanged</dd>

@@ -139,6 +139,101 @@ export async function signUp(formData: FormData) {
   );
 }
 
+export async function requestPasswordReset(formData: FormData) {
+  const email = readField(formData, "email").toLowerCase();
+
+  if (!emailPattern.test(email)) {
+    redirectWithMessage(
+      "/auth/forgot-password",
+      "error",
+      "Enter a valid email address.",
+    );
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+
+  if (!appUrl) {
+    redirectWithMessage(
+      "/auth/forgot-password",
+      "error",
+      "Password recovery is temporarily unavailable.",
+    );
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${appUrl}/auth/callback?next=/auth/update-password`,
+  });
+
+  if (error) {
+    redirectWithMessage(
+      "/auth/forgot-password",
+      "error",
+      "We could not send a reset email. Please try again.",
+    );
+  }
+
+  redirectWithMessage(
+    "/auth/forgot-password",
+    "message",
+    "If an account exists for that email, a password reset link has been sent.",
+  );
+}
+
+export async function updatePassword(formData: FormData) {
+  const password = readField(formData, "password");
+  const confirmPassword = readField(formData, "confirmPassword");
+
+  if (password.length < 8) {
+    redirectWithMessage(
+      "/auth/update-password",
+      "error",
+      "Create a password containing at least 8 characters.",
+    );
+  }
+
+  if (password !== confirmPassword) {
+    redirectWithMessage(
+      "/auth/update-password",
+      "error",
+      "The passwords do not match.",
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirectWithMessage(
+      "/auth/forgot-password",
+      "error",
+      "This reset link is invalid or has expired. Request a new one.",
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    redirectWithMessage(
+      "/auth/update-password",
+      "error",
+      "We could not update your password. Please request a new reset link.",
+    );
+  }
+
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+
+  redirectWithMessage(
+    "/auth/sign-in",
+    "message",
+    "Your password has been updated. Sign in with your new password.",
+  );
+}
+
 export async function signOut() {
   const supabase = await createClient();
   const { error } = await supabase.auth.signOut();

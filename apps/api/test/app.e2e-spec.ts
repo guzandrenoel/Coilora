@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+
 import { AppModule } from './../src/app.module.js';
 
 describe('AppController (e2e)', () => {
@@ -21,6 +22,17 @@ describe('AppController (e2e)', () => {
       status: 'ok',
       service: 'coilora-api',
     });
+  });
+
+  it('/v1/me (GET) rejects requests without a token', () => {
+    return request(app.getHttpServer()).get('/v1/me').expect(401);
+  });
+
+  it('/v1/me (GET) rejects invalid tokens', () => {
+    return request(app.getHttpServer())
+      .get('/v1/me')
+      .set('Authorization', 'Bearer not-a-valid-jwt')
+      .expect(401);
   });
 
   afterEach(async () => {

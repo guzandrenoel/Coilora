@@ -144,6 +144,21 @@
   font-weight: 500;
 }
 
+.formUtility {
+  margin-top: -0.5rem;
+  text-align: right;
+  font-size: 0.88rem;
+}
+
+.formUtility a {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.formUtility a:hover {
+  text-decoration: underline;
+}
+
 .submitButton {
   min-height: 3.15rem;
   margin-top: 0.25rem;
