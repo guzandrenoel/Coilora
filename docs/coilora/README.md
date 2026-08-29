@@ -5,7 +5,7 @@
 > **Product:** A cross-platform, source-grounded study workspace for medical and allied-health students  
 > **Current strategy:** Web-first validation; native tablet applications after validation  
 > **Dependency policy:** Free and open-source baseline; no required paid third-party API  
-> **Version:** 0.4 — 27 August 2026
+> **Version:** 0.4, 27 August 2026
 
 ## Product summary
 
@@ -13,7 +13,7 @@ Coilora combines the document-centered note-taking experience associated with Go
 
 **Import → Annotate → Highlight → Understand → Practice → Review**
 
-The first product is a responsive web application. It validates whether students repeatedly use this complete loop before development expands into native tablet applications. Coilora is web-first, tablet-focused, and cross-platform by design—not iPad-exclusive.
+The first product is a responsive web application. It validates whether students repeatedly use this complete loop before development expands into native tablet applications. Coilora is web-first, tablet-focused, and cross-platform by design, not iPad-exclusive.
 
 ## Current product decision
 
@@ -73,18 +73,18 @@ The software has no required API licence fee. Production is not literally free: 
 
 ## Documentation map
 
-1. [Product overview and requirements](./01_PRODUCT_OVERVIEW_AND_REQUIREMENTS.md) — audience, workflow, requirements, boundaries, and success measures.
-2. [Feature inspiration and differentiation](./FEATURE_INSPIRATION_AND_DIFFERENTIATION.md) — Goodnotes-inspired, NotebookLM-inspired, shared, and Coilora-specific features.
-3. [Web MVP scope](./02_WEB_MVP_SCOPE.md) — first release, screens, acceptance criteria, and exclusions.
-4. [Tech stack](./03_TECH_STACK.md) — selected architecture technologies and deployment approach.
-5. [System architecture](./04_SYSTEM_ARCHITECTURE.md) — clients, backend, workers, storage, local intelligence, and future native applications.
-6. [Database and storage](./05_DATABASE_AND_STORAGE.md) — tables, files, embeddings, local caching, and data ownership.
-7. [API design](./06_API_DESIGN.md) — authentication, authorization, endpoints, contracts, and errors.
-8. [AI and document pipeline](./07_AI_AND_DOCUMENT_PIPELINE.md) — local extraction, OCR, retrieval, citations, generation, and evaluation.
-9. [Security, authentication, and privacy](./08_SECURITY_AUTH_AND_PRIVACY.md) — access controls, sessions, uploads, privacy, and compliance boundaries.
-10. [Free and open-source tools](./09_FREE_AND_OPEN_SOURCE_TOOLS.md) — authoritative licence register, adoption gates, and excluded proprietary services.
-11. [Development roadmap](./10_DEVELOPMENT_ROADMAP.md) — phased implementation, validation gates, testing, and native releases.
-12. [Brand assets and startup animation](./11_BRAND_AND_STARTUP_ANIMATION.md) — selected logo direction, vector asset requirements, motion sequence, web implementation, native transition, and accessibility rules.
+1. [Product overview and requirements](./01_PRODUCT_OVERVIEW_AND_REQUIREMENTS.md): audience, workflow, requirements, boundaries, and success measures.
+2. [Feature inspiration and differentiation](./FEATURE_INSPIRATION_AND_DIFFERENTIATION.md): Goodnotes-inspired, NotebookLM-inspired, shared, and Coilora-specific features.
+3. [Web MVP scope](./02_WEB_MVP_SCOPE.md): first release, screens, acceptance criteria, and exclusions.
+4. [Tech stack](./03_TECH_STACK.md): selected architecture technologies and deployment approach.
+5. [System architecture](./04_SYSTEM_ARCHITECTURE.md): clients, backend, workers, storage, local intelligence, and future native applications.
+6. [Database and storage](./05_DATABASE_AND_STORAGE.md): tables, files, embeddings, local caching, and data ownership.
+7. [API design](./06_API_DESIGN.md): authentication, authorization, endpoints, contracts, and errors.
+8. [AI and document pipeline](./07_AI_AND_DOCUMENT_PIPELINE.md): local extraction, OCR, retrieval, citations, generation, and evaluation.
+9. [Security, authentication, and privacy](./08_SECURITY_AUTH_AND_PRIVACY.md): access controls, sessions, uploads, privacy, and compliance boundaries.
+10. [Free and open-source tools](./09_FREE_AND_OPEN_SOURCE_TOOLS.md): authoritative licence register, adoption gates, and excluded proprietary services.
+11. [Development roadmap](./10_DEVELOPMENT_ROADMAP.md): phased implementation, validation gates, testing, and native releases.
+12. [Brand assets and startup animation](./11_BRAND_AND_STARTUP_ANIMATION.md): selected logo direction, vector asset requirements, motion sequence, web implementation, native transition, and accessibility rules.
 
 ## Platform plan
 

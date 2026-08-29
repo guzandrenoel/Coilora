@@ -39,6 +39,7 @@ export class SupabaseJwtVerifier {
       return {
         id: payload.sub,
         role: 'authenticated',
+        accessToken: token,
         ...(typeof payload.email === 'string'
           ? { email: payload.email }
           : {}),

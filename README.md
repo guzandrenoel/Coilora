@@ -33,12 +33,12 @@ Implemented:
 - Row Level Security and authenticated ownership policies.
 - Typed browser and server Supabase clients.
 - NestJS API authentication with JWKS-verified Supabase access tokens and a protected current-user endpoint.
+- Authenticated course and notebook creation and listing through the NestJS API with Supabase Row Level Security enforcement.
 - Strict TypeScript, linting, testing, and production-build checks across the monorepo.
 - Product and technical documentation for the web-first MVP.
 
 Planned next:
 
-- Persistent course and notebook interfaces.
 - Private document storage and secure uploads.
 - PDF reading and manual annotations.
 - Source-grounded explanations and study-item generation.

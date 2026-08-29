@@ -6,11 +6,11 @@ The selected Coilora emblem combines a calm serpent forming the letter **C** wit
 
 Current raster source files:
 ![[coilora_logo_v1.png]]
--  — transparent-background version.
+- Transparent-background version.
 
 ![[coilora_logo_whitebg.png]]
 
--  — white-background version.
+- White-background version.
 
 These PNGs are source references, not the preferred production animation format. Before implementation, create a cleaned vector master and confirm that Coilora may use the artwork commercially.
 

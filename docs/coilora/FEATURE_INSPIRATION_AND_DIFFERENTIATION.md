@@ -28,7 +28,7 @@ Goodnotes is the main inspiration for Coilora's document and annotation experien
 
 ### Boundary
 
-Coilora must not copy Goodnotes branding, icons, toolbar layout, templates, wording, illustrations, or proprietary file formats. The inspiration is the principle of writing directly on study material—not a screen-for-screen recreation.
+Coilora must not copy Goodnotes branding, icons, toolbar layout, templates, wording, illustrations, or proprietary file formats. The inspiration is the principle of writing directly on study material, not a screen-for-screen recreation.
 
 ## 3. Features inspired primarily by NotebookLM
 
@@ -118,7 +118,7 @@ Students can mask labels or regions from anatomy diagrams, microscopy images, pa
 
 ### 5.6 Weak topics based on review evidence
 
-Weak-topic labels are calculated from student behavior such as lapses, low recall, response time, and repeated errors—not a vague AI confidence score. The system can prioritize those topics while preserving the student's full overdue queue.
+Weak-topic labels are calculated from student behavior such as lapses, low recall, response time, and repeated errors, not a vague AI confidence score. The system can prioritize those topics while preserving the student's full overdue queue.
 
 ### 5.7 Exam-aware spaced repetition
 
@@ -155,7 +155,7 @@ Coilora is designed for learning from course material. It explicitly avoids pati
 
 ## 7. Positioning statement
 
-> **Coilora turns medical lecture material into a traceable learning loop—combining annotation, student-controlled AI highlights, cited explanations, active recall, and exam-aware review.**
+> **Coilora turns medical lecture material into a traceable learning loop, combining annotation, student-controlled AI highlights, cited explanations, active recall, and exam-aware review.**
 
 Shorter alternative:
 

@@ -183,7 +183,7 @@ Future store-distributed apps must implement the account-deletion and privacy-di
 | Security audit events | Longer justified period, metadata only |
 | Backups | Documented rolling retention and eventual purge behavior |
 
-Exact periods require legal and operational approval. Deletion workflows must account for backups, derived artifacts, worker caches, and model traces—not only primary database rows.
+Exact periods require legal and operational approval. Deletion workflows must account for backups, derived artifacts, worker caches, and model traces, not only primary database rows.
 
 ## 11. Philippines launch considerations
 

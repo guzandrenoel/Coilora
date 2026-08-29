@@ -4,7 +4,7 @@
 
 Ship the smallest complete learning loop, test it with real students, and expand only after evidence. The first objective is not “build Goodnotes plus NotebookLM.” It is to prove that students repeatedly turn their own lecture material into cited understanding and active recall.
 
-## 2. Phase 0 — foundation and research
+## 2. Phase 0: foundation and research
 
 ### Build and decide
 
@@ -25,7 +25,7 @@ Ship the smallest complete learning loop, test it with real students, and expand
 - Test materials cover text PDFs, scanned pages, tables, diagrams, and poor OCR.
 - The architecture and security boundaries are agreed.
 
-## 3. Phase 1 — web foundation
+## 3. Phase 1: web foundation
 
 ### Build
 
@@ -46,7 +46,7 @@ Ship the smallest complete learning loop, test it with real students, and expand
 - Development and staging environments are isolated.
 - Secrets are not present in browser bundles or source control.
 
-## 4. Phase 2 — import and document reader
+## 4. Phase 2: import and document reader
 
 ### Build
 
@@ -68,7 +68,7 @@ Ship the smallest complete learning loop, test it with real students, and expand
 - Highlights remain aligned after resize and zoom.
 - Large documents do not cause unbounded browser memory use.
 
-## 5. Phase 3 — cited AI assistant
+## 5. Phase 3: cited AI assistant
 
 ### Build
 
@@ -88,7 +88,7 @@ Ship the smallest complete learning loop, test it with real students, and expand
 - Citation accuracy meets the agreed evaluation threshold.
 - Prompt-injection fixtures cannot override source or authorization boundaries.
 
-## 6. Phase 4 — highlighting and study generation
+## 6. Phase 4: highlighting and study generation
 
 ### Build
 
@@ -108,7 +108,7 @@ Ship the smallest complete learning loop, test it with real students, and expand
 - Every generated item retains a valid source reference.
 - Human evaluation checks answerability, ambiguity, distractor quality, and usefulness.
 
-## 7. Phase 5 — review loop and private web beta
+## 7. Phase 5: review loop and private web beta
 
 ### Build
 
@@ -134,7 +134,7 @@ Start with 10–20 medical, medical-technology, nursing, or allied-health studen
 - Major failures are visible through monitoring.
 - Interviews reveal whether full stylus annotation is a decisive need.
 
-## 8. Phase 6 — improve retention and reliability
+## 8. Phase 6: improve retention and reliability
 
 Prioritize measured problems:
 
@@ -148,7 +148,7 @@ Prioritize measured problems:
 
 Do not add native clients merely because the roadmap says they are next. Apply the native transition gate from the web MVP document.
 
-## 9. Phase 7 — native iPad notebook
+## 9. Phase 7: native iPad notebook
 
 Begin only after web validation.
 
@@ -172,7 +172,7 @@ Begin only after web validation.
 - Conflict scenarios preserve user work.
 - TestFlight users complete the same shared learning loop.
 
-## 10. Phase 8 — phone and Android expansion
+## 10. Phase 8: phone and Android expansion
 
 Sequence based on usage evidence:
 
@@ -277,4 +277,3 @@ The web MVP is done only when a target student can independently:
 - [Supabase local development](https://supabase.com/docs/guides/local-development)
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
 - [Apple TestFlight overview](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview)
-

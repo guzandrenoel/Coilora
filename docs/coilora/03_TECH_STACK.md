@@ -144,7 +144,7 @@ Generate embeddings locally with Qwen3-Embedding-0.6B, store them in pgvector, a
 
 ### Production scaling
 
-Ollama is adequate for development and a small private alpha. If concurrent inference becomes a proven bottleneck, introduce vLLM—Apache-2.0—on a Linux GPU host without changing Coilora's model interface. GPU hosting costs money even though the software is open source.
+Ollama is adequate for development and a small private alpha. If concurrent inference becomes a proven bottleneck, introduce vLLM (Apache-2.0) on a Linux GPU host without changing Coilora's model interface. GPU hosting costs money even though the software is open source.
 
 ## 8. Deployment
 

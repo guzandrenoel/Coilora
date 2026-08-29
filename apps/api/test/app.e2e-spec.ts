@@ -35,6 +35,17 @@ describe('AppController (e2e)', () => {
       .expect(401);
   });
 
+  it('/v1/courses (GET) rejects requests without a token', () => {
+    return request(app.getHttpServer()).get('/v1/courses').expect(401);
+  });
+
+  it('/v1/notebooks (POST) rejects requests without a token', () => {
+    return request(app.getHttpServer())
+      .post('/v1/notebooks')
+      .send({ title: 'Cardiovascular system' })
+      .expect(401);
+  });
+
   afterEach(async () => {
     await app.close();
   });

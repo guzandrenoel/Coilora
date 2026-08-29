@@ -16,6 +16,7 @@ import {
   UploadIcon,
 } from "@/components/ui/icons";
 import { ApiIdentityStatus } from "@/features/auth/api-identity-status";
+import { LibraryCollections } from "@/features/library/library-collections";
 import { MaterialImport } from "@/features/materials/material-import";
 import { createClient } from "@/lib/supabase/server";
 
@@ -130,6 +131,8 @@ export default async function LibraryPage() {
               </div>
             ))}
           </section>
+
+          <LibraryCollections />
 
           <div className={styles.workspaceGrid}>
             <section className={styles.materialsArea} aria-labelledby="materials-title">

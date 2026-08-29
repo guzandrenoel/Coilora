@@ -45,7 +45,7 @@ export default function HomePage() {
           <p className={styles.eyebrow}>Shed the overload. Keep what matters.</p>
           <h1>Your notes should help you think.</h1>
           <p className={styles.heroSummary}>
-            Coilora keeps medical study materials, annotations, explanations, and practice tied to the source—so the path from reading to recall stays clear.
+            Coilora keeps medical study materials, annotations, explanations, and practice tied to the source so the path from reading to recall stays clear.
           </p>
           <div className={styles.heroActions}>
             <Link className={styles.primaryButton} href="/auth/sign-up">

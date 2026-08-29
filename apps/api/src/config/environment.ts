@@ -7,6 +7,7 @@ const environmentSchema = z.object({
     .string()
     .url()
     .transform((value) => value.replace(/\/$/, '')),
+  SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   SUPABASE_JWT_AUDIENCE: z.string().min(1).default('authenticated'),
 });
 
