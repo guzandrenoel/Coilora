@@ -46,6 +46,18 @@ describe('AppController (e2e)', () => {
       .expect(401);
   });
 
+  it('/v1/notebooks/:id (DELETE) rejects requests without a token', () => {
+    return request(app.getHttpServer())
+      .delete('/v1/notebooks/00000000-0000-4000-8000-000000000000')
+      .expect(401);
+  });
+
+  it('/v1/courses/:id (DELETE) rejects requests without a token', () => {
+    return request(app.getHttpServer())
+      .delete('/v1/courses/00000000-0000-4000-8000-000000000000')
+      .expect(401);
+  });
+
   afterEach(async () => {
     await app.close();
   });

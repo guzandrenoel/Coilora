@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  Param,
   Post,
   Query,
   UseGuards,
@@ -12,6 +15,7 @@ import { CurrentUser } from '../auth/current-user.decorator.js';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard.js';
 import {
   createNotebookSchema,
+  notebookIdSchema,
   notebookListQuerySchema,
 } from '../library/library.schemas.js';
 import { parseWithSchema } from '../validation/zod-validation.js';
@@ -38,6 +42,18 @@ export class NotebooksController {
     return this.notebooks.create(
       user,
       parseWithSchema(createNotebookSchema, body),
+    );
+  }
+
+  @Delete(':notebookId')
+  @HttpCode(200)
+  archive(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+  ) {
+    return this.notebooks.archive(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
     );
   }
 }

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 
 import type {
+  ArchiveResponse,
   Course,
   CourseListResponse,
   CreateCourseInput,
@@ -126,6 +127,16 @@ function isNotebookListResponse(
   return Array.isArray(response.items) && response.items.every(isNotebook);
 }
 
+function isArchiveResponse(value: unknown): value is ArchiveResponse {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const response = value as Record<string, unknown>;
+
+  return typeof response.id === "string" && response.archived === true;
+}
+
 export async function getCourses(): Promise<Course[]> {
   const body = await apiRequest("/v1/courses");
 
@@ -180,4 +191,30 @@ export async function createNotebook(
   }
 
   return body;
+}
+
+export async function archiveCourse(courseId: string): Promise<void> {
+  const body = await apiRequest(
+    `/v1/courses/${encodeURIComponent(courseId)}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  if (!isArchiveResponse(body) || body.id !== courseId) {
+    throw new Error("The API returned an unexpected archive response.");
+  }
+}
+
+export async function archiveNotebook(notebookId: string): Promise<void> {
+  const body = await apiRequest(
+    `/v1/notebooks/${encodeURIComponent(notebookId)}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  if (!isArchiveResponse(body) || body.id !== notebookId) {
+    throw new Error("The API returned an unexpected archive response.");
+  }
 }

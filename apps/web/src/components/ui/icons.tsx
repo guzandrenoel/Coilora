@@ -74,3 +74,13 @@ export function LogOutIcon(props: IconProps) {
 export function CheckIcon(props: IconProps) {
   return <IconFrame {...props}><path d="m5 12 4 4L19 6" /></IconFrame>;
 }
+
+export function ArchiveIcon(props: IconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="M4 7h16v13H4z" />
+      <path d="M3 3h18v4H3z" />
+      <path d="M9 11h6" />
+    </IconFrame>
+  );
+}

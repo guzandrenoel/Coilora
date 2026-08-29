@@ -23,6 +23,11 @@ export type NotebookListResponse = {
   items: Notebook[];
 };
 
+export type ArchiveResponse = {
+  id: string;
+  archived: true;
+};
+
 export type CreateCourseInput = {
   name: string;
   description?: string;

@@ -7,7 +7,10 @@ import {
   useState,
 } from "react";
 
+import { ArchiveIcon } from "@/components/ui/icons";
 import {
+  archiveCourse,
+  archiveNotebook,
   createCourse,
   createNotebook,
   getCourses,
@@ -25,10 +28,21 @@ export function LibraryCollections() {
   const [courseName, setCourseName] = useState("");
   const [isCreatingCourse, setIsCreatingCourse] = useState(false);
   const [courseError, setCourseError] = useState<string | null>(null);
+  const [archivingCourseId, setArchivingCourseId] = useState<string | null>(
+    null,
+  );
+  const [pendingArchiveCourseId, setPendingArchiveCourseId] = useState<
+    string | null
+  >(null);
   const [notebookTitle, setNotebookTitle] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [isCreatingNotebook, setIsCreatingNotebook] = useState(false);
   const [notebookError, setNotebookError] = useState<string | null>(null);
+  const [archivingNotebookId, setArchivingNotebookId] = useState<
+    string | null
+  >(null);
+  const [pendingArchiveNotebookId, setPendingArchiveNotebookId] =
+    useState<string | null>(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -101,6 +115,50 @@ export function LibraryCollections() {
     }
   }
 
+  function requestCourseArchive(courseId: string) {
+    setCourseError(null);
+    setPendingArchiveCourseId(courseId);
+  }
+
+  function cancelCourseArchive() {
+    if (!archivingCourseId) {
+      setPendingArchiveCourseId(null);
+    }
+  }
+
+  async function confirmCourseArchive() {
+    const courseId = pendingArchiveCourseId;
+
+    if (!courseId) {
+      return;
+    }
+
+    setArchivingCourseId(courseId);
+    setCourseError(null);
+
+    try {
+      await archiveCourse(courseId);
+
+      setCourses((currentCourses) =>
+        currentCourses.filter((course) => course.id !== courseId),
+      );
+
+      if (selectedCourseId === courseId) {
+        setSelectedCourseId("");
+      }
+
+      setPendingArchiveCourseId(null);
+    } catch (error: unknown) {
+      setCourseError(
+        error instanceof Error
+          ? error.message
+          : "The course could not be archived.",
+      );
+    } finally {
+      setArchivingCourseId(null);
+    }
+  }
+
   async function handleCreateNotebook(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -135,6 +193,46 @@ export function LibraryCollections() {
       setIsCreatingNotebook(false);
     }
   }
+
+  function requestNotebookArchive(notebookId: string) {
+  setNotebookError(null);
+  setPendingArchiveNotebookId(notebookId);
+}
+
+function cancelNotebookArchive() {
+  if (!archivingNotebookId) {
+    setPendingArchiveNotebookId(null);
+  }
+}
+
+async function confirmNotebookArchive() {
+  const notebookId = pendingArchiveNotebookId;
+
+  if (!notebookId) {
+    return;
+  }
+
+  setArchivingNotebookId(notebookId);
+  setNotebookError(null);
+
+  try {
+    await archiveNotebook(notebookId);
+
+    setNotebooks((currentNotebooks) =>
+      currentNotebooks.filter((notebook) => notebook.id !== notebookId),
+    );
+
+    setPendingArchiveNotebookId(null);
+  } catch (error: unknown) {
+    setNotebookError(
+      error instanceof Error
+        ? error.message
+        : "The notebook could not be archived.",
+    );
+  } finally {
+    setArchivingNotebookId(null);
+  }
+}
 
   return (
     <section className={styles.section} aria-labelledby="collections-title">
@@ -205,11 +303,50 @@ export function LibraryCollections() {
             ) : (
               <ul className={styles.list}>
                 {courses.map((course) => (
-                  <li key={course.id}>
-                    <strong>{course.name}</strong>
-                    {course.description ? (
-                      <span>{course.description}</span>
-                    ) : null}
+                  <li className={styles.listItem} key={course.id}>
+                    <div className={styles.listCopy}>
+                      <strong>{course.name}</strong>
+                      {course.description ? (
+                        <span>{course.description}</span>
+                      ) : null}
+                    </div>
+
+                    {pendingArchiveCourseId === course.id ? (
+                      <div
+                        className={styles.confirmActions}
+                        role="group"
+                        aria-label={`Archive ${course.name}?`}
+                      >
+                        <button
+                          className={styles.keepButton}
+                          type="button"
+                          disabled={archivingCourseId === course.id}
+                          onClick={cancelCourseArchive}
+                        >
+                          Keep
+                        </button>
+
+                        <button
+                          className={styles.confirmArchiveButton}
+                          type="button"
+                          disabled={archivingCourseId === course.id}
+                          onClick={() => void confirmCourseArchive()}
+                        >
+                          {archivingCourseId === course.id
+                            ? "Archiving..."
+                            : "Archive"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className={styles.iconButton}
+                        type="button"
+                        aria-label={`Archive ${course.name}`}
+                        onClick={() => requestCourseArchive(course.id)}
+                      >
+                        <ArchiveIcon />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -286,14 +423,53 @@ export function LibraryCollections() {
             ) : (
               <ul className={styles.list}>
                 {notebooks.map((notebook) => (
-                  <li key={notebook.id}>
-                    <strong>{notebook.title}</strong>
-                    <span>
-                      {notebook.course_id
-                        ? courseNames.get(notebook.course_id) ??
-                          "Unknown course"
-                        : "No course"}
-                    </span>
+                  <li className={styles.listItem} key={notebook.id}>
+                    <div className={styles.listCopy}>
+                      <strong>{notebook.title}</strong>
+                      <span>
+                        {notebook.course_id
+                          ? courseNames.get(notebook.course_id) ??
+                            "Unknown course"
+                          : "No course"}
+                      </span>
+                    </div>
+
+                    {pendingArchiveNotebookId === notebook.id ? (
+                      <div
+                        className={styles.confirmActions}
+                        role="group"
+                        aria-label={`Archive ${notebook.title}?`}
+                      >
+                        <button
+                          className={styles.keepButton}
+                          type="button"
+                          disabled={archivingNotebookId === notebook.id}
+                          onClick={cancelNotebookArchive}
+                        >
+                          Keep
+                        </button>
+
+                        <button
+                          className={styles.confirmArchiveButton}
+                          type="button"
+                          disabled={archivingNotebookId === notebook.id}
+                          onClick={() => void confirmNotebookArchive()}
+                        >
+                          {archivingNotebookId === notebook.id
+                            ? "Archiving..."
+                            : "Archive"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className={styles.iconButton}
+                        type="button"
+                        aria-label={`Archive ${notebook.title}`}
+                        onClick={() => requestNotebookArchive(notebook.id)}
+                      >
+                        <ArchiveIcon />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

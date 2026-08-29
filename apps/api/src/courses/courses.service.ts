@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 
@@ -51,5 +52,54 @@ export class CoursesService {
     }
 
     return data;
+  }
+
+  async archive(user: AuthenticatedUser, courseId: string) {
+    const client = this.clients.create(user);
+    const { count, error: notebookError } = await client
+      .from('notebooks')
+      .select('id', {
+        count: 'exact',
+        head: true,
+      })
+      .eq('course_id', courseId)
+      .is('archived_at', null)
+
+    if (notebookError) {
+      throw new ServiceUnavailableException(
+        'The course could not be checked.',
+      );
+    }
+
+    if ((count ?? 0) > 0) {
+      throw new ConflictException(
+        'Archive the notebooks in this course first.',
+      );
+    }
+
+    const { data, error } = await client
+      .from('courses')
+      .update({
+        archived_at: new Date().toISOString(),
+      })
+      .eq('id', courseId)
+      .is('archived_at', null)
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      throw new ServiceUnavailableException(
+        'The course could not be archived.',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('The course was not found.');
+    }
+
+    return {
+      id: data.id,
+      archived: true,
+    };
   }
 }

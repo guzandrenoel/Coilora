@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 
@@ -61,5 +62,33 @@ export class NotebooksService {
     }
 
     return data;
+  }
+
+  async archive(user: AuthenticatedUser, notebookId: string) {
+    const client = this.clients.create(user);
+    const { data, error } = await client
+      .from('notebooks')
+      .update({
+        archived_at: new Date().toISOString(),
+      })
+      .eq('id', notebookId)
+      .is('archived_at', null)
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      throw new ServiceUnavailableException(
+        'The notebook could not be archived.',
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException('The notebook was not found.');
+    }
+
+    return {
+      id: data.id,
+      archived: true,
+    };
   }
 }

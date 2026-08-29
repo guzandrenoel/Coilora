@@ -33,3 +33,5 @@ export const notebookListQuerySchema = z.object({
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
 export type CreateNotebookInput = z.infer<typeof createNotebookSchema>;
 export type NotebookListQuery = z.infer<typeof notebookListQuerySchema>;
+export const notebookIdSchema = z.uuid("Select a valid notebook.");
+export const courseIdSchema = z.uuid("Select a valid course.");
