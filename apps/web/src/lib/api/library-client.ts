@@ -36,8 +36,7 @@ async function getAccessToken() {
   return session.access_token;
 }
 
-async function apiRequest(path: string, init?: RequestInit): Promise<unknown> {
-  const accessToken = await getAccessToken();
+export async function apiRequest(path: string, init?: RequestInit): Promise<unknown> {  const accessToken = await getAccessToken();
   const headers = new Headers(init?.headers);
 
   headers.set("Accept", "application/json");

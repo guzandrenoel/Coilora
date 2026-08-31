@@ -58,7 +58,57 @@ describe('AppController (e2e)', () => {
       .expect(401);
   });
 
+  it('document creation rejects requests without a token', () => {
+    return request(app.getHttpServer())
+      .post(
+        '/v1/notebooks/00000000-0000-4000-8000-000000000000/documents',
+      )
+      .send({
+        title: 'Test lecture',
+        originalFilename: 'lecture.pdf',
+        sourceType: 'pdf',
+        mediaType: 'application/pdf',
+        byteSize: 1024,
+      })
+      .expect(401);
+  });
+
+    it('upload sessions reject requests without a token', () => {
+    return request(app.getHttpServer())
+      .post(
+        '/v1/documents/00000000-0000-4000-8000-000000000000/upload-session',
+      )
+      .expect(401);
+  });
+
+  it('upload sessions reject invalid tokens', () => {
+    return request(app.getHttpServer())
+      .post(
+        '/v1/documents/00000000-0000-4000-8000-000000000000/upload-session',
+      )
+      .set('Authorization', 'Bearer not-a-valid-jwt')
+      .expect(401);
+  });
+
   afterEach(async () => {
     await app.close();
   });
+
+  it('upload completion rejects requests without a token', () => {
+    return request(app.getHttpServer())
+      .post(
+        '/v1/documents/00000000-0000-4000-8000-000000000000/upload-complete',
+      )
+      .expect(401);
+  });
+
+  it('upload completion rejects invalid tokens', () => {
+    return request(app.getHttpServer())
+      .post(
+        '/v1/documents/00000000-0000-4000-8000-000000000000/upload-complete',
+      )
+      .set('Authorization', 'Bearer not-a-valid-jwt')
+      .expect(401);
+  });
+
 });

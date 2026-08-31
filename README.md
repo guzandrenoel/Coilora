@@ -12,59 +12,113 @@
   <em>Shed the overload. Keep what matters.</em>
 </p>
 
-Coilora is a source-grounded study workspace for medical and allied-health students. It is designed around one continuous learning loop:
+Coilora is a source-grounded study workspace for medical and allied-health students. It is being built around one continuous learning loop:
 
 **Import → Annotate → Highlight → Understand → Practice → Review**
 
-The project is currently in its foundation phase. This repository contains the initial web and API foundations alongside the product, architecture, security, and delivery documentation that guides implementation.
+The project is in active development. Authentication, course and notebook organization, private document uploads, and saved-document listing are implemented. Reading, annotation, document processing, and AI-assisted study features are planned.
 
 ## Current state
 
-Implemented:
+### Accounts and workspace
 
-- Responsive Next.js application shell and product landing page.
-- Interactive preview of the Import → Annotate → Highlight → Understand → Practice → Review workflow.
-- Email and password authentication with email confirmation and password recovery.
-- Server-side session refresh, protected library access, and sign-out.
-- Automatic user profile creation after registration.
-- Responsive library workspace with local file selection, duplicate prevention, type checks, and size validation.
-- Supabase Cloud development environment.
-- Versioned PostgreSQL foundation schema with profiles, courses, and notebooks.
-- Row Level Security and authenticated ownership policies.
-- Typed browser and server Supabase clients.
-- NestJS API authentication with JWKS-verified Supabase access tokens and a protected current-user endpoint.
-- Authenticated course and notebook creation and listing through the NestJS API with Supabase Row Level Security enforcement.
-- Strict TypeScript, linting, testing, and production-build checks across the monorepo.
-- Product and technical documentation for the web-first MVP.
+- Responsive Next.js landing page and library workspace.
+- Branded interface with navigation icons, motion, and responsive layouts.
+- Email and password authentication, email confirmation, and password recovery.
+- Session refresh, protected library access, and sign-out.
+- Automatic profile creation after registration.
+- Persistent course and notebook creation and listing.
+- Optional course assignment when creating notebooks.
+- Course and notebook archiving.
+- Course archiving is blocked while the course contains active notebooks.
 
-Planned next:
+### Documents and uploads
 
-- Private document storage and secure uploads.
-- PDF reading and manual annotations.
-- Source-grounded explanations and study-item generation.
+- File selection and drag-and-drop.
+- Duplicate selection prevention within the current upload queue.
+- Browser-side filename, file-type, and size checks.
+- PDF, PNG, JPG/JPEG, WEBP, TXT, and Markdown support.
+- A maximum file size of 50 MiB (52,428,800 bytes), displayed as 50 MB in the interface.
+- Document metadata stored in PostgreSQL and associated with a notebook.
+- Private Supabase Storage with ownership policies.
+- Authenticated upload-session creation and signed file uploads.
+- Per-file transfer percentages and progress bars.
+- Server-side upload completion checks for file presence, expected size, and stored content type.
+- Retry controls for failed upload stages.
+- Saved-document lists with loading, empty, error, refresh, and pagination states.
+- Automatic saved-list refresh after successful uploads.
 
-Detailed scope and sequencing are maintained in the [development roadmap](./docs/coilora/10_DEVELOPMENT_ROADMAP.md).
+### Backend and development foundation
+
+- Separate Next.js web and NestJS API workspaces.
+- Supabase access-token verification through JWKS.
+- Protected API routes and a current-user identity endpoint.
+- User-scoped database clients and Row Level Security policies.
+- Versioned database migrations for profiles, courses, notebooks, and documents.
+- Generated database types shared across the API and web applications.
+- TypeScript, linting, API unit tests, API HTTP tests, and production-build checks.
+- Product, architecture, security, and delivery documentation.
+
+## Upload behavior
+
+1. Create or select a notebook.
+2. Choose study materials.
+3. Select the destination under **Save to notebook**.
+4. Click **Upload**.
+5. Watch the transfer progress and verification status.
+6. Find completed uploads under **Saved documents**.
+
+The upload queue and saved-document list serve different purposes:
+
+- The upload queue is temporary and resets when the page reloads.
+- **Remove** and **Clear list** only remove entries from that queue. They do not delete saved files.
+- Saved documents are loaded from the API and remain available after a reload.
+- Select the notebook again after reloading to view its documents.
+- Uploads run sequentially. Keep the page open until they finish.
+- Retry controls are available while the current queue remains open. Uploads are not resumable across page reloads.
+
+**Uploaded means saved to storage, not processed for studying.**
+
+The completion endpoint checks storage metadata. It does not yet inspect document contents, scan for malware, extract text, perform OCR, or build a search index. Waiting will not start those unimplemented processing stages.
+
+## Planned next
+
+- Additional automated coverage for saved-document listing and upload interactions.
+- Opening saved PDFs inside the workspace.
+- PDF reading and manual annotation tools.
+- Document-content validation and background processing.
+- Text extraction, OCR, and search indexing.
+- Source-grounded explanations with citations.
+- Study-item generation, practice, and review.
+- Native tablet support after validation of the web study workflow.
+
+The [development roadmap](./docs/coilora/10_DEVELOPMENT_ROADMAP.md) describes the intended scope and sequencing. Roadmap features should not be assumed to be implemented.
 
 ## Local development
 
-Requirements:
+The current development environment uses:
 
-- Node.js 20.11 or newer
-- npm 11 or a compatible npm release
+- Node.js 24.x
+- npm 11.19.0
+- A Supabase development project
 
-Install dependencies from the repository root:
+Run the following commands from the repository root using Git Bash or another Bash-compatible terminal.
+
+### Install dependencies
 
 ```bash
 npm install
 ```
 
-Create the web environment file:
+### Configure the web application
+
+Create the local environment file if it does not already exist:
 
 ```bash
-cp apps/web/.env.example apps/web/.env.local
+cp -n apps/web/.env.example apps/web/.env.local
 ```
 
-Provide the following values in `apps/web/.env.local`:
+Set these values in `apps/web/.env.local`:
 
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -73,39 +127,79 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```
 
-Create the API environment file:
+### Configure the API
+
+Create the local environment file if it does not already exist:
 
 ```bash
-cp apps/api/.env.example apps/api/.env
+cp -n apps/api/.env.example apps/api/.env
 ```
 
-Provide the following values in `apps/api/.env`:
+Set these values in `apps/api/.env`:
 
 ```env
 PORT=4000
 WEB_ORIGIN=http://localhost:3000
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 SUPABASE_JWT_AUDIENCE=authenticated
 ```
 
-Use the real Supabase project URL and publishable key in local files. Never commit `apps/web/.env.local` or `apps/api/.env`.
+Replace `YOUR_PROJECT_REF` and `YOUR_PUBLISHABLE_KEY` with values from the same Supabase development project.
 
-Start the Next.js web application:
+The localhost addresses, port, and `authenticated` audience can remain as shown for the default local setup.
+
+Never commit local environment files, database passwords, service-role keys, or signed upload tokens. The current application uses a publishable key together with the authenticated user's access token for user-scoped database operations.
+
+### Prepare Supabase
+
+For a new development environment, authenticate the Supabase CLI and link the intended project:
+
+```bash
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REF
+```
+
+Review pending migrations before applying them:
+
+```bash
+npx supabase db push --dry-run
+```
+
+After confirming the target project and pending migrations:
+
+```bash
+npx supabase db push
+```
+
+This command changes the linked remote database. Do not apply migrations to an unintended project.
+
+The committed migrations create the application tables, ownership policies, and private `documents` storage bucket. Keep this bucket private.
+
+For an existing environment, let the CLI track applied migrations. Do not manually rerun or rewrite an already-applied migration.
+
+Configure Supabase Auth for the local application URL and its confirmation and recovery callback URLs. The application uses `/auth/callback` to exchange authentication codes.
+
+### Start both applications
+
+Start the web application:
 
 ```bash
 npm run dev
 ```
 
-In a second terminal, start the NestJS API:
+In a second terminal, start the API:
 
 ```bash
 npm run start:dev --workspace @coilora/api
 ```
 
-Local services are available at:
+Local services:
 
 - Web application: [http://localhost:3000](http://localhost:3000)
 - API health check: [http://localhost:4000/v1/health](http://localhost:4000/v1/health)
+
+The root `dev` command starts only the web application. Keep the API running for course, notebook, identity, and document operations.
 
 ## Quality checks
 
@@ -119,38 +213,63 @@ npm run test:e2e
 npm run build
 ```
 
-Run the complete suite with:
+Run the complete suite:
 
 ```bash
 npm run check
 ```
 
+Run checks for one workspace:
+
+```bash
+npm run check --workspace @coilora/api
+npm run check --workspace @coilora/web
+```
+
+Current automated tests are API-focused. They cover document schemas, service behavior, and authentication rejection on selected routes.
+
+Real upload progress and saved-document display have also been checked manually during development. Automated checks are not a substitute for browser testing or verification of deployed authorization policies.
+
 ## Repository structure
 
 ```text
 apps/
-  api/                    NestJS HTTP API
-  web/                    Next.js frontend application
+  api/
+    src/auth/             Access-token verification and authentication guards
+    src/config/           Environment validation
+    src/courses/          Course operations
+    src/database/         User-scoped clients and generated database types
+    src/documents/        Document metadata and upload services
+    src/notebooks/        Notebook operations
+    test/                 API HTTP tests and test configuration
+
+  web/
     public/brand/         Runtime brand assets
-    src/app/              Routes, authentication screens, and styles
-    src/features/         Feature and interactive interface components
-    src/lib/api/          Authenticated browser-to-API client
+    src/app/              Routes, authentication screens, and layouts
+    src/components/       Shared interface components and icons
+    src/features/         Library, upload, and saved-document interfaces
+    src/lib/api/          Authenticated browser-to-API clients
     src/lib/supabase/     Browser, server, and session Supabase clients
     src/types/            Generated database types
+
 docs/                     Product and technical documentation
 supabase/                 Supabase configuration and database migrations
 ```
 
-The repository uses npm workspaces. The web application and API are implemented as separate workspaces; a worker will be added under `apps/worker` when background processing begins.
+The repository uses npm workspaces. The web application and API run as separate applications.
+
+A background worker is planned for document processing. It is not implemented yet.
 
 Start with the [documentation index](./docs/coilora/README.md) for product scope, architecture, security boundaries, API design, and the implementation roadmap.
 
 ## Product boundaries
 
-- Original uploads remain immutable.
-- Suggested highlights never modify source documents without approval.
-- Source-grounded answers and generated study items preserve citations.
-- Authorization is enforced on the server and at the database layer.
+- The upload workflow stores original file contents without rewriting them and does not overwrite existing objects.
+- Application authorization is enforced through authenticated API routes and database and storage policies.
 - Identifiable patient information is prohibited in the initial release.
+- Document processing and content-safety checks remain incomplete.
+- Planned annotation tools must preserve source documents.
+- Planned explanations and generated study items must preserve citations.
+- Suggested changes to study material must remain under the user's control.
 
-Coilora is web-first, not web-only. Native tablet applications are planned after the complete study loop is validated with target students.
+Coilora is web-first, not web-only. Native tablet applications and stylus-focused workflows are planned after the complete study loop is validated with target students.

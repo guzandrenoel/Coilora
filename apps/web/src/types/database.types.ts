@@ -10,32 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -70,6 +45,90 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "courses_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          byte_size: number
+          created_at: string
+          deleted_at: string | null
+          failure_code: string | null
+          id: string
+          indexed_at: string | null
+          media_type: string
+          notebook_id: string
+          original_filename: string
+          owner_id: string
+          page_count: number | null
+          parser_version: string | null
+          revision: number
+          sanitized_object_path: string | null
+          sha256: string | null
+          source_object_path: string | null
+          source_type: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          byte_size: number
+          created_at?: string
+          deleted_at?: string | null
+          failure_code?: string | null
+          id?: string
+          indexed_at?: string | null
+          media_type: string
+          notebook_id: string
+          original_filename: string
+          owner_id: string
+          page_count?: number | null
+          parser_version?: string | null
+          revision?: number
+          sanitized_object_path?: string | null
+          sha256?: string | null
+          source_object_path?: string | null
+          source_type: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          byte_size?: number
+          created_at?: string
+          deleted_at?: string | null
+          failure_code?: string | null
+          id?: string
+          indexed_at?: string | null
+          media_type?: string
+          notebook_id?: string
+          original_filename?: string
+          owner_id?: string
+          page_count?: number | null
+          parser_version?: string | null
+          revision?: number
+          sanitized_object_path?: string | null
+          sha256?: string | null
+          source_object_path?: string | null
+          source_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_notebook_owner_fk"
+            columns: ["notebook_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "notebooks"
+            referencedColumns: ["id", "owner_id"]
+          },
+          {
+            foreignKeyName: "documents_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -289,9 +348,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

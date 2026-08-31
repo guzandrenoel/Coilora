@@ -139,7 +139,7 @@ export default async function LibraryPage() {
               <header className={styles.sectionHeader}>
                 <div>
                   <p>Study materials</p>
-                  <h2 id="materials-title">Add your first source</h2>
+                  <h2 id="materials-title">Import study materials</h2>
                 </div>
                 <span>PDF, images, and notes</span>
               </header>
@@ -150,7 +150,7 @@ export default async function LibraryPage() {
               <section className={styles.guidePanel} aria-labelledby="guide-title">
                 <div className={styles.panelIcon}><SparkIcon /></div>
                 <h2 id="guide-title">Start small</h2>
-                <p>Choose one useful lecture or note. You can organize it after the upload workflow is connected.</p>
+                <p>Choose a lecture or note, select its notebook, and upload the original file to your private library.</p>
                 <ol>
                   <li><span>1</span><div><strong>Choose a source</strong><small>PDF, image, text, or Markdown</small></div></li>
                   <li><span>2</span><div><strong>Check the file</strong><small>Coilora validates it locally</small></div></li>

@@ -8,6 +8,7 @@ import { CoursesModule } from './courses/courses.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { MeModule } from './me/me.module.js';
 import { NotebooksModule } from './notebooks/notebooks.module.js';
+import { DocumentsModule } from './documents/documents.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { NotebooksModule } from './notebooks/notebooks.module.js';
     MeModule,
     CoursesModule,
     NotebooksModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
