@@ -16,7 +16,7 @@ Coilora is a source-grounded study workspace for medical and allied-health stude
 
 **Import → Annotate → Highlight → Understand → Practice → Review**
 
-The project is in active development. Authentication, course and notebook organization, private document uploads, saved-document listing, PDF reading, and persistent blank notebook pages are implemented. Opening and editing blank pages, PDF annotations, document processing, and AI-assisted study features are planned.
+The project is in active development. Authentication, course and notebook organization, private document uploads, visual document cards, persistent notebook pages, PDF reading, freehand annotation, and page bookmarks are implemented. Document processing and AI-assisted study features remain planned.
 
 ## Current state
 
@@ -33,7 +33,9 @@ The project is in active development. Authentication, course and notebook organi
 - Course and notebook archiving.
 - Course archiving is blocked while the course contains active notebooks.
 - Course-scoped notebook views and a responsive notebook workspace.
-- Persistent blank notebook pages with blank, dotted, ruled, grid, and Cornell paper styles.
+- Persistent named notebook pages with blank, dotted, ruled, grid, and Cornell paper styles.
+- A dedicated page editor with a responsive thumbnail sidebar, page creation, renaming, and bookmark filtering.
+- Freehand pen, highlighter, and eraser tools with optimistic saving so completed strokes do not flicker while the server responds.
 
 ### Documents and uploads
 
@@ -48,10 +50,12 @@ The project is in active development. Authentication, course and notebook organi
 - Per-file transfer percentages and progress bars.
 - Server-side upload completion checks for file presence, expected size, and stored content type.
 - Retry controls for failed upload stages.
-- Saved-document lists with loading, empty, error, recovery, and pagination states.
+- Visual saved-document cards with loading, empty, error, recovery, and pagination states.
 - Automatic saved-list refresh after successful uploads.
 - Authenticated PDF read sessions backed by short-lived signed URLs.
-- An in-app PDF reader with page navigation and fit/zoom controls.
+- An in-app PDF reader with lazy page thumbnails, page navigation, and fit/zoom controls.
+- Persisted pen, highlighter, eraser, and per-page bookmark controls for PDFs.
+- Named notebook pages can be inserted after a PDF page and remain linked to that document position.
 - PDF rendering that keeps original uploads unchanged.
 
 ### Backend and development foundation
@@ -60,8 +64,8 @@ The project is in active development. Authentication, course and notebook organi
 - Supabase access-token verification through JWKS.
 - Protected API routes and a current-user identity endpoint.
 - User-scoped database clients and Row Level Security policies.
-- Versioned database migrations for profiles, courses, notebooks, notebook pages, and documents.
-- Row Level Security policies for user-owned notebook pages and private documents.
+- Versioned database migrations for profiles, courses, notebooks, notebook pages, page bookmarks, annotations, and documents.
+- Row Level Security policies for user-owned notebook pages, bookmarks, annotations, and private documents.
 - Generated database types shared across the API and web applications.
 - TypeScript, linting, API unit tests, API HTTP tests, and production-build checks.
 - Product, architecture, security, and delivery documentation.
@@ -90,10 +94,8 @@ The completion endpoint checks storage metadata. It does not yet inspect documen
 
 ## Planned next
 
-- A dedicated editor route for opening persistent blank notebook pages.
-- A reusable annotation layer for blank pages and PDF pages.
-- Drawing, highlighting, erasing, and undo/redo with durable annotation storage.
-- Lazy PDF page thumbnails so large documents remain responsive.
+- Undo and redo for durable annotation edits.
+- Additional page management, including reordering and deletion safeguards.
 - Document-content validation and background processing.
 - Text extraction, OCR, and search indexing.
 - Source-grounded explanations with citations.

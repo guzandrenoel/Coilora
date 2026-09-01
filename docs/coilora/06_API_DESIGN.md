@@ -99,7 +99,7 @@ POST   /v1/notebooks/:notebookId/pages
 GET    /v1/notebooks/:notebookId/documents
 ```
 
-Notebook-page creation accepts `paperStyle` as `blank`, `dotted`, `ruled`, `grid`, or `cornell`. Page lists are ordered by position and return at most 50 items plus a `nextPage` value.
+Notebook-page creation accepts a page name and `paperStyle` as `blank`, `dotted`, `ruled`, `grid`, or `cornell`. Optional document placement inserts the note after a PDF page. Page lists are ordered by position and return at most 50 items plus a `nextPage` value. Page updates support renaming and bookmark changes.
 
 ### Documents and pages
 
@@ -108,6 +108,7 @@ POST   /v1/notebooks/:notebookId/documents
 POST   /v1/documents/:documentId/upload-session
 POST   /v1/documents/:documentId/upload-complete
 POST   /v1/documents/:documentId/read-session
+PATCH  /v1/documents/:documentId/page-count
 GET    /v1/documents/:documentId
 GET    /v1/documents/:documentId/status
 GET    /v1/documents/:documentId/pages
@@ -117,18 +118,25 @@ DELETE /v1/documents/:documentId
 POST   /v1/documents/:documentId/export
 ```
 
-Creating a document reserves metadata; the upload session returns a signed destination. Upload completion verifies the actual storage object. The read-session endpoint checks ownership and returns short-lived access for the in-app PDF reader. Background processing and the remaining document endpoints are planned.
+Creating a document reserves metadata; the upload session returns a signed destination. Upload completion verifies the actual storage object. The read-session endpoint checks ownership and returns short-lived access for the in-app PDF reader. The reader records a validated PDF page count after loading. Background processing and the remaining document endpoints are planned.
 
 ### Annotations and synchronization
 
 ```text
 POST   /v1/sync/push
 GET    /v1/sync/pull?cursor={cursor}&limit={limit}
-GET    /v1/documents/:documentId/annotations
-GET    /v1/documents/:documentId/annotation-snapshot
+GET    /v1/notebooks/:notebookId/pages/:pageId/annotations
+POST   /v1/notebooks/:notebookId/pages/:pageId/annotations
+DELETE /v1/notebooks/:notebookId/pages/:pageId/annotations/:annotationId
+GET    /v1/documents/:documentId/annotations/bookmarks
+GET    /v1/documents/:documentId/pages/:pageNumber/annotations
+POST   /v1/documents/:documentId/pages/:pageNumber/annotations
+DELETE /v1/documents/:documentId/pages/:pageNumber/annotations/:annotationId
+PUT    /v1/documents/:documentId/pages/:pageNumber/bookmark
+DELETE /v1/documents/:documentId/pages/:pageNumber/bookmark
 ```
 
-Web edits use idempotent annotation operations instead of replacing an entire document state. The future native editor batches Pencil or stylus changes into durable operations rather than sending one HTTP request per input sample. The server may compact operations into snapshots while retaining enough history for recovery.
+The web editor sends one durable normalized stroke after pointer completion and renders an optimistic copy while the request is pending. This avoids a visible save flicker without replacing an entire page state. The future native editor may batch Pencil or stylus changes into durable operations and add snapshot compaction for recovery.
 
 ### Highlights
 
@@ -484,4 +492,3 @@ The API should return remaining usage or a durable usage endpoint rather than su
 - [Supabase Sign in with Apple](https://supabase.com/docs/guides/auth/social-login/auth-apple)
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
 - [Supabase resumable uploads](https://supabase.com/docs/guides/storage/uploads/resumable-uploads)
-

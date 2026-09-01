@@ -20,7 +20,9 @@ import {
   updateNotebookSchema,
   notebookIdSchema,
   notebookListQuerySchema,
+  notebookPageIdSchema,
   notebookPageListQuerySchema,
+  updateNotebookPageSchema,
 } from '../library/library.schemas.js';
 import { parseWithSchema } from '../validation/zod-validation.js';
 import { NotebookPagesService } from './notebook-pages.service.js';
@@ -67,6 +69,19 @@ export class NotebooksController {
     );
   }
 
+  @Get(':notebookId/pages/:pageId')
+  getPage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Param('pageId') pageId: string,
+  ) {
+    return this.pages.get(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(notebookPageIdSchema, pageId),
+    );
+  }
+
   @Post(':notebookId/pages')
   createPage(
     @CurrentUser() user: AuthenticatedUser,
@@ -77,6 +92,21 @@ export class NotebooksController {
       user,
       parseWithSchema(notebookIdSchema, notebookId),
       parseWithSchema(createNotebookPageSchema, body),
+    );
+  }
+
+  @Patch(':notebookId/pages/:pageId')
+  updatePage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Param('pageId') pageId: string,
+    @Body() body: unknown,
+  ) {
+    return this.pages.update(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(notebookPageIdSchema, pageId),
+      parseWithSchema(updateNotebookPageSchema, body),
     );
   }
 

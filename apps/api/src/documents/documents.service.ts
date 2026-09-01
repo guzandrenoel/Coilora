@@ -9,7 +9,7 @@ import { UserDatabaseClientFactory } from '../database/user-database-client.fact
 import type { CreateDocumentInput } from './documents.schemas.js';
 
 const documentSelection =
-  'id, notebook_id, title, original_filename, source_type, media_type, status, byte_size, revision, created_at, updated_at' as const;
+  'id, notebook_id, title, original_filename, source_type, media_type, status, page_count, byte_size, revision, created_at, updated_at' as const;
 
 const pageSize = 20;
 
@@ -17,11 +17,7 @@ const pageSize = 20;
 export class DocumentsService {
   constructor(private readonly clients: UserDatabaseClientFactory) {}
 
-  async list(
-    user: AuthenticatedUser,
-    notebookId: string,
-    page: number,
-  ) {
+  async list(user: AuthenticatedUser, notebookId: string, page: number) {
     const client = await this.getNotebookClient(user, notebookId);
     const offset = page * pageSize;
 
@@ -71,9 +67,7 @@ export class DocumentsService {
       .single();
 
     if (error?.code === '23503') {
-      throw new NotFoundException(
-        'The notebook is no longer available.',
-      );
+      throw new NotFoundException('The notebook is no longer available.');
     }
 
     if (error || !data) {
@@ -85,10 +79,7 @@ export class DocumentsService {
     return data;
   }
 
-  private async getNotebookClient(
-    user: AuthenticatedUser,
-    notebookId: string,
-  ) {
+  private async getNotebookClient(user: AuthenticatedUser, notebookId: string) {
     const client = this.clients.create(user);
 
     const { data: notebook, error } = await client

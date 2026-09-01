@@ -1,7 +1,9 @@
 import {
   Controller,
+  Body,
   Header,
   HttpCode,
+  Patch,
   Param,
   ParseUUIDPipe,
   Post,
@@ -12,6 +14,8 @@ import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard.js';
 import { DocumentReadService } from './document-read.service.js';
+import { documentPageCountSchema } from './documents.schemas.js';
+import { parseWithSchema } from '../validation/zod-validation.js';
 
 @Controller('documents')
 @UseGuards(SupabaseAuthGuard)
@@ -26,5 +30,16 @@ export class DocumentReadController {
     @Param('documentId', new ParseUUIDPipe()) documentId: string,
   ) {
     return this.reads.createSession(user, documentId);
+  }
+
+  @Patch(':documentId/page-count')
+  @HttpCode(200)
+  recordPageCount(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('documentId', new ParseUUIDPipe()) documentId: string,
+    @Body() body: unknown,
+  ) {
+    const input = parseWithSchema(documentPageCountSchema, body);
+    return this.reads.recordPageCount(user, documentId, input.pageCount);
   }
 }

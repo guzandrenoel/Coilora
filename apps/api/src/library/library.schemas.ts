@@ -69,8 +69,43 @@ export const paperStyleSchema = z.enum([
 ]);
 
 export const createNotebookPageSchema = z
-  .object({ paperStyle: paperStyleSchema })
-  .strict();
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(1, 'Page name is required.')
+      .max(120, 'Page name must be 120 characters or fewer.'),
+    paperStyle: paperStyleSchema,
+    documentId: z.uuid('Select a valid document.').nullable().default(null),
+    afterDocumentPageNumber: z
+      .number()
+      .int()
+      .min(0)
+      .max(5000)
+      .nullable()
+      .default(null),
+  })
+  .strict()
+  .refine(
+    (input) =>
+      (input.documentId === null && input.afterDocumentPageNumber === null) ||
+      (input.documentId !== null && input.afterDocumentPageNumber !== null),
+    {
+      message: 'Choose where the document note should be inserted.',
+      path: ['afterDocumentPageNumber'],
+    },
+  );
+
+export const updateNotebookPageSchema = z
+  .object({
+    title: createNotebookPageSchema.shape.title.optional(),
+    bookmarked: z.boolean().optional(),
+  })
+  .strict()
+  .refine(
+    (input) => input.title !== undefined || input.bookmarked !== undefined,
+    'Choose a page change.',
+  );
 
 export const notebookPageListQuerySchema = z
   .object({
@@ -79,6 +114,7 @@ export const notebookPageListQuerySchema = z
   .strict();
 
 export const notebookIdSchema = z.uuid('Select a valid notebook.');
+export const notebookPageIdSchema = z.uuid('Select a valid notebook page.');
 export const courseIdSchema = z.uuid('Select a valid course.');
 
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
@@ -87,3 +123,4 @@ export type UpdateNotebookInput = z.infer<typeof updateNotebookSchema>;
 export type UpdateCourseInput = z.infer<typeof updateCourseSchema>;
 export type NotebookListQuery = z.infer<typeof notebookListQuerySchema>;
 export type CreateNotebookPageInput = z.infer<typeof createNotebookPageSchema>;
+export type UpdateNotebookPageInput = z.infer<typeof updateNotebookPageSchema>;

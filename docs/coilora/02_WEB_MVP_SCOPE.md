@@ -8,7 +8,7 @@ The MVP is successful when students repeatedly move from uploaded lecture materi
 
 ### Current implementation boundary
 
-The current web application supports private uploads, saved-document listing, PDF reading with page navigation and zoom, and creation of persistent blank notebook pages in five paper styles. Blank page editing, PDF annotations, document processing, and the learning features later in this journey remain planned work.
+The current web application supports private uploads, visual document cards, named notebook pages in five paper styles, notebook and PDF freehand annotations, page bookmarks, bookmark filtering, lazy PDF thumbnails, and linked note pages inserted after PDF pages. Document processing and the learning features later in this journey remain planned work.
 
 ## 2. Core user journey
 
@@ -50,7 +50,7 @@ The web viewer must provide:
 
 Freehand drawing may be experimental. Goodnotes-level handwriting, pressure-sensitive ink, lasso editing, and perfect browser offline editing are explicitly outside the first validation release.
 
-The implemented reader currently covers authenticated PDF access, rendering, page navigation, and fit/zoom controls. The annotation items above describe the target MVP, not current behavior.
+The implemented reader currently covers authenticated PDF access, lazy page thumbnails, rendering, page navigation, fit/zoom controls, freehand pen and highlighter strokes, erasing, page bookmarks, and inserted named note pages. Search, text selection, typed passage notes, image occlusion, citation navigation, pressure-sensitive ink, and undo/redo remain target work.
 
 ### 3.3 AI smart highlighting
 

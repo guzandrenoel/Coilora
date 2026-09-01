@@ -9,6 +9,7 @@ export type DocumentReadSession = {
   originalFilename: string;
   mediaType: "application/pdf";
   byteSize: number;
+  pageCount: number | null;
   revision: number;
   status: "uploaded";
   signedUrl: string;
@@ -53,6 +54,11 @@ export async function createDocumentReadSession(
     !Number.isSafeInteger(value.byteSize) ||
     value.byteSize < 1 ||
     value.byteSize > maximumBytes ||
+    (value.pageCount !== null &&
+      (typeof value.pageCount !== "number" ||
+        !Number.isSafeInteger(value.pageCount) ||
+        value.pageCount < 1 ||
+        value.pageCount > 5000)) ||
     typeof value.revision !== "number" ||
     !Number.isSafeInteger(value.revision) ||
     value.revision < 1 ||
@@ -103,11 +109,34 @@ export async function createDocumentReadSession(
     originalFilename: value.originalFilename,
     mediaType: "application/pdf",
     byteSize: value.byteSize,
+    pageCount: value.pageCount,
     revision: value.revision,
     status: "uploaded",
     signedUrl: value.signedUrl,
     expiresIn: value.expiresIn,
   };
+}
+
+export async function recordDocumentPageCount(
+  documentId: string,
+  pageCount: number,
+): Promise<void> {
+  if (
+    !uuidPattern.test(documentId) ||
+    !Number.isSafeInteger(pageCount) ||
+    pageCount < 1 ||
+    pageCount > 5000
+  ) {
+    throw new Error("Choose a valid PDF page count.");
+  }
+
+  await apiRequest(
+    `/v1/documents/${encodeURIComponent(documentId)}/page-count`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ pageCount }),
+    },
+  );
 }
 
 export async function downloadDocumentPdf(

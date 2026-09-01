@@ -37,9 +37,11 @@ courses
 notebooks
 notebook_pages
 documents
+page_annotations
+page_bookmarks
 ```
 
-`notebook_pages` stores an owner, notebook, stable position, and one of five paper styles: `blank`, `dotted`, `ruled`, `grid`, or `cornell`. A composite notebook and owner relationship prevents a page from being attached across ownership boundaries. Row Level Security restricts all page operations to the owner, and page creation and updates require an active notebook.
+`notebook_pages` stores an owner, notebook, name, stable position, optional PDF-relative placement, and one of five paper styles: `blank`, `dotted`, `ruled`, `grid`, or `cornell`. `page_annotations` stores normalized freehand strokes for either a notebook page or a PDF page. `page_bookmarks` stores exactly one notebook-page or PDF-page target. Composite ownership relationships and Row Level Security prevent cross-owner attachment or access. Deleting a document is restricted while notebook pages are attached to it, which prevents linked student notes from being silently removed.
 
 The following list describes the target relational model as later phases are implemented.
 
@@ -201,4 +203,3 @@ Native offline sync will use a Coilora-owned outbox, idempotent API operations, 
 - [Supabase storage access control](https://supabase.com/docs/guides/storage/security/access-control)
 - [Supabase pgvector](https://supabase.com/docs/guides/database/extensions/pgvector)
 - [PostgreSQL full-text search](https://www.postgresql.org/docs/current/textsearch.html)
-

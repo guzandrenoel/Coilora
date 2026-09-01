@@ -2,26 +2,60 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type {
   PDFDocumentLoadingTask,
   PDFDocumentProxy,
   RenderTask,
 } from "pdfjs-dist";
 
-import { ArrowRightIcon, LibraryIcon, LockIcon } from "@/components/ui/icons";
+import { ArrowRightIcon, LibraryIcon } from "@/components/ui/icons";
+import {
+  getDocumentBookmarks,
+  setDocumentBookmark,
+} from "@/lib/api/document-annotations-client";
 import { getPageScale, type PdfZoom } from "./pdf-layout";
 import { PdfThumbnails } from "./pdf-thumbnails";
 import {
   createDocumentReadSession,
   downloadDocumentPdf,
+  recordDocumentPageCount,
 } from "@/lib/api/document-read-client";
+import {
+  createNotebookPage,
+  getNotebookPages,
+} from "@/lib/api/notebook-pages-client";
+import {
+  paperStyles,
+  type NotebookPage,
+  type PaperStyle,
+} from "@/lib/api/types";
+import {
+  AnnotationCanvas,
+  type EditorTool,
+} from "@/features/editor/annotation-canvas";
+import { LibraryDialog } from "@/features/library/library-dialog";
+import workspaceStyles from "@/features/library/library-workspace.module.css";
 import styles from "./pdf-reader.module.css";
 
 type ReaderState =
   | { kind: "loading" }
   | { kind: "error"; message: string }
-  | { kind: "ready"; pdf: PDFDocumentProxy; title: string };
+  | {
+      kind: "ready";
+      pdf: PDFDocumentProxy;
+      title: string;
+      notebookId: string;
+    };
+
+const annotationColors = [
+  "#173f5f",
+  "#d94f70",
+  "#e6b800",
+  "#2b8a6e",
+  "#7b61c9",
+] as const;
 
 export function PdfReader({ documentId }: { documentId: string }) {
   const [attempt, setAttempt] = useState(0);
@@ -41,11 +75,19 @@ function ReaderSession({
   documentId: string;
   onRetry: () => void;
 }) {
+  const router = useRouter();
   const [state, setState] = useState<ReaderState>({ kind: "loading" });
   const [pageNumber, setPageNumber] = useState(1);
   const [zoom, setZoom] = useState<PdfZoom>("page");
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [showPages, setShowPages] = useState(false);
+  const [showPages, setShowPages] = useState(true);
+  const [tool, setTool] = useState<EditorTool>("ink");
+  const [color, setColor] = useState<string>(annotationColors[0]);
+  const [bookmarks, setBookmarks] = useState<Set<number>>(new Set());
+  const [attachedNotes, setAttachedNotes] = useState<NotebookPage[]>([]);
+  const [addNoteOpen, setAddNoteOpen] = useState(false);
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
   const pagesButtonRef = useRef<HTMLButtonElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -122,7 +164,17 @@ function ReaderSession({
             "This reader supports PDFs containing 1 to 5,000 pages.",
           );
         }
-        setState({ kind: "ready", pdf, title: session.title });
+        setState({
+          kind: "ready",
+          pdf,
+          title: session.title,
+          notebookId: session.notebookId,
+        });
+        if (session.pageCount !== pdf.numPages) {
+          void recordDocumentPageCount(documentId, pdf.numPages).catch(
+            () => undefined,
+          );
+        }
       } catch (error: unknown) {
         if (cancelled) return;
         const name = error instanceof Error ? error.name : "";
@@ -153,6 +205,38 @@ function ReaderSession({
     };
   }, [documentId]);
 
+  useEffect(() => {
+    if (state.kind !== "ready") return;
+    let cancelled = false;
+    const notebookId = state.notebookId;
+
+    async function loadConnectedContents() {
+      const [savedBookmarks, pages] = await Promise.all([
+        getDocumentBookmarks(documentId),
+        (async () => {
+          const items: NotebookPage[] = [];
+          let cursor: number | null = 0;
+          while (cursor !== null) {
+            const result = await getNotebookPages(notebookId, cursor);
+            items.push(...result.items);
+            cursor = result.nextPage;
+          }
+          return items.filter((page) => page.document_id === documentId);
+        })(),
+      ]);
+
+      if (!cancelled) {
+        setBookmarks(new Set(savedBookmarks));
+        setAttachedNotes(pages);
+      }
+    }
+
+    void loadConnectedContents().catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [documentId, state]);
+
   const ready = state.kind === "ready";
   // Only fit modes need to redraw when the viewport changes size.
   const renderWidth = typeof zoom === "string" ? size.width : 0;
@@ -168,6 +252,71 @@ function ReaderSession({
     viewportRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }
 
+  async function toggleBookmark(page: number) {
+    const bookmarked = !bookmarks.has(page);
+    setBookmarks((current) => {
+      const next = new Set(current);
+      if (bookmarked) next.add(page);
+      else next.delete(page);
+      return next;
+    });
+    try {
+      await setDocumentBookmark(documentId, page, bookmarked);
+    } catch {
+      setBookmarks((current) => {
+        const next = new Set(current);
+        if (bookmarked) next.delete(page);
+        else next.add(page);
+        return next;
+      });
+    }
+  }
+
+  async function addDocumentNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (state.kind !== "ready" || noteBusy) return;
+    const data = new FormData(event.currentTarget);
+    const title = String(data.get("title") ?? "").trim();
+    const paperStyle = String(data.get("paperStyle") ?? "");
+    if (!title) {
+      setNoteError("Enter a page name.");
+      return;
+    }
+    if (!paperStyles.includes(paperStyle as PaperStyle)) {
+      setNoteError("Choose a paper style.");
+      return;
+    }
+
+    setNoteBusy(true);
+    setNoteError(null);
+    try {
+      const created = await createNotebookPage(
+        state.notebookId,
+        title,
+        paperStyle as PaperStyle,
+        {
+          documentId,
+          afterDocumentPageNumber: pageNumber,
+        },
+      );
+      setAttachedNotes((current) => [...current, created]);
+      setAddNoteOpen(false);
+      router.push(
+        `/library/notebooks/${encodeURIComponent(
+          state.notebookId,
+        )}/pages/${encodeURIComponent(created.id)}`,
+      );
+    } catch (reason) {
+      setNoteError(
+        reason instanceof Error
+          ? reason.message
+          : "The document note could not be added.",
+      );
+    } finally {
+      setNoteBusy(false);
+    }
+  }
+
   return (
     <main
       className={styles.reader}
@@ -180,7 +329,11 @@ function ReaderSession({
       </a>
       <header className={styles.header}>
         <Link
-          href="/library"
+          href={
+            ready
+              ? `/library?notebook=${encodeURIComponent(state.notebookId)}`
+              : "/library"
+          }
           className={styles.brand}
           aria-label="Coilora library"
         >
@@ -196,11 +349,15 @@ function ReaderSession({
         <h1 title={ready ? state.title : undefined}>
           {ready ? `PDF Reader · ${state.title}` : "PDF Reader"}
         </h1>
-        <span className={styles.readOnly}>
-          <LockIcon /> Read only
-        </span>
-        <Link href="/library" className={styles.button}>
-          <LibraryIcon /> Library
+        <Link
+          href={
+            ready
+              ? `/library?notebook=${encodeURIComponent(state.notebookId)}`
+              : "/library"
+          }
+          className={styles.button}
+        >
+          <LibraryIcon /> Back to notebook
         </Link>
       </header>
 
@@ -279,6 +436,46 @@ function ReaderSession({
         </label>
       </div>
 
+      <div className={styles.annotationToolbar} aria-label="PDF annotation tools">
+        <div className={styles.annotationTools} role="group" aria-label="Drawing tool">
+          {(["ink", "highlight", "eraser"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={tool === option}
+              onClick={() => setTool(option)}
+            >
+              {option === "ink"
+                ? "Pen"
+                : option === "highlight"
+                  ? "Highlighter"
+                  : "Eraser"}
+            </button>
+          ))}
+        </div>
+        <div className={styles.annotationColors} role="group" aria-label="Annotation color">
+          {annotationColors.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-label={`Use ${option} annotation color`}
+              aria-pressed={color === option}
+              style={{ backgroundColor: option }}
+              onClick={() => setColor(option)}
+            />
+          ))}
+        </div>
+        <button
+          className={styles.bookmarkButton}
+          type="button"
+          aria-pressed={bookmarks.has(pageNumber)}
+          disabled={!ready}
+          onClick={() => void toggleBookmark(pageNumber)}
+        >
+          {bookmarks.has(pageNumber) ? "★ Bookmarked" : "☆ Bookmark"}
+        </button>
+      </div>
+
       <div className={styles.workspace}>
         {ready && showPages ? (
           <>
@@ -291,7 +488,15 @@ function ReaderSession({
             <PdfThumbnails
               pdf={state.pdf}
               selectedPage={pageNumber}
+              bookmarkedPages={bookmarks}
+              attachedNotes={attachedNotes}
+              notebookId={state.notebookId}
               onClose={closePages}
+              onAddNote={() => {
+                setNoteError(null);
+                setAddNoteOpen(true);
+              }}
+              onToggleBookmark={(page) => void toggleBookmark(page)}
               onSelect={(page) => {
                 selectPage(page);
                 if (window.matchMedia("(max-width: 640px)").matches)
@@ -328,14 +533,62 @@ function ReaderSession({
               width={renderWidth}
               height={renderHeight}
               onRetry={onRetry}
+              documentId={documentId}
+              tool={tool}
+              color={color}
             />
           ) : null}
         </div>
       </div>
       <p className={styles.notice}>
-        Read-only PDF. Your original file is unchanged. Annotation tools are not
-        enabled yet.
+        Your annotations and inserted note pages are saved separately. The
+        original PDF stays unchanged.
       </p>
+
+      {addNoteOpen ? (
+        <LibraryDialog
+          title="Add note after this PDF page"
+          busy={noteBusy}
+          onClose={() => setAddNoteOpen(false)}
+        >
+          <form className={styles.noteForm} onSubmit={(event) => void addDocumentNote(event)}>
+            <label htmlFor="document-note-title">Page name</label>
+            <input
+              id="document-note-title"
+              name="title"
+              required
+              maxLength={120}
+              defaultValue={`Notes after PDF page ${pageNumber}`}
+            />
+            <label htmlFor="document-note-paper">Paper style</label>
+            <select id="document-note-paper" name="paperStyle" defaultValue="blank">
+              {paperStyles.map((paperStyle) => (
+                <option key={paperStyle} value={paperStyle}>
+                  {paperStyle[0].toUpperCase() + paperStyle.slice(1)}
+                </option>
+              ))}
+            </select>
+            {noteError ? <p role="alert">{noteError}</p> : null}
+            <div className={workspaceStyles.dialogActions}>
+              <button
+                className={workspaceStyles.secondary}
+                type="button"
+                disabled={noteBusy}
+                onClick={() => setAddNoteOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={workspaceStyles.primary}
+                type="submit"
+                disabled={noteBusy}
+              >
+                {noteBusy ? "Adding..." : "Add note page"}
+              </button>
+            </div>
+          </form>
+        </LibraryDialog>
+      ) : null}
     </main>
   );
 }
@@ -347,6 +600,9 @@ function RenderedPage({
   width,
   height,
   onRetry,
+  documentId,
+  tool,
+  color,
 }: {
   pdf: PDFDocumentProxy;
   pageNumber: number;
@@ -354,12 +610,16 @@ function RenderedPage({
   width: number;
   height: number;
   onRetry: () => void;
+  documentId: string;
+  tool: EditorTool;
+  color: string;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
   );
   const [pageText, setPageText] = useState("");
+  const [surfaceSize, setSurfaceSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     let cancelled = false;
@@ -411,6 +671,7 @@ function RenderedPage({
         await task.promise;
         if (cancelled) return;
         host.replaceChildren(canvas);
+        setSurfaceSize({ width: viewport.width, height: viewport.height });
         setStatus("ready");
 
         const text = await page.getTextContent().catch(() => null);
@@ -455,7 +716,23 @@ function RenderedPage({
           </button>
         </div>
       ) : null}
-      <div ref={hostRef} className={styles.canvasHost} />
+      <div
+        className={styles.pageSurface}
+        style={{
+          width: surfaceSize.width || undefined,
+          height: surfaceSize.height || undefined,
+        }}
+      >
+        <div ref={hostRef} className={styles.canvasHost} />
+        {status === "ready" ? (
+          <AnnotationCanvas
+            documentId={documentId}
+            documentPageNumber={pageNumber}
+            tool={tool}
+            color={color}
+          />
+        ) : null}
+      </div>
       {pageText ? <p className="sr-only">{pageText}</p> : null}
     </section>
   );

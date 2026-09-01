@@ -34,8 +34,7 @@ export const createDocumentSchema = z
   })
   .strict()
   .refine(
-    (input) =>
-      allowedMediaTypes[input.sourceType].includes(input.mediaType),
+    (input) => allowedMediaTypes[input.sourceType].includes(input.mediaType),
     {
       message: 'The file type does not match the selected source type.',
       path: ['mediaType'],
@@ -46,5 +45,11 @@ export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;
 export const listDocumentsQuerySchema = z
   .object({
     page: z.coerce.number().int().min(0).max(10000).default(0),
+  })
+  .strict();
+
+export const documentPageCountSchema = z
+  .object({
+    pageCount: z.number().int().min(1).max(5000),
   })
   .strict();

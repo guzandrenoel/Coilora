@@ -72,8 +72,49 @@ export type PaperStyle = (typeof paperStyles)[number];
 export type NotebookPage = {
   id: string;
   notebook_id: string;
+  title: string;
   position: number;
   paper_style: PaperStyle;
+  document_id: string | null;
+  after_document_page_number: number | null;
+  bookmarked: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export const annotationKinds = [
+  "ink",
+  "highlight",
+] as const;
+
+export type AnnotationKind =
+  (typeof annotationKinds)[number];
+
+export type AnnotationPoint = {
+  x: number;
+  y: number;
+};
+
+export type PageAnnotation = {
+  id: string;
+  notebook_page_id: string | null;
+  document_id: string | null;
+  document_page_number: number | null;
+  kind: AnnotationKind;
+  points: AnnotationPoint[];
+  color: string;
+  width: number;
+  opacity: number;
+  z_index: number;
+  revision: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateAnnotationInput = {
+  kind: AnnotationKind;
+  points: AnnotationPoint[];
+  color: string;
+  width: number;
+  opacity: number;
 };

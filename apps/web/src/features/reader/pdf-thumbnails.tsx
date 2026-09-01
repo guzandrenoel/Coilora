@@ -1,21 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 
 import { getThumbnailRange, THUMBNAIL_ROW_HEIGHT } from "./pdf-layout";
 import styles from "./pdf-reader.module.css";
+import type { NotebookPage } from "@/lib/api/types";
 
 export function PdfThumbnails({
   pdf,
   selectedPage,
   onSelect,
   onClose,
+  onToggleBookmark,
+  onAddNote,
+  bookmarkedPages,
+  attachedNotes,
+  notebookId,
 }: {
   pdf: PDFDocumentProxy;
   selectedPage: number;
   onSelect: (page: number) => void;
   onClose: () => void;
+  onToggleBookmark: (page: number) => void;
+  onAddNote: () => void;
+  bookmarkedPages: Set<number>;
+  attachedNotes: NotebookPage[];
+  notebookId: string;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState({
@@ -120,9 +132,44 @@ export function PdfThumbnails({
                 <Thumbnail pdf={pdf} pageNumber={page} />
                 <span className={styles.thumbnailNumber}>{page}</span>
               </button>
+              <button
+                type="button"
+                className={styles.thumbnailBookmark}
+                aria-label={`${
+                  bookmarkedPages.has(page) ? "Remove" : "Add"
+                } bookmark for PDF page ${page}`}
+                aria-pressed={bookmarkedPages.has(page)}
+                onClick={() => onToggleBookmark(page)}
+              >
+                {bookmarkedPages.has(page) ? "★" : "☆"}
+              </button>
             </li>
           ))}
         </ol>
+      </div>
+      <div className={styles.documentNotes}>
+        {attachedNotes.length > 0 ? <h3>Inserted notes</h3> : null}
+        {attachedNotes
+          .slice()
+          .sort(
+            (first, second) =>
+              (first.after_document_page_number ?? 0) -
+              (second.after_document_page_number ?? 0),
+          )
+          .map((note) => (
+            <Link
+              key={note.id}
+              href={`/library/notebooks/${encodeURIComponent(
+                notebookId,
+              )}/pages/${encodeURIComponent(note.id)}`}
+            >
+              <span>{note.title}</span>
+              <small>After PDF page {note.after_document_page_number}</small>
+            </Link>
+          ))}
+        <button type="button" onClick={onAddNote}>
+          + Add note page
+        </button>
       </div>
     </aside>
   );

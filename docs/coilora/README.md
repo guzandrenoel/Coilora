@@ -5,7 +5,7 @@
 > **Product:** A cross-platform, source-grounded study workspace for medical and allied-health students  
 > **Current strategy:** Web-first validation; native tablet applications after validation  
 > **Dependency policy:** Free and open-source baseline; no required paid third-party API  
-> **Version:** 0.5, 1 September 2026
+> **Version:** 0.6, 2 September 2026
 
 ## Product summary
 
@@ -17,9 +17,9 @@ The first product is a responsive web application. It validates whether students
 
 ## Implementation snapshot
 
-The current repository implements account authentication, a responsive library, course and notebook organization, user-selected course and notebook colors, private uploads, saved-document listing, authenticated PDF read sessions, an in-app PDF reader, and persistent blank notebook pages. Blank pages support blank, dotted, ruled, grid, and Cornell paper styles.
+The current repository implements account authentication, a responsive library, course and notebook organization, user-selected course and notebook colors, private uploads, visual document cards, authenticated PDF read sessions, and a connected notebook and PDF workspace. Named notebook pages support five paper styles, freehand annotation, renaming, bookmarks, bookmark filtering, and a responsive thumbnail sidebar. PDF pages support lazy thumbnails, freehand annotation, bookmarks, and linked notebook pages inserted after a selected PDF page.
 
-Blank page opening and editing, drawing, highlighting, PDF annotations, text extraction, OCR, retrieval, and study-generation features are not implemented yet. The planned annotation layer will be shared by blank notebook pages and PDF pages while keeping uploaded originals unchanged.
+Pen, highlighter, and eraser annotations are stored separately from page backgrounds and uploaded PDFs, so originals remain unchanged. Undo and redo, text extraction, OCR, retrieval, and study-generation features are not implemented yet.
 
 ## Current product decision
 

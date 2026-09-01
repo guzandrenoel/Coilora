@@ -1,14 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { AnnotationsModule } from './annotations/annotations.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { validateEnvironment } from './config/environment.js';
 import { CoursesModule } from './courses/courses.module.js';
 import { DatabaseModule } from './database/database.module.js';
+import { DocumentsModule } from './documents/documents.module.js';
 import { MeModule } from './me/me.module.js';
 import { NotebooksModule } from './notebooks/notebooks.module.js';
-import { DocumentsModule } from './documents/documents.module.js';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { DocumentsModule } from './documents/documents.module.js';
     CoursesModule,
     NotebooksModule,
     DocumentsModule,
+    AnnotationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 
 import {
@@ -40,29 +41,45 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
 
   useEffect(() => {
     let cancelled = false;
+
     getNotebookPages(notebookId, page)
       .then((result) => {
         if (cancelled) return;
+
         setPages((current) => {
           if (page === 0) return result.items;
-          const merged = new Map(current.map((item) => [item.id, item]));
-          for (const item of result.items) merged.set(item.id, item);
-          return [...merged.values()].sort((a, b) => a.position - b.position);
+
+          const merged = new Map(
+            current.map((item) => [item.id, item]),
+          );
+
+          for (const item of result.items) {
+            merged.set(item.id, item);
+          }
+
+          return [...merged.values()].sort(
+            (first, second) => first.position - second.position,
+          );
         });
+
         setNextPage(result.nextPage);
         setLoadError(null);
       })
       .catch((error: unknown) => {
-        if (!cancelled)
+        if (!cancelled) {
           setLoadError(
             error instanceof Error
               ? error.message
               : "Notebook pages could not be loaded.",
           );
+        }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       });
+
     return () => {
       cancelled = true;
     };
@@ -70,9 +87,18 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
 
   async function addPage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (busy) return;
+
     const data = new FormData(event.currentTarget);
     const paperStyle = data.get("paperStyle");
+    const title = String(data.get("title") ?? "").trim();
+
+    if (!title) {
+      setFormError("Enter a page name.");
+      return;
+    }
+
     if (
       typeof paperStyle !== "string" ||
       !paperStyles.some((item) => item === paperStyle)
@@ -80,22 +106,29 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
       setFormError("Choose a paper style.");
       return;
     }
+
     setBusy(true);
     setFormError(null);
+
     try {
       const created = await createNotebookPage(
         notebookId,
+        title,
         paperStyle as PaperStyle,
       );
+
       setPages((current) =>
         [...current.filter((item) => item.id !== created.id), created].sort(
-          (a, b) => a.position - b.position,
+          (first, second) => first.position - second.position,
         ),
       );
+
       setAddOpen(false);
     } catch (error) {
       setFormError(
-        error instanceof Error ? error.message : "The page could not be added.",
+        error instanceof Error
+          ? error.message
+          : "The page could not be added.",
       );
     } finally {
       setBusy(false);
@@ -103,7 +136,10 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
   }
 
   return (
-    <section className={styles.section} aria-labelledby="notebook-notes-title">
+    <section
+      className={styles.section}
+      aria-labelledby="notebook-notes-title"
+    >
       <header className={styles.header}>
         <div>
           <h2 id="notebook-notes-title">Notes</h2>
@@ -136,13 +172,32 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
 
       {!loadError ? (
         <ol className={styles.grid}>
-          {pages.map((notebookPage, index) => (
-            <li className={styles.pageCard} key={notebookPage.id}>
-              <PaperPreview paperStyle={notebookPage.paper_style} />
-              <strong>Page {index + 1}</strong>
-              <span>{paperStyleNames[notebookPage.paper_style]}</span>
-            </li>
-          ))}
+          {pages.map((notebookPage, index) => {
+            const pageNumber = index + 1;
+            const paperStyleName =
+              paperStyleNames[notebookPage.paper_style];
+
+            return (
+              <li
+                className={styles.pageCard}
+                key={notebookPage.id}
+              >
+                <Link
+                  href={`/library/notebooks/${encodeURIComponent(
+                    notebookId,
+                  )}/pages/${encodeURIComponent(notebookPage.id)}`}
+                  aria-label={`Open page ${pageNumber}, ${paperStyleName} paper`}
+                >
+                  <PaperPreview
+                    paperStyle={notebookPage.paper_style}
+                  />
+                  <strong>{notebookPage.title}</strong>
+                  <span>{paperStyleName}</span>
+                </Link>
+              </li>
+            );
+          })}
+
           <li>
             <button
               className={styles.addPage}
@@ -183,8 +238,20 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
             className={styles.form}
             onSubmit={(event) => void addPage(event)}
           >
-            <fieldset className={styles.picker} disabled={busy}>
+            <label htmlFor="new-page-title">Page name</label>
+            <input
+              id="new-page-title"
+              name="title"
+              required
+              maxLength={120}
+              defaultValue={`Page ${pages.length + 1}`}
+            />
+            <fieldset
+              className={styles.picker}
+              disabled={busy}
+            >
               <legend>Choose a paper style</legend>
+
               <div className={styles.options}>
                 {paperStyles.map((paperStyle) => (
                   <label key={paperStyle}>
@@ -195,19 +262,27 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
                       defaultChecked={paperStyle === "blank"}
                       required
                     />
+
                     <span className={styles.choice}>
                       <PaperPreview paperStyle={paperStyle} />
-                      <strong>{paperStyleNames[paperStyle]}</strong>
+                      <strong>
+                        {paperStyleNames[paperStyle]}
+                      </strong>
                     </span>
                   </label>
                 ))}
               </div>
             </fieldset>
+
             {formError ? (
-              <p className={styles.formError} role="alert">
+              <p
+                className={styles.formError}
+                role="alert"
+              >
                 {formError}
               </p>
             ) : null}
+
             <div className={workspaceStyles.dialogActions}>
               <button
                 className={workspaceStyles.secondary}
@@ -217,6 +292,7 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
               >
                 Cancel
               </button>
+
               <button
                 className={workspaceStyles.primary}
                 type="submit"

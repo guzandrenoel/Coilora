@@ -242,6 +242,7 @@ export type SavedDocument = {
   source_type: string;
   byte_size: number;
   status: (typeof savedDocumentStatuses)[number];
+  page_count: number | null;
   created_at: string;
 };
 
@@ -264,6 +265,11 @@ function isSavedDocument(value: unknown): value is SavedDocument {
     value.byte_size <= 52428800 &&
     typeof value.status === "string" &&
     savedDocumentStatuses.some((status) => status === value.status) &&
+    (value.page_count === null ||
+      (typeof value.page_count === "number" &&
+        Number.isSafeInteger(value.page_count) &&
+        value.page_count >= 1 &&
+        value.page_count <= 5000)) &&
     typeof value.created_at === "string" &&
     Number.isFinite(Date.parse(value.created_at))
   );

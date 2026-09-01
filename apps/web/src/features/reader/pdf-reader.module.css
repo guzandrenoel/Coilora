@@ -48,6 +48,78 @@
   border-bottom: 1px solid var(--line);
   background: white;
 }
+
+.annotationToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  min-height: 50px;
+  padding: 0.3rem 0.75rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfc;
+}
+
+.annotationTools {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: white;
+}
+
+.annotationTools button,
+.bookmarkButton {
+  min-height: 2.35rem;
+  padding: 0.45rem 0.7rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.annotationTools button[aria-pressed="true"] {
+  background: var(--navy);
+  color: white;
+}
+
+.annotationColors {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.annotationColors button {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line-strong);
+  cursor: pointer;
+}
+
+.annotationColors button[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px white,
+    0 0 0 4px var(--blue);
+}
+
+.bookmarkButton {
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.bookmarkButton[aria-pressed="true"] {
+  border-color: #d59684;
+  color: #a44834;
+  background: #fff2ee;
+}
 .controls {
   display: flex;
   align-items: center;
@@ -180,12 +252,24 @@
   width: max-content;
   margin-inline: auto;
 }
-.canvasHost canvas {
-  display: block;
+
+.pageSurface {
+  position: relative;
+  width: max-content;
+  height: max-content;
+  margin-inline: auto;
   background: white;
   box-shadow:
     0 2px 5px rgb(18 61 86 / 8%),
     0 12px 32px rgb(18 61 86 / 12%);
+}
+
+.pageSurface .canvasHost {
+  margin: 0;
+}
+.canvasHost canvas {
+  display: block;
+  background: white;
 }
 .message {
   max-width: 34rem;
@@ -204,7 +288,7 @@
 .sidebar {
   display: flex;
   flex-direction: column;
-  flex: 0 0 184px;
+  flex: 0 0 220px;
   min-height: 0;
   border-right: 1px solid var(--line-strong);
   background: var(--surface);
@@ -259,6 +343,26 @@
   height: 204px;
   padding: 6px 8px;
 }
+
+.thumbnailBookmark {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 1;
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: rgb(255 255 255 / 92%);
+  color: #75817c;
+  cursor: pointer;
+}
+
+.thumbnailBookmark[aria-pressed="true"] {
+  color: #c25a42;
+}
 .thumbnailButton {
   display: flex;
   flex-direction: column;
@@ -307,6 +411,91 @@
 .sidebarBackdrop {
   display: none;
 }
+
+.documentNotes {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 34%;
+  padding: 0.65rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+}
+
+.documentNotes h3 {
+  margin: 0;
+  color: var(--navy-deep);
+  font-size: 0.72rem;
+}
+
+.documentNotes a {
+  display: block;
+  padding: 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: white;
+}
+
+.documentNotes a span,
+.documentNotes a small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentNotes a span {
+  color: var(--navy-deep);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.documentNotes a small {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.documentNotes > button {
+  min-height: 2.5rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 0.5rem;
+  background: white;
+  color: var(--navy);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.noteForm {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.noteForm label {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.noteForm input,
+.noteForm select {
+  min-height: 2.85rem;
+  padding: 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.65rem;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+
+.noteForm > p {
+  margin: 0;
+  padding: 0.6rem;
+  border-radius: 0.5rem;
+  background: var(--coral-soft);
+  color: #943e34;
+  font-size: 0.72rem;
+}
 @media (max-width: 640px) {
   .header {
     gap: 0.7rem;
@@ -327,6 +516,10 @@
   .toolbar {
     padding: 0.25rem 0.5rem;
     gap: 0.3rem;
+  }
+
+  .annotationToolbar {
+    justify-content: flex-start;
   }
   .controls {
     gap: 0;

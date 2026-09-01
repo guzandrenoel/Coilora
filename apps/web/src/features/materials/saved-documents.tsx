@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 
-import { FileIcon } from "@/components/ui/icons";
 import {
   getSavedDocuments,
   type SavedDocument,
@@ -119,17 +118,22 @@ function DocumentList({
   return (
     <div aria-busy={isLoading}>
       {documents.length > 0 ? (
-        <ul className={styles.list}>
+        <ul className={styles.grid}>
           {documents.map((document) => (
-            <li className={styles.row} key={document.id}>
-              <span className={styles.icon}>
-                <FileIcon />
-              </span>
+            <li className={styles.card} key={document.id}>
+              <div className={styles.preview} data-type={document.source_type}>
+                <span>{document.source_type.toUpperCase()}</span>
+                <i />
+                <i />
+                <i />
+              </div>
 
-              <div className={styles.details}>
+              <div className={styles.cardBody}>
                 <h3>{document.title}</h3>
-                <p>
-                  {document.source_type.toUpperCase()} ·{" "}
+                <p className={styles.meta}>
+                  {document.page_count
+                    ? `${document.page_count} pages · `
+                    : ""}
                   {formatFileSize(document.byte_size)} · Added{" "}
                   <time dateTime={document.created_at}>
                     {new Date(document.created_at).toLocaleDateString(
@@ -146,9 +150,6 @@ function DocumentList({
                   <summary>File details</summary>
                   <p>Original filename: {document.original_filename}</p>
                 </details>
-              </div>
-
-              <div className={styles.actions}>
                 {document.status !== "uploaded" ? (
                   <span className={styles.badge} data-status={document.status}>
                     {statusLabels[document.status]}
@@ -164,7 +165,7 @@ function DocumentList({
                     rel={openInNewTab ? "noopener noreferrer" : undefined}
                     aria-label={`Open in Reader${openInNewTab ? " in new tab" : ""}: ${document.title}`}
                   >
-                    Open in Reader{" "}
+                    Open in Reader
                     <span aria-hidden="true">{openInNewTab ? "↗" : "→"}</span>
                   </Link>
                 ) : null}

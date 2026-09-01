@@ -49,9 +49,11 @@ function message(error: unknown) {
 
 export function LibraryWorkspace({
   displayName,
+  initialNotebookId = "",
   signOutAction,
 }: {
   displayName: string;
+  initialNotebookId?: string;
   signOutAction: () => Promise<void>;
 }) {
   const [view, setView] = useState<View>("notebooks");
@@ -72,6 +74,7 @@ export function LibraryWorkspace({
   const mutationLock = useRef(false);
   const dataEpoch = useRef(0);
   const lastRefresh = useRef(0);
+  const initialNotebookApplied = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +86,15 @@ export function LibraryWorkspace({
         setLoadError(null);
         setCourses(nextCourses);
         setNotebooks(nextNotebooks);
+        if (
+          !initialNotebookApplied.current &&
+          initialNotebookId &&
+          nextNotebooks.some((notebook) => notebook.id === initialNotebookId)
+        ) {
+          initialNotebookApplied.current = true;
+          setActiveNotebookId(initialNotebookId);
+          setView("notebook");
+        }
         setCourseId((current) =>
           current === "uncategorized" ||
           nextCourses.some((course) => course.id === current)
@@ -105,7 +117,7 @@ export function LibraryWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [loadVersion]);
+  }, [initialNotebookId, loadVersion]);
 
   useEffect(() => {
     function revalidate() {

@@ -14,8 +14,11 @@ const notebookId = '00000000-0000-4000-8000-000000000002';
 const savedPage = {
   id: '00000000-0000-4000-8000-000000000003',
   notebook_id: notebookId,
+  title: 'Lecture notes',
   position: 1,
   paper_style: 'ruled',
+  document_id: null,
+  after_document_page_number: null,
   created_at: '2026-09-01T00:00:00.000Z',
   updated_at: '2026-09-01T00:00:00.000Z',
 };
@@ -38,10 +41,17 @@ function setup(pageRows = [savedPage]) {
     range: vi.fn().mockResolvedValue({ data: pageRows, error: null }),
     single: vi.fn().mockResolvedValue({ data: savedPage, error: null }),
   };
+  const bookmarkQuery = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockResolvedValue({ data: [], error: null }),
+  };
   const client = {
-    from: vi.fn((table: string) =>
-      table === 'notebooks' ? notebookQuery : pageQuery,
-    ),
+    from: vi.fn((table: string) => {
+      if (table === 'notebooks') return notebookQuery;
+      if (table === 'page_bookmarks') return bookmarkQuery;
+      return pageQuery;
+    }),
   };
   const clients = { create: vi.fn().mockReturnValue(client) };
   return {
@@ -52,6 +62,7 @@ function setup(pageRows = [savedPage]) {
     client,
     notebookQuery,
     pageQuery,
+    bookmarkQuery,
   };
 }
 
@@ -59,7 +70,7 @@ describe('NotebookPagesService', () => {
   it('lists only the owner notebook pages in saved order', async () => {
     const { service, notebookQuery, pageQuery } = setup();
     await expect(service.list(user, notebookId, 0)).resolves.toEqual({
-      items: [savedPage],
+      items: [{ ...savedPage, bookmarked: false }],
       nextPage: null,
     });
     expect(notebookQuery.eq).toHaveBeenCalledWith('owner_id', user.id);
@@ -80,7 +91,10 @@ describe('NotebookPagesService', () => {
     }));
     const { service } = setup(rows);
     await expect(service.list(user, notebookId, 2)).resolves.toEqual({
-      items: rows.slice(0, 50),
+      items: rows.slice(0, 50).map((item) => ({
+        ...item,
+        bookmarked: false,
+      })),
       nextPage: 3,
     });
   });
@@ -88,12 +102,20 @@ describe('NotebookPagesService', () => {
   it('creates a blank page for the authenticated owner', async () => {
     const { service, pageQuery } = setup();
     await expect(
-      service.create(user, notebookId, { paperStyle: 'ruled' }),
-    ).resolves.toEqual(savedPage);
+      service.create(user, notebookId, {
+        title: 'Lecture notes',
+        paperStyle: 'ruled',
+        documentId: null,
+        afterDocumentPageNumber: null,
+      }),
+    ).resolves.toEqual({ ...savedPage, bookmarked: false });
     expect(pageQuery.insert).toHaveBeenCalledWith({
       owner_id: user.id,
       notebook_id: notebookId,
+      title: 'Lecture notes',
       paper_style: 'ruled',
+      document_id: null,
+      after_document_page_number: null,
     });
   });
 

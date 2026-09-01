@@ -131,8 +131,16 @@ describe('library schemas', () => {
   it.each(paperStyleSchema.options)(
     'accepts the %s paper style',
     (paperStyle) => {
-      expect(createNotebookPageSchema.parse({ paperStyle })).toEqual({
+      expect(
+        createNotebookPageSchema.parse({
+          title: 'Lecture notes',
+          paperStyle,
+        }),
+      ).toEqual({
+        title: 'Lecture notes',
         paperStyle,
+        documentId: null,
+        afterDocumentPageNumber: null,
       });
     },
   );

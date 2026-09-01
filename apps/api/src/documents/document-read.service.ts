@@ -20,7 +20,7 @@ export class DocumentReadService {
     const { data: document, error: documentError } = await client
       .from('documents')
       .select(
-        'id, notebook_id, title, original_filename, source_type, media_type, status, source_object_path, revision, byte_size',
+        'id, notebook_id, title, original_filename, source_type, media_type, status, source_object_path, revision, byte_size, page_count',
       )
       .eq('id', documentId)
       .eq('owner_id', user.id)
@@ -71,13 +71,8 @@ export class DocumentReadService {
       );
     }
 
-    if (
-      !Number.isSafeInteger(document.revision) ||
-      document.revision < 1
-    ) {
-      throw new ConflictException(
-        'The document has an invalid file revision.',
-      );
+    if (!Number.isSafeInteger(document.revision) || document.revision < 1) {
+      throw new ConflictException('The document has an invalid file revision.');
     }
 
     const expectedPath =
@@ -107,10 +102,36 @@ export class DocumentReadService {
       originalFilename: document.original_filename,
       mediaType: document.media_type,
       byteSize: document.byte_size,
+      pageCount: document.page_count,
       revision: document.revision,
       status: document.status,
       signedUrl: access.signedUrl,
       expiresIn: readUrlLifetimeSeconds,
     };
+  }
+
+  async recordPageCount(
+    user: AuthenticatedUser,
+    documentId: string,
+    pageCount: number,
+  ) {
+    const client = this.clients.create(user);
+    const { data, error } = await client
+      .from('documents')
+      .update({ page_count: pageCount })
+      .eq('id', documentId)
+      .eq('owner_id', user.id)
+      .eq('source_type', 'pdf')
+      .is('deleted_at', null)
+      .select('id, notebook_id, page_count')
+      .maybeSingle();
+
+    if (error) {
+      throw new ServiceUnavailableException(
+        'The PDF page count could not be saved.',
+      );
+    }
+    if (!data) throw new NotFoundException('The document was not found.');
+    return data;
   }
 }
