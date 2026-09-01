@@ -7,10 +7,13 @@ import {
 
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { UserDatabaseClientFactory } from '../database/user-database-client.factory.js';
-import type { CreateCourseInput } from '../library/library.schemas.js';
+import type {
+  CreateCourseInput,
+  UpdateCourseInput,
+} from '../library/library.schemas.js';
 
 const courseSelection =
-  'id, name, description, created_at, updated_at' as const;
+  'id, name, accent_color, description, created_at, updated_at' as const;
 
 @Injectable()
 export class CoursesService {
@@ -38,6 +41,7 @@ export class CoursesService {
       .insert({
         owner_id: user.id,
         name: input.name,
+        accent_color: input.color,
         description: input.description,
       })
       .select(courseSelection)
@@ -54,6 +58,31 @@ export class CoursesService {
     return data;
   }
 
+  async update(
+    user: AuthenticatedUser,
+    courseId: string,
+    input: UpdateCourseInput,
+  ) {
+    const { data, error } = await this.clients
+      .create(user)
+      .from('courses')
+      .update({
+        name: input.name,
+        ...(input.color !== undefined ? { accent_color: input.color } : {}),
+      })
+      .eq('id', courseId)
+      .eq('owner_id', user.id)
+      .is('archived_at', null)
+      .select(courseSelection)
+      .maybeSingle();
+    if (error?.code === '23505')
+      throw new ConflictException('An active course already uses this name.');
+    if (error)
+      throw new ServiceUnavailableException('The course could not be updated.');
+    if (!data) throw new NotFoundException('The course was not found.');
+    return data;
+  }
+
   async archive(user: AuthenticatedUser, courseId: string) {
     const client = this.clients.create(user);
     const { count, error: notebookError } = await client
@@ -63,12 +92,10 @@ export class CoursesService {
         head: true,
       })
       .eq('course_id', courseId)
-      .is('archived_at', null)
+      .is('archived_at', null);
 
     if (notebookError) {
-      throw new ServiceUnavailableException(
-        'The course could not be checked.',
-      );
+      throw new ServiceUnavailableException('The course could not be checked.');
     }
 
     if ((count ?? 0) > 0) {

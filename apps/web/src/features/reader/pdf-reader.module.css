@@ -1,0 +1,370 @@
+.reader {
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+.header {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 1rem;
+  min-height: 60px;
+  padding: 0.35rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: white;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  color: var(--navy-deep);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+.brand img {
+  width: 32px;
+  height: 32px;
+}
+.header h1 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: white;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.controls .button {
+  width: 44px;
+  padding: 0;
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.7rem;
+  background: white;
+  color: var(--navy);
+  font-weight: 650;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.button svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.previousIcon {
+  transform: rotate(180deg);
+}
+.button:hover:not(:disabled) {
+  background: var(--mint-soft);
+  border-color: var(--mint-deep);
+}
+.button[aria-expanded="true"] {
+  background: var(--mint-soft);
+  border-color: var(--mint-deep);
+}
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.pageCount {
+  min-width: 5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.zoom select {
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.7rem;
+  padding: 0.5rem;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+.zoom select:focus-visible,
+.viewport:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: -3px;
+}
+.notice {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.3rem 1rem;
+  color: var(--ink-soft);
+  border-top: 1px solid var(--line);
+  background: white;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+.readOnly {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.readOnly svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.workspace {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.viewport {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: auto;
+  /* Keep the measured width unchanged when a rendered page adds overflow. */
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  padding: 24px;
+  background: #e0e7e7;
+  overscroll-behavior: contain;
+}
+.pageFrame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-width: 100%;
+  min-height: 100%;
+}
+.renderStatus {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  pointer-events: none;
+}
+.canvasHost {
+  width: max-content;
+  margin-inline: auto;
+}
+.canvasHost canvas {
+  display: block;
+  background: white;
+  box-shadow:
+    0 2px 5px rgb(18 61 86 / 8%),
+    0 12px 32px rgb(18 61 86 / 12%);
+}
+.message {
+  max-width: 34rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+  text-align: center;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.message p {
+  margin-bottom: 1rem;
+}
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 184px;
+  min-height: 0;
+  border-right: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+.sidebarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0.6rem 0.25rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.sidebarHeader h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+.sidebarHeader h2 span {
+  margin-left: 0.3rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+.iconButton {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 1.4rem;
+}
+.iconButton:hover {
+  background: var(--surface-muted);
+}
+.thumbnailList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.thumbnailTrack {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.thumbnailRow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 204px;
+  padding: 6px 8px;
+}
+.thumbnailButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  cursor: pointer;
+  color: var(--muted);
+}
+.thumbnailButton:hover {
+  background: var(--surface-muted);
+}
+.thumbnailButton[aria-current="page"] {
+  border-color: var(--mint-deep);
+  background: var(--mint-soft);
+  color: var(--navy-deep);
+}
+.thumbnailPreview {
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 128px;
+  height: 156px;
+}
+.thumbnailPreview canvas {
+  display: block;
+  background: white;
+  box-shadow: 0 2px 5px rgb(18 61 86 / 15%);
+}
+.thumbnailPlaceholder {
+  position: absolute;
+  font-size: 0.7rem;
+  text-align: center;
+}
+.thumbnailNumber {
+  margin-top: 5px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.sidebarBackdrop {
+  display: none;
+}
+@media (max-width: 640px) {
+  .header {
+    gap: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    min-height: 52px;
+  }
+  .brand span,
+  .readOnly {
+    display: none;
+  }
+  .brand img {
+    width: 28px;
+    height: 28px;
+  }
+  .header h1 {
+    font-size: 0.85rem;
+  }
+  .toolbar {
+    padding: 0.25rem 0.5rem;
+    gap: 0.3rem;
+  }
+  .controls {
+    gap: 0;
+  }
+  .pageCount {
+    min-width: 3.5rem;
+    font-size: 0.75rem;
+  }
+  .zoom {
+    font-size: 0;
+    gap: 0;
+  }
+  .zoom select {
+    font-size: 0.75rem;
+    max-width: 6.5rem;
+  }
+  .toolbar > .button {
+    padding-inline: 0.5rem;
+  }
+  .toolbar > .button svg {
+    display: none;
+  }
+  .sidebar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 184px;
+    z-index: 3;
+    box-shadow: 8px 0 24px rgb(18 61 86 / 15%);
+  }
+  .sidebarBackdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border: 0;
+    background: rgb(11 47 67 / 25%);
+  }
+  .notice {
+    padding-inline: 0.75rem;
+  }
+}

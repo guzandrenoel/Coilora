@@ -8,9 +8,9 @@
 
 .dropzone {
   display: grid;
-  min-height: 25rem;
+  min-height: 17rem;
   margin: 0.8rem;
-  padding: 3rem 1.5rem;
+  padding: 1.8rem 1.5rem;
   place-items: center;
   align-content: center;
   border: 1.5px dashed #b7c9c8;
@@ -19,7 +19,9 @@
     radial-gradient(circle at 50% 20%, rgb(143 124 246 / 10%), transparent 32%),
     #fafcfc;
   text-align: center;
-  transition: border-color 160ms ease, background 160ms ease;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .dropzone:hover {
@@ -39,14 +41,13 @@
 
 .uploadIcon {
   display: grid;
-  width: 4rem;
-  height: 4rem;
-  margin-bottom: 1.1rem;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.8rem;
   place-items: center;
-  border-radius: 1.25rem;
+  border-radius: 0.85rem;
   background: var(--lilac-soft);
   color: #695bc2;
-  transform: rotate(-3deg);
 }
 
 .uploadIcon svg {
@@ -80,7 +81,9 @@
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 760;
-  transition: background 150ms ease, transform 150ms ease;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
 }
 
 .chooseButton:hover {
@@ -96,8 +99,8 @@
 .dropzone > small {
   max-width: 24rem;
   margin-top: 1rem;
-  color: #829198;
-  font-size: 0.68rem;
+  color: var(--muted);
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
@@ -147,7 +150,9 @@
   border-bottom: 1px solid #e8eded;
 }
 
-.fileRow:last-child { border-bottom: 0; }
+.fileRow:last-child {
+  border-bottom: 0;
+}
 
 .fileIcon {
   display: grid;
@@ -159,8 +164,13 @@
   color: #4075b8;
 }
 
-.fileIcon svg { width: 1.15rem; height: 1.15rem; }
-.fileDetails { min-width: 0; }
+.fileIcon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.fileDetails {
+  min-width: 0;
+}
 .fileDetails p {
   overflow: hidden;
   margin: 0 0 0.2rem;
@@ -170,12 +180,27 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.fileDetails span { color: #788a91; font-size: 0.69rem; }
-.fileDetails strong { display: block; margin-top: 0.25rem; color: #a44444; font-size: 0.7rem; }
+.fileDetails span {
+  color: #788a91;
+  font-size: 0.69rem;
+}
+.fileDetails strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: #a44444;
+  font-size: 0.7rem;
+}
 
 @media (max-width: 640px) {
-  .dropzone { min-height: 21rem; margin: 0.65rem; padding-inline: 1rem; }
-  .selectionBar, .fileRow { padding-inline: 1rem; }
+  .dropzone {
+    min-height: 17rem;
+    margin: 0.65rem;
+    padding-inline: 1rem;
+  }
+  .selectionBar,
+  .fileRow {
+    padding-inline: 1rem;
+  }
 }
 
 .uploadControls {
@@ -322,6 +347,38 @@
   width: 100%;
   height: 0.65rem;
   accent-color: var(--mint-deep);
+  appearance: none;
+  border: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--surface-muted);
+}
+
+.uploadProgress progress::-webkit-progress-bar {
+  background: var(--surface-muted);
+  border-radius: 1rem;
+}
+.uploadProgress progress::-webkit-progress-value {
+  background: var(--mint-deep);
+  border-radius: 1rem;
+}
+.uploadProgress progress::-moz-progress-bar {
+  background: var(--mint-deep);
+  border-radius: 1rem;
+}
+
+.uploadProgress progress:indeterminate {
+  background: linear-gradient(90deg, #d9e8e0, var(--mint-deep), #d9e8e0);
+  background-size: 200% 100%;
+  animation: verifying 1.5s linear infinite;
+}
+.uploadProgress progress:indeterminate::-webkit-progress-bar {
+  background: transparent;
+}
+@keyframes verifying {
+  to {
+    background-position: -200% 0;
+  }
 }
 
 .uploadProgress span {

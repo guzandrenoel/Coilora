@@ -1,5 +1,4 @@
 "use client";
-import { SavedDocuments } from "./saved-documents";
 import {
   type ChangeEvent,
   type DragEvent,
@@ -15,7 +14,6 @@ import {
   createDocumentUploadSession,
   uploadDocumentFile,
 } from "@/lib/api/documents-client";
-import { getNotebooks } from "@/lib/api/library-client";
 import type { Notebook } from "@/lib/api/types";
 
 import {
@@ -28,12 +26,7 @@ import {
 import styles from "./material-import.module.css";
 
 type UploadPhase =
-  | "selected"
-  | "creating"
-  | "uploading"
-  | "verifying"
-  | "uploaded"
-  | "error";
+  "selected" | "creating" | "uploading" | "verifying" | "uploaded" | "error";
 
 type UploadTarget = Pick<Notebook, "id" | "title">;
 
@@ -62,19 +55,33 @@ function errorMessage(error: unknown) {
     : "Something went wrong. Please try again.";
 }
 
-export function MaterialImport() {
+type MaterialImportProps = {
+  notebooks: Notebook[];
+  notebookId: string;
+  notebooksLoading: boolean;
+  notebookError: string | null;
+  onNotebookChange: (id: string) => void;
+  onRefreshNotebooks: () => void;
+  onUploaded: () => void;
+  onBusyChange: (busy: boolean) => void;
+};
+
+export function MaterialImport({
+  notebooks,
+  notebookId,
+  notebooksLoading,
+  notebookError,
+  onNotebookChange,
+  onRefreshNotebooks,
+  onUploaded,
+  onBusyChange,
+}: MaterialImportProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadLock = useRef(false);
   const mounted = useRef(false);
 
   const [materials, setMaterials] = useState<UploadItem[]>([]);
-  const [notebooks, setNotebooks] = useState<Notebook[]>([]);
-  const [notebookId, setNotebookId] = useState("");
-  const [notebooksLoading, setNotebooksLoading] = useState(true);
-  const [notebookError, setNotebookError] = useState<string | null>(null);
-  const [refreshVersion, setRefreshVersion] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [savedDocumentsVersion, setSavedDocumentsVersion] = useState(0);
 
   useEffect(() => {
     mounted.current = true;
@@ -85,38 +92,12 @@ export function MaterialImport() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    getNotebooks()
-      .then((items) => {
-        if (cancelled) return;
-
-        setNotebooks(items);
-        setNotebookId((current) =>
-          items.some((notebook) => notebook.id === current) ? current : "",
-        );
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setNotebookError(errorMessage(error));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setNotebooksLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshVersion]);
-
-  function refreshNotebooks() {
-    setNotebookError(null);
-    setNotebooksLoading(true);
-    setRefreshVersion((current) => current + 1);
-  }
+    if (!isUploading) return;
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) =>
+      event.preventDefault();
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [isUploading]);
 
   function addFiles(files: FileList | File[]) {
     if (uploadLock.current) return;
@@ -132,13 +113,13 @@ export function MaterialImport() {
 
         seen.add(material.id);
         additions.push({
-  ...material,
-  phase: "selected",
-  transferAttempted: false,
-  transferSucceeded: false,
-  uploadError: null,
-  uploadProgress: null,
-});
+          ...material,
+          phase: "selected",
+          transferAttempted: false,
+          transferSucceeded: false,
+          uploadError: null,
+          uploadProgress: null,
+        });
       }
 
       return [...current, ...additions];
@@ -161,9 +142,7 @@ export function MaterialImport() {
   function removeMaterial(id: string) {
     if (uploadLock.current) return;
 
-    setMaterials((current) =>
-      current.filter((material) => material.id !== id),
-    );
+    setMaterials((current) => current.filter((material) => material.id !== id));
   }
 
   async function uploadOne(initial: UploadItem, target: UploadTarget) {
@@ -171,19 +150,19 @@ export function MaterialImport() {
     let item: UploadItem = { ...initial, target: destination };
 
     function update(changes: Partial<UploadItem>) {
-  const next = { ...item, ...changes };
-  item = next;
+      const next = { ...item, ...changes };
+      item = next;
 
-  if (mounted.current) {
-    setMaterials((current) =>
-      current.map((entry) => (entry.id === next.id ? next : entry)),
-    );
+      if (mounted.current) {
+        setMaterials((current) =>
+          current.map((entry) => (entry.id === next.id ? next : entry)),
+        );
 
-    if (changes.phase === "uploaded") {
-      setSavedDocumentsVersion((current) => current + 1);
+        if (changes.phase === "uploaded") {
+          onUploaded();
+        }
+      }
     }
-  }
-}
 
     try {
       const input = getDocumentInput(item.file);
@@ -218,9 +197,9 @@ export function MaterialImport() {
       if (!mounted.current) return;
 
       update({
-  phase: "uploading",
-  uploadProgress: 0,
-});
+        phase: "uploading",
+        uploadProgress: 0,
+      });
 
       const session = await createDocumentUploadSession(documentId);
 
@@ -229,13 +208,13 @@ export function MaterialImport() {
       update({ transferAttempted: true });
 
       await uploadDocumentFile(
-  session,
-  item.file,
-  input.mediaType,
-  (percentage) => {
-    update({ uploadProgress: percentage });
-  },
-);
+        session,
+        item.file,
+        input.mediaType,
+        (percentage) => {
+          update({ uploadProgress: percentage });
+        },
+      );
 
       update({
         transferSucceeded: true,
@@ -258,6 +237,7 @@ export function MaterialImport() {
 
     uploadLock.current = true;
     setIsUploading(true);
+    onBusyChange(true);
 
     try {
       for (const item of items) {
@@ -270,6 +250,7 @@ export function MaterialImport() {
 
       if (mounted.current) {
         setIsUploading(false);
+        onBusyChange(false);
       }
     }
   }
@@ -323,7 +304,8 @@ export function MaterialImport() {
         </button>
 
         <small>
-          Files stay on your device until you select a notebook and click Upload.
+          Files stay on your device until you select a notebook and click
+          Upload.
         </small>
       </div>
 
@@ -335,7 +317,7 @@ export function MaterialImport() {
             id="material-notebook"
             value={notebookId}
             disabled={isUploading || notebooksLoading || !!notebookError}
-            onChange={(event) => setNotebookId(event.target.value)}
+            onChange={(event) => onNotebookChange(event.target.value)}
           >
             <option value="">
               {notebooksLoading ? "Loading notebooks..." : "Select a notebook"}
@@ -348,14 +330,16 @@ export function MaterialImport() {
             ))}
           </select>
 
-          <button
-            className={styles.refreshButton}
-            type="button"
-            disabled={isUploading || notebooksLoading}
-            onClick={refreshNotebooks}
-          >
-            Refresh
-          </button>
+          {notebookError ? (
+            <button
+              className={styles.refreshButton}
+              type="button"
+              disabled={isUploading || notebooksLoading}
+              onClick={onRefreshNotebooks}
+            >
+              Try again
+            </button>
+          ) : null}
         </div>
 
         {notebookError ? (
@@ -366,7 +350,7 @@ export function MaterialImport() {
 
         {!notebooksLoading && !notebookError && notebooks.length === 0 ? (
           <p className={styles.uploadHelp}>
-            Create a notebook in the section above, then click Refresh here.
+            Create a notebook from your library, then return here to add files.
           </p>
         ) : null}
 
@@ -452,31 +436,33 @@ export function MaterialImport() {
                   ) : null}
 
                   {material.phase === "uploading" ||
-material.phase === "verifying" ? (
-  <div className={styles.uploadProgress}>
-    <progress
-      max={100}
-      value={
-        material.phase === "verifying"
-          ? undefined
-          : material.uploadProgress ?? undefined
-      }
-      aria-label={`${
-        material.phase === "verifying" ? "Verifying" : "Uploading"
-      } ${material.file.name}`}
-    />
+                  material.phase === "verifying" ? (
+                    <div className={styles.uploadProgress}>
+                      <progress
+                        max={100}
+                        value={
+                          material.phase === "verifying"
+                            ? undefined
+                            : (material.uploadProgress ?? undefined)
+                        }
+                        aria-label={`${
+                          material.phase === "verifying"
+                            ? "Verifying"
+                            : "Uploading"
+                        } ${material.file.name}`}
+                      />
 
-    <span>
-      {material.phase === "verifying"
-        ? "Confirming saved file..."
-        : material.uploadProgress === null
-          ? "Transferring file..."
-          : material.uploadProgress === 100
-            ? "Transfer sent. Waiting for storage..."
-            : `${material.uploadProgress}% transferred`}
-    </span>
-  </div>
-) : null}
+                      <span>
+                        {material.phase === "verifying"
+                          ? "Confirming saved file..."
+                          : material.uploadProgress === null
+                            ? "Transferring file..."
+                            : material.uploadProgress === 100
+                              ? "Transfer sent. Waiting for storage..."
+                              : `${material.uploadProgress}% transferred`}
+                      </span>
+                    </div>
+                  ) : null}
 
                   {material.error || material.uploadError ? (
                     <strong role="alert">
@@ -515,17 +501,13 @@ material.phase === "verifying" ? (
           </ul>
 
           <p className={styles.listHelp}>
-            Keep this page open until uploads finish. Clearing this list does not
-            delete saved files. The list resets when you refresh the page.
+            You can browse your library while files upload. Keep this browser
+            tab open until uploads finish. Removing files from this queue does
+            not delete saved documents. The queue resets when you reload the
+            page.
           </p>
         </>
       ) : null}
-
-      <SavedDocuments
-  key={`${notebookId}:${savedDocumentsVersion}`}
-  notebookId={selectedNotebook?.id ?? ""}
-  notebookTitle={selectedNotebook?.title ?? ""}
-/>
     </section>
   );
 }

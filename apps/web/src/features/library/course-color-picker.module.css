@@ -1,0 +1,90 @@
+.picker {
+  min-width: 0;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  border: 0;
+}
+
+.picker legend {
+  margin-bottom: 0.85rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.option {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding-block: 0.3rem;
+  cursor: pointer;
+}
+
+.picker .radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+}
+
+.swatch {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.radio:checked + .swatch {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.radio:checked + .swatch::after {
+  content: "✓";
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.radio:focus-visible + .swatch {
+  outline: 3px solid var(--blue);
+  outline-offset: 4px;
+}
+
+.picker .label {
+  color: var(--ink-soft);
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+
+.picker:disabled {
+  opacity: 0.55;
+}
+
+.picker:disabled .option {
+  cursor: not-allowed;
+}
+
+@media (max-width: 440px) {
+  .options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 0.75rem;
+  }
+}
+
+.radio[value="yellow"]:checked + .swatch::after {
+  color: #554217;
+}

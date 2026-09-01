@@ -1,5 +1,7 @@
 "use client";
 
+import { isCoverColor, type CoverColor } from "./types";
+
 import { createClient } from "@/lib/supabase/client";
 
 import type {
@@ -36,7 +38,11 @@ async function getAccessToken() {
   return session.access_token;
 }
 
-export async function apiRequest(path: string, init?: RequestInit): Promise<unknown> {  const accessToken = await getAccessToken();
+export async function apiRequest(
+  path: string,
+  init?: RequestInit,
+): Promise<unknown> {
+  const accessToken = await getAccessToken();
   const headers = new Headers(init?.headers);
 
   headers.set("Accept", "application/json");
@@ -81,6 +87,7 @@ function isCourse(value: unknown): value is Course {
   return (
     typeof course.id === "string" &&
     typeof course.name === "string" &&
+    isCoverColor(course.accent_color) &&
     isNullableString(course.description) &&
     typeof course.created_at === "string" &&
     typeof course.updated_at === "string"
@@ -98,6 +105,7 @@ function isNotebook(value: unknown): value is Notebook {
     typeof notebook.id === "string" &&
     isNullableString(notebook.course_id) &&
     typeof notebook.title === "string" &&
+    isCoverColor(notebook.cover_color) &&
     isNullableString(notebook.description) &&
     typeof notebook.created_at === "string" &&
     typeof notebook.updated_at === "string"
@@ -114,9 +122,7 @@ function isCourseListResponse(value: unknown): value is CourseListResponse {
   return Array.isArray(response.items) && response.items.every(isCourse);
 }
 
-function isNotebookListResponse(
-  value: unknown,
-): value is NotebookListResponse {
+function isNotebookListResponse(value: unknown): value is NotebookListResponse {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -146,9 +152,7 @@ export async function getCourses(): Promise<Course[]> {
   return body.items;
 }
 
-export async function createCourse(
-  input: CreateCourseInput,
-): Promise<Course> {
+export async function createCourse(input: CreateCourseInput): Promise<Course> {
   const body = await apiRequest("/v1/courses", {
     method: "POST",
     body: JSON.stringify(input),
@@ -161,12 +165,8 @@ export async function createCourse(
   return body;
 }
 
-export async function getNotebooks(
-  courseId?: string,
-): Promise<Notebook[]> {
-  const query = courseId
-    ? `?courseId=${encodeURIComponent(courseId)}`
-    : "";
+export async function getNotebooks(courseId?: string): Promise<Notebook[]> {
+  const query = courseId ? `?courseId=${encodeURIComponent(courseId)}` : "";
 
   const body = await apiRequest(`/v1/notebooks${query}`);
 
@@ -192,13 +192,36 @@ export async function createNotebook(
   return body;
 }
 
+export async function updateCourse(
+  id: string,
+  input: { name: string; color?: CoverColor },
+): Promise<Course> {
+  const body = await apiRequest(`/v1/courses/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+  if (!isCourse(body) || body.id !== id)
+    throw new Error("The API returned an unexpected course response.");
+  return body;
+}
+
+export async function updateNotebook(
+  id: string,
+  input: { title: string; coverColor: CoverColor },
+): Promise<Notebook> {
+  const body = await apiRequest(`/v1/notebooks/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+  if (!isNotebook(body) || body.id !== id)
+    throw new Error("The API returned an unexpected notebook response.");
+  return body;
+}
+
 export async function archiveCourse(courseId: string): Promise<void> {
-  const body = await apiRequest(
-    `/v1/courses/${encodeURIComponent(courseId)}`,
-    {
-      method: "DELETE",
-    },
-  );
+  const body = await apiRequest(`/v1/courses/${encodeURIComponent(courseId)}`, {
+    method: "DELETE",
+  });
 
   if (!isArchiveResponse(body) || body.id !== courseId) {
     throw new Error("The API returned an unexpected archive response.");

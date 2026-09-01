@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard.js';
 import {
   courseIdSchema,
   createCourseSchema,
+  updateCourseSchema,
 } from '../library/library.schemas.js';
 import { parseWithSchema } from '../validation/zod-validation.js';
 import { CoursesService } from './courses.service.js';
@@ -31,9 +33,19 @@ export class CoursesController {
 
   @Post()
   create(@CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
-    return this.courses.create(
+    return this.courses.create(user, parseWithSchema(createCourseSchema, body));
+  }
+
+  @Patch(':courseId')
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('courseId') courseId: string,
+    @Body() body: unknown,
+  ) {
+    return this.courses.update(
       user,
-      parseWithSchema(createCourseSchema, body),
+      parseWithSchema(courseIdSchema, courseId),
+      parseWithSchema(updateCourseSchema, body),
     );
   }
 

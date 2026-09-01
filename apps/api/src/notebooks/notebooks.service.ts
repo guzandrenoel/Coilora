@@ -9,11 +9,12 @@ import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { UserDatabaseClientFactory } from '../database/user-database-client.factory.js';
 import type {
   CreateNotebookInput,
+  UpdateNotebookInput,
   NotebookListQuery,
 } from '../library/library.schemas.js';
 
 const notebookSelection =
-  'id, course_id, title, description, created_at, updated_at' as const;
+  'id, course_id, title, cover_color, description, created_at, updated_at' as const;
 
 @Injectable()
 export class NotebooksService {
@@ -48,6 +49,7 @@ export class NotebooksService {
         owner_id: user.id,
         course_id: input.courseId,
         title: input.title,
+        cover_color: input.coverColor,
         description: input.description,
       })
       .select(notebookSelection)
@@ -58,9 +60,33 @@ export class NotebooksService {
     }
 
     if (error || !data) {
-      throw new ServiceUnavailableException('The notebook could not be created.');
+      throw new ServiceUnavailableException(
+        'The notebook could not be created.',
+      );
     }
 
+    return data;
+  }
+
+  async update(
+    user: AuthenticatedUser,
+    notebookId: string,
+    input: UpdateNotebookInput,
+  ) {
+    const { data, error } = await this.clients
+      .create(user)
+      .from('notebooks')
+      .update({ title: input.title, cover_color: input.coverColor })
+      .eq('id', notebookId)
+      .eq('owner_id', user.id)
+      .is('archived_at', null)
+      .select(notebookSelection)
+      .maybeSingle();
+    if (error)
+      throw new ServiceUnavailableException(
+        'The notebook could not be updated.',
+      );
+    if (!data) throw new NotFoundException('The notebook was not found.');
     return data;
   }
 

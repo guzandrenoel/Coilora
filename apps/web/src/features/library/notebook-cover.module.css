@@ -1,0 +1,219 @@
+.cover,
+.swatch {
+  --paper: #e9f1eb;
+  --cloth: #88aa97;
+  --cover-ink: #153d30;
+}
+[data-color="ocean"].cover,
+[data-color="ocean"].swatch {
+  --paper: #e7eff8;
+  --cloth: #85a8ce;
+  --cover-ink: #143452;
+}
+[data-color="lavender"].cover,
+[data-color="lavender"].swatch {
+  --paper: #efebf7;
+  --cloth: #b4a3d1;
+  --cover-ink: #38264f;
+}
+[data-color="rose"].cover,
+[data-color="rose"].swatch {
+  --paper: #f7eaee;
+  --cloth: #d5a0b2;
+  --cover-ink: #522339;
+}
+[data-color="peach"].cover,
+[data-color="peach"].swatch {
+  --paper: #fcf0e7;
+  --cloth: #e5b18b;
+  --cover-ink: #57311e;
+}
+[data-color="slate"].cover,
+[data-color="slate"].swatch {
+  --paper: #e9edf1;
+  --cloth: #8d9cae;
+  --cover-ink: #162b43;
+}
+[data-color="yellow"].cover,
+[data-color="yellow"].swatch {
+  --paper: #fbf5dd;
+  --cloth: #ffea98;
+  --cover-ink: #554217;
+}
+.cover {
+  display: grid;
+  place-items: center;
+  height: 230px;
+  overflow: hidden;
+  border-radius: 1rem 1rem 0 0;
+  background:
+    radial-gradient(ellipse at 50% 25%, #ffffffa0, transparent 70%),
+    var(--paper);
+}
+.book {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 148px;
+  height: 184px;
+  padding: 25px 16px 22px 20px;
+  border-radius: 3px 11px 11px 3px;
+  border-left: 7px solid #00000014;
+  background: linear-gradient(90deg, #ffffff12, transparent 22%), var(--cloth);
+  color: var(--cover-ink);
+  box-shadow:
+    3px 2px 0 #fffdf8,
+    5px 4px 0 #dce1dc,
+    12px 15px 22px #23382a24;
+  transform: rotate(-5deg);
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease;
+}
+.book::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: -6px;
+  right: 10px;
+  width: 3px;
+  background: #00000016;
+  border-radius: 0 0 2px 2px;
+}
+.rule {
+  width: 25px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.6;
+}
+.title {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+  padding-right: 6px;
+  visibility: hidden;
+}
+.lines {
+  display: grid;
+  gap: 3px;
+  opacity: 0.3;
+}
+.lines i {
+  display: block;
+  width: 24px;
+  height: 1px;
+  background: currentColor;
+}
+.lines i:last-child {
+  width: 16px;
+}
+button:hover .book,
+button:focus-visible .book {
+  transform: rotate(0deg) translateY(-5px);
+  box-shadow:
+    3px 2px #fffdf8,
+    5px 4px #dce1dc,
+    10px 19px 24px #23382a30;
+}
+.cover[data-compact="true"] {
+  height: 152px;
+  border-radius: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.cover[data-compact="true"] .book {
+  width: 95px;
+  height: 120px;
+  padding: 14px 12px;
+  border-left-width: 5px;
+}
+.cover[data-compact="true"] .title {
+  font-size: 0.7rem;
+  -webkit-line-clamp: 3;
+}
+.palette {
+  min-width: 0;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  border: 0;
+}
+.palette legend {
+  margin-bottom: 0.8rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.swatch {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+.palette .swatch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.swatch .colorChip {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--cloth);
+  color: var(--cover-ink);
+  font-size: 1rem;
+}
+.swatch input:checked + .colorChip {
+  outline: 2px solid var(--cover-ink);
+  outline-offset: 3px;
+}
+.swatch input:focus-visible + .colorChip {
+  outline: 3px solid var(--navy);
+  outline-offset: 4px;
+}
+.swatch > span:last-child {
+  font-size: 0.61rem;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.palette:disabled {
+  opacity: 0.55;
+}
+.palette:disabled .swatch {
+  cursor: not-allowed;
+}
+@media (max-width: 440px) {
+  .swatches {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 0.75rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .book {
+    transition: none;
+    transform: none;
+  }
+  button:hover .book,
+  button:focus-visible .book {
+    transform: none;
+  }
+}

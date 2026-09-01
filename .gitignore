@@ -36,3 +36,5 @@ Thumbs.db
 
 # Next.js generated declarations
 **/next-env.d.ts
+# Generated PDF.js browser assets
+/apps/web/public/pdfjs/

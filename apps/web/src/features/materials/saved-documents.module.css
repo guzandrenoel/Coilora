@@ -16,7 +16,7 @@
   min-width: 0;
 }
 
-.header h3 {
+.header h2 {
   margin: 0 0 0.35rem;
   color: var(--navy-deep);
   font-size: 1rem;
@@ -35,6 +35,10 @@
 }
 
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   min-height: 2.75rem;
   padding: 0.6rem 0.85rem;
   flex-shrink: 0;
@@ -91,12 +95,41 @@
   height: 1.2rem;
 }
 
-.details h4 {
+.details h3 {
   margin: 0 0 0.2rem;
   color: var(--navy-deep);
   font-size: 0.86rem;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
+.fileDetails {
+  margin-top: 0.4rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.fileDetails summary {
+  width: fit-content;
+  padding-block: 0.35rem;
+  cursor: pointer;
+}
+
+.fileDetails summary:hover {
+  color: var(--navy);
+}
+
+.fileDetails summary:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+  border-radius: 0.2rem;
 }
 
 .badge {
@@ -155,8 +188,8 @@
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .badge {
+  .actions {
     grid-column: 2;
-    justify-self: start;
+    align-items: flex-start;
   }
 }

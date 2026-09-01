@@ -1,0 +1,261 @@
+.section {
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+}
+
+.header {
+  margin-bottom: 1.2rem;
+}
+
+.header h2 {
+  margin: 0 0 0.35rem;
+  color: var(--navy-deep);
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.header p,
+.status,
+.pageCard span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 160px));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pageCard {
+  min-width: 0;
+}
+
+.pageCard strong,
+.pageCard span {
+  display: block;
+}
+
+.pageCard strong {
+  margin-top: 0.65rem;
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+
+.paper {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid #dce2df;
+  border-radius: 0.28rem;
+  background-color: #fffef9;
+  box-shadow: 0 8px 18px rgb(28 56 47 / 9%);
+}
+
+.paper[data-paper-style="dotted"] {
+  background-image: radial-gradient(circle, #aebbb5 1px, transparent 1.2px);
+  background-size: 12px 12px;
+}
+
+.paper[data-paper-style="ruled"] {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 18px,
+    #cbd8e1 19px,
+    transparent 20px
+  );
+}
+
+.paper[data-paper-style="grid"] {
+  background-image:
+    linear-gradient(#d7e0dc 1px, transparent 1px),
+    linear-gradient(90deg, #d7e0dc 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+
+.paper[data-paper-style="cornell"] {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 18px,
+    #d7e0dc 19px,
+    transparent 20px
+  );
+}
+
+.paper[data-paper-style="cornell"]::before,
+.paper[data-paper-style="cornell"]::after {
+  position: absolute;
+  content: "";
+  background: #b9c8c1;
+}
+
+.paper[data-paper-style="cornell"]::before {
+  inset: 0 auto 0 29%;
+  width: 1px;
+}
+
+.paper[data-paper-style="cornell"]::after {
+  inset: 23% 0 auto;
+  height: 1px;
+}
+
+.addPage {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  place-content: center;
+  justify-items: center;
+  gap: 0.65rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 0.6rem;
+  background: var(--surface);
+  color: var(--navy);
+  cursor: pointer;
+}
+
+.addPage:hover {
+  border-color: var(--mint-deep);
+  background: var(--mint-soft);
+}
+
+.addPage:focus-visible,
+.loadMore:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+
+.addPage > span {
+  font-size: 2rem;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.addPage strong {
+  font-size: 0.8rem;
+}
+
+.error {
+  padding: 1rem;
+  border-radius: 0.8rem;
+  background: var(--coral-soft);
+  color: #943e34;
+}
+
+.error p {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+}
+
+.error button,
+.loadMore {
+  min-height: 2.6rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.65rem;
+  background: white;
+  color: var(--navy);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.loadMore {
+  margin-top: 1rem;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.picker {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.picker legend {
+  margin-bottom: 0.8rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.options label {
+  min-width: 0;
+  cursor: pointer;
+}
+
+.options input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.choice {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.45rem;
+  border: 2px solid transparent;
+  border-radius: 0.65rem;
+  color: var(--ink);
+  text-align: center;
+}
+
+.choice .paper {
+  width: min(100%, 84px);
+  margin-inline: auto;
+}
+
+.choice strong {
+  font-size: 0.72rem;
+}
+
+.options input:checked + .choice {
+  border-color: var(--blue);
+  background: var(--sky-soft);
+}
+
+.options input:focus-visible + .choice {
+  outline: 3px solid rgb(77 124 255 / 35%);
+  outline-offset: 2px;
+}
+
+.formError {
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--coral-soft);
+  color: #943e34;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 520px) {
+  .section {
+    padding: 1rem;
+  }
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

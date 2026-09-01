@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 
 import { FileIcon } from "@/components/ui/icons";
@@ -25,49 +26,47 @@ const statusLabels: Record<SavedDocument["status"], string> = {
 type SavedDocumentsProps = {
   notebookId: string;
   notebookTitle: string;
+  openInNewTab?: boolean;
 };
 
 export function SavedDocuments({
   notebookId,
   notebookTitle,
+  openInNewTab = false,
 }: SavedDocumentsProps) {
   const headingId = useId();
-  const [refreshVersion, setRefreshVersion] = useState(0);
 
   return (
     <section className={styles.section} aria-labelledby={headingId}>
       <header className={styles.header}>
         <div>
-          <h3 id={headingId}>Saved documents</h3>
+          <h2 id={headingId}>Documents</h2>
           <p>
             {notebookId
               ? `Files saved in ${notebookTitle}`
-              : "Select a notebook above to view its saved files."}
+              : "Open a notebook to view its saved files."}
           </p>
         </div>
-
-        <button
-          className={styles.button}
-          type="button"
-          disabled={!notebookId}
-          onClick={() => setRefreshVersion((current) => current + 1)}
-        >
-          Refresh
-          <span className="sr-only"> saved documents</span>
-        </button>
       </header>
 
       {notebookId ? (
         <DocumentList
-          key={`${notebookId}:${refreshVersion}`}
+          key={notebookId}
           notebookId={notebookId}
+          openInNewTab={openInNewTab}
         />
       ) : null}
     </section>
   );
 }
 
-function DocumentList({ notebookId }: { notebookId: string }) {
+function DocumentList({
+  notebookId,
+  openInNewTab,
+}: {
+  notebookId: string;
+  openInNewTab: boolean;
+}) {
   const [documents, setDocuments] = useState<SavedDocument[]>([]);
   const [page, setPage] = useState(0);
   const [nextPage, setNextPage] = useState<number | null>(null);
@@ -128,8 +127,7 @@ function DocumentList({ notebookId }: { notebookId: string }) {
               </span>
 
               <div className={styles.details}>
-                <h4>{document.title}</h4>
-                <p>{document.original_filename}</p>
+                <h3>{document.title}</h3>
                 <p>
                   {document.source_type.toUpperCase()} ·{" "}
                   {formatFileSize(document.byte_size)} · Added{" "}
@@ -144,14 +142,33 @@ function DocumentList({ notebookId }: { notebookId: string }) {
                     )}
                   </time>
                 </p>
+                <details className={styles.fileDetails}>
+                  <summary>File details</summary>
+                  <p>Original filename: {document.original_filename}</p>
+                </details>
               </div>
 
-              <span
-                className={styles.badge}
-                data-status={document.status}
-              >
-                {statusLabels[document.status]}
-              </span>
+              <div className={styles.actions}>
+                {document.status !== "uploaded" ? (
+                  <span className={styles.badge} data-status={document.status}>
+                    {statusLabels[document.status]}
+                  </span>
+                ) : null}
+                {document.source_type === "pdf" &&
+                document.status === "uploaded" ? (
+                  <Link
+                    className={styles.button}
+                    href={`/library/documents/${encodeURIComponent(document.id)}`}
+                    prefetch={false}
+                    target={openInNewTab ? "_blank" : undefined}
+                    rel={openInNewTab ? "noopener noreferrer" : undefined}
+                    aria-label={`Open in Reader${openInNewTab ? " in new tab" : ""}: ${document.title}`}
+                  >
+                    Open in Reader{" "}
+                    <span aria-hidden="true">{openInNewTab ? "↗" : "→"}</span>
+                  </Link>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
@@ -165,8 +182,7 @@ function DocumentList({ notebookId }: { notebookId: string }) {
 
       {!isLoading && !errorMessage && documents.length === 0 ? (
         <p className={styles.empty}>
-          No saved documents in this notebook yet. Upload a file above to
-          get started.
+          No documents yet. Add files to start filling this notebook.
         </p>
       ) : null}
 
@@ -203,10 +219,7 @@ function DocumentList({ notebookId }: { notebookId: string }) {
       ) : null}
 
       {documents.length > 0 ? (
-        <p className={styles.message}>
-          These files remain saved when you refresh or clear the upload
-          queue. Uploaded files have not been processed yet.
-        </p>
+        <p className={styles.message}>Your original files stay unchanged.</p>
       ) : null}
     </div>
   );

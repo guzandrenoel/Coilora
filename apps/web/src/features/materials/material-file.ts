@@ -4,7 +4,7 @@ export const MAX_MATERIAL_SIZE_BYTES = 50 * 1024 * 1024;
 
 export const MATERIAL_INPUT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp,.txt,.md";
 
-export type MaterialKind = "PDF" | "Image" | "Transcript";
+export type MaterialKind = "PDF" | "Image" | "Text" | "Markdown";
 
 export type MaterialSelection = {
   id: string;
@@ -25,8 +25,11 @@ const formats = new Map<string, MaterialFormat>([
   ["jpg", { kind: "Image", sourceType: "image", mediaType: "image/jpeg" }],
   ["jpeg", { kind: "Image", sourceType: "image", mediaType: "image/jpeg" }],
   ["webp", { kind: "Image", sourceType: "image", mediaType: "image/webp" }],
-  ["txt", { kind: "Transcript", sourceType: "text", mediaType: "text/plain" }],
-  ["md", { kind: "Transcript", sourceType: "markdown", mediaType: "text/markdown" }],
+  ["txt", { kind: "Text", sourceType: "text", mediaType: "text/plain" }],
+  [
+    "md",
+    { kind: "Markdown", sourceType: "markdown", mediaType: "text/markdown" },
+  ],
 ]);
 
 function getFormat(filename: string) {

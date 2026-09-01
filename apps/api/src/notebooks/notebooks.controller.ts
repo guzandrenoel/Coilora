@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -14,17 +15,24 @@ import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard.js';
 import {
+  createNotebookPageSchema,
   createNotebookSchema,
+  updateNotebookSchema,
   notebookIdSchema,
   notebookListQuerySchema,
+  notebookPageListQuerySchema,
 } from '../library/library.schemas.js';
 import { parseWithSchema } from '../validation/zod-validation.js';
+import { NotebookPagesService } from './notebook-pages.service.js';
 import { NotebooksService } from './notebooks.service.js';
 
 @Controller('notebooks')
 @UseGuards(SupabaseAuthGuard)
 export class NotebooksController {
-  constructor(private readonly notebooks: NotebooksService) {}
+  constructor(
+    private readonly notebooks: NotebooksService,
+    private readonly pages: NotebookPagesService,
+  ) {}
 
   @Get()
   list(
@@ -42,6 +50,46 @@ export class NotebooksController {
     return this.notebooks.create(
       user,
       parseWithSchema(createNotebookSchema, body),
+    );
+  }
+
+  @Get(':notebookId/pages')
+  listPages(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Query() query: Record<string, unknown>,
+  ) {
+    const input = parseWithSchema(notebookPageListQuerySchema, query);
+    return this.pages.list(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      input.page,
+    );
+  }
+
+  @Post(':notebookId/pages')
+  createPage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Body() body: unknown,
+  ) {
+    return this.pages.create(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(createNotebookPageSchema, body),
+    );
+  }
+
+  @Patch(':notebookId')
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Body() body: unknown,
+  ) {
+    return this.notebooks.update(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(updateNotebookSchema, body),
     );
   }
 
