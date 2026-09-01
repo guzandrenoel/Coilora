@@ -16,7 +16,7 @@ Coilora is a source-grounded study workspace for medical and allied-health stude
 
 **Import → Annotate → Highlight → Understand → Practice → Review**
 
-The project is in active development. Authentication, course and notebook organization, private document uploads, and saved-document listing are implemented. Reading, annotation, document processing, and AI-assisted study features are planned.
+The project is in active development. Authentication, course and notebook organization, private document uploads, saved-document listing, PDF reading, and persistent blank notebook pages are implemented. Opening and editing blank pages, PDF annotations, document processing, and AI-assisted study features are planned.
 
 ## Current state
 
@@ -29,8 +29,11 @@ The project is in active development. Authentication, course and notebook organi
 - Automatic profile creation after registration.
 - Persistent course and notebook creation and listing.
 - Optional course assignment when creating notebooks.
+- Persisted course accent colors and notebook cover colors, including yellow.
 - Course and notebook archiving.
 - Course archiving is blocked while the course contains active notebooks.
+- Course-scoped notebook views and a responsive notebook workspace.
+- Persistent blank notebook pages with blank, dotted, ruled, grid, and Cornell paper styles.
 
 ### Documents and uploads
 
@@ -45,8 +48,11 @@ The project is in active development. Authentication, course and notebook organi
 - Per-file transfer percentages and progress bars.
 - Server-side upload completion checks for file presence, expected size, and stored content type.
 - Retry controls for failed upload stages.
-- Saved-document lists with loading, empty, error, refresh, and pagination states.
+- Saved-document lists with loading, empty, error, recovery, and pagination states.
 - Automatic saved-list refresh after successful uploads.
+- Authenticated PDF read sessions backed by short-lived signed URLs.
+- An in-app PDF reader with page navigation and fit/zoom controls.
+- PDF rendering that keeps original uploads unchanged.
 
 ### Backend and development foundation
 
@@ -54,7 +60,8 @@ The project is in active development. Authentication, course and notebook organi
 - Supabase access-token verification through JWKS.
 - Protected API routes and a current-user identity endpoint.
 - User-scoped database clients and Row Level Security policies.
-- Versioned database migrations for profiles, courses, notebooks, and documents.
+- Versioned database migrations for profiles, courses, notebooks, notebook pages, and documents.
+- Row Level Security policies for user-owned notebook pages and private documents.
 - Generated database types shared across the API and web applications.
 - TypeScript, linting, API unit tests, API HTTP tests, and production-build checks.
 - Product, architecture, security, and delivery documentation.
@@ -83,9 +90,10 @@ The completion endpoint checks storage metadata. It does not yet inspect documen
 
 ## Planned next
 
-- Additional automated coverage for saved-document listing and upload interactions.
-- Opening saved PDFs inside the workspace.
-- PDF reading and manual annotation tools.
+- A dedicated editor route for opening persistent blank notebook pages.
+- A reusable annotation layer for blank pages and PDF pages.
+- Drawing, highlighting, erasing, and undo/redo with durable annotation storage.
+- Lazy PDF page thumbnails so large documents remain responsive.
 - Document-content validation and background processing.
 - Text extraction, OCR, and search indexing.
 - Source-grounded explanations with citations.
@@ -226,7 +234,7 @@ npm run check --workspace @coilora/api
 npm run check --workspace @coilora/web
 ```
 
-Current automated tests are API-focused. They cover document schemas, service behavior, and authentication rejection on selected routes.
+Current automated tests cover API schemas, service behavior, notebook-page persistence, document reading, authentication rejection on selected routes, and selected web library behavior.
 
 Real upload progress and saved-document display have also been checked manually during development. Automated checks are not a substitute for browser testing or verification of deployed authorization policies.
 
@@ -240,7 +248,7 @@ apps/
     src/courses/          Course operations
     src/database/         User-scoped clients and generated database types
     src/documents/        Document metadata and upload services
-    src/notebooks/        Notebook operations
+    src/notebooks/        Notebook and blank-page operations
     test/                 API HTTP tests and test configuration
 
   web/

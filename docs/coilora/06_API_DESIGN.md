@@ -14,6 +14,10 @@
 - OpenAPI is the contract source and generates TypeScript clients first, followed by Swift and Kotlin clients when native applications begin.
 - The authenticated subject comes from the verified token, never a request-supplied `ownerId`.
 
+### Current implementation boundary
+
+The implemented API includes health and current-user access, course and notebook operations within the current product rules, notebook-page listing and creation, document creation and listing, upload sessions and completion, and PDF read sessions. Other endpoints in this document describe the target API and are not necessarily available yet.
+
 ## 2. Authentication flow
 
 Authentication is provided by Supabase Auth.
@@ -83,16 +87,19 @@ DELETE /v1/me/deletion-request
 ```text
 POST   /v1/courses
 GET    /v1/courses
-GET    /v1/courses/:courseId
 PATCH  /v1/courses/:courseId
 DELETE /v1/courses/:courseId
 
-POST   /v1/courses/:courseId/notebooks
-GET    /v1/notebooks/:notebookId
+POST   /v1/notebooks
+GET    /v1/notebooks?courseId={courseId}
 PATCH  /v1/notebooks/:notebookId
 DELETE /v1/notebooks/:notebookId
+GET    /v1/notebooks/:notebookId/pages?page={page}
+POST   /v1/notebooks/:notebookId/pages
 GET    /v1/notebooks/:notebookId/documents
 ```
+
+Notebook-page creation accepts `paperStyle` as `blank`, `dotted`, `ruled`, `grid`, or `cornell`. Page lists are ordered by position and return at most 50 items plus a `nextPage` value.
 
 ### Documents and pages
 
@@ -100,6 +107,7 @@ GET    /v1/notebooks/:notebookId/documents
 POST   /v1/notebooks/:notebookId/documents
 POST   /v1/documents/:documentId/upload-session
 POST   /v1/documents/:documentId/upload-complete
+POST   /v1/documents/:documentId/read-session
 GET    /v1/documents/:documentId
 GET    /v1/documents/:documentId/status
 GET    /v1/documents/:documentId/pages
@@ -109,7 +117,7 @@ DELETE /v1/documents/:documentId
 POST   /v1/documents/:documentId/export
 ```
 
-Creating a document reserves metadata; the upload session returns a signed/resumable destination. Upload completion verifies the actual storage object before queueing work.
+Creating a document reserves metadata; the upload session returns a signed destination. Upload completion verifies the actual storage object. The read-session endpoint checks ownership and returns short-lived access for the in-app PDF reader. Background processing and the remaining document endpoints are planned.
 
 ### Annotations and synchronization
 
@@ -297,6 +305,13 @@ The canonical storage strategy and entity relationship diagram live in [Database
 - `title`, `description`, `exam_date`
 - `created_at`, `updated_at`, `archived_at`, `revision`
 
+#### `notebook_pages`
+
+- `id`, `owner_id`, `notebook_id`
+- `position`
+- `paper_style`: `blank`, `dotted`, `ruled`, `grid`, or `cornell`
+- `created_at`, `updated_at`
+
 ### Documents
 
 #### `documents`
@@ -469,5 +484,4 @@ The API should return remaining usage or a durable usage endpoint rather than su
 - [Supabase Sign in with Apple](https://supabase.com/docs/guides/auth/social-login/auth-apple)
 - [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
 - [Supabase resumable uploads](https://supabase.com/docs/guides/storage/uploads/resumable-uploads)
-
 

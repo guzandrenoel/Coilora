@@ -2,7 +2,7 @@
 
 The Coilora API is a NestJS application for authenticated server-side operations that should not run directly in the web client.
 
-It is being developed as a modular monolith. The initial foundation provides a versioned health endpoint, automated tests, strict TypeScript checks, and a production build.
+It is being developed as a modular monolith. The current application provides authenticated course, notebook, blank-page, document upload, saved-document, and PDF read-session operations together with automated tests, strict TypeScript checks, and a production build.
 
 ## Local development
 
@@ -26,11 +26,21 @@ PORT=4000
 WEB_ORIGIN=http://localhost:3000
 ```
 
-## Current endpoint
+## Current endpoint groups
 
 ```text
 GET /v1/health
+GET /v1/me
+GET, POST, PATCH, DELETE /v1/courses
+GET, POST, PATCH, DELETE /v1/notebooks
+GET, POST /v1/notebooks/:notebookId/pages
+GET, POST /v1/notebooks/:notebookId/documents
+POST /v1/documents/:documentId/upload-session
+POST /v1/documents/:documentId/upload-complete
+POST /v1/documents/:documentId/read-session
 ```
+
+All resource endpoints require a valid Supabase access token and enforce ownership through the API and Row Level Security. The notebook-page API supports blank, dotted, ruled, grid, and Cornell paper styles. Annotation and document-processing endpoints remain planned.
 
 Expected response:
 

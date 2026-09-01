@@ -6,6 +6,10 @@ Coilora begins as a self-hostable web application backed by one platform API and
 
 The required application stack contains no paid or proprietary third-party API. Open-source software removes API licence fees, but public hosting and model compute still cost money.
 
+### Current implementation
+
+The repository currently contains a Next.js web application, a NestJS API, Supabase migrations, and product documentation. The API handles authenticated course, notebook, notebook-page, document upload, saved-document, and PDF read-session operations. Background workers, document intelligence, annotations, retrieval, and model runtimes remain planned.
+
 ## 2. System context
 
 ```mermaid
@@ -48,7 +52,8 @@ Responsibilities:
 
 - Public pages and account entry.
 - Library and notebook interface.
-- PDF rendering and editable annotation overlay.
+- PDF rendering and read controls. The editable annotation overlay is planned.
+- Persistent blank-page selection and paper-style previews. The page editor is planned.
 - AI suggestion and assistant interface.
 - Study-item editing and review.
 - Settings, export, and deletion requests.
@@ -131,9 +136,9 @@ coilora/
     coilora/
 ```
 
-Only `apps/web`, `supabase`, and the documentation exist during the current foundation
-phase. API, worker, shared-package, service, deployment, and native-client directories are
-created only when their implementation begins.
+`apps/web`, `apps/api`, `supabase`, and the documentation exist today. Worker,
+shared-package, service, deployment, and native-client directories are created only when
+their implementation begins.
 
 ## 5. Request flows
 
@@ -201,6 +206,8 @@ Original PDF
 ```
 
 PDF.js renders the source; Konva renders editable web annotations; pdf-lib creates optional exports. Coordinates use PDF-page or normalized page space so the same data can later render on iPad and Android.
+
+The current reader implements the PDF.js source-rendering portion only. Blank notebook pages are stored independently with an ordered position and paper style. The planned editor will place one reusable annotation layer over either a blank page or a PDF page, persist annotations separately, and never rewrite the source PDF.
 
 ## 8. Backend modules
 

@@ -4,6 +4,27 @@
 
 Ship the smallest complete learning loop, test it with real students, and expand only after evidence. The first objective is not “build Goodnotes plus NotebookLM.” It is to prove that students repeatedly turn their own lecture material into cited understanding and active recall.
 
+## Current progress, 1 September 2026
+
+Implemented:
+
+- Account authentication and protected workspace access.
+- Course and notebook organization with persisted accent and cover colors.
+- Private document upload, completion verification, and saved-document listing.
+- Authenticated PDF read sessions and an in-app PDF reader with navigation and fit/zoom controls.
+- Persistent blank notebook pages with blank, dotted, ruled, grid, and Cornell paper styles.
+- API validation, ownership checks, Row Level Security, and automated checks for the implemented areas.
+
+Next implementation slice:
+
+1. Open a blank notebook page in a dedicated editor route.
+2. Render its persisted paper style at full size.
+3. Add a reusable annotation layer for blank and PDF pages.
+4. Persist drawing, highlighting, erasing, and undo/redo without changing original PDFs.
+5. Add lazy PDF page thumbnails so large documents remain responsive.
+
+Document processing, OCR, retrieval, cited assistance, study generation, and review scheduling remain later roadmap work.
+
 ## 2. Phase 0: foundation and research
 
 ### Build and decide
@@ -57,6 +78,8 @@ Ship the smallest complete learning loop, test it with real students, and expand
 - Docling extraction with PaddleOCR routing for scanned pages.
 - Page previews and thumbnails.
 - PDF.js reader with page navigation, zoom, and search.
+- Persistent blank notebook pages and selectable paper styles.
+- A shared page-editor shell for blank pages and PDF pages.
 - Manual text highlights and typed notes.
 - Processing-status events.
 

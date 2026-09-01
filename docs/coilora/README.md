@@ -5,7 +5,7 @@
 > **Product:** A cross-platform, source-grounded study workspace for medical and allied-health students  
 > **Current strategy:** Web-first validation; native tablet applications after validation  
 > **Dependency policy:** Free and open-source baseline; no required paid third-party API  
-> **Version:** 0.4, 27 August 2026
+> **Version:** 0.5, 1 September 2026
 
 ## Product summary
 
@@ -14,6 +14,12 @@ Coilora combines the document-centered note-taking experience associated with Go
 **Import → Annotate → Highlight → Understand → Practice → Review**
 
 The first product is a responsive web application. It validates whether students repeatedly use this complete loop before development expands into native tablet applications. Coilora is web-first, tablet-focused, and cross-platform by design, not iPad-exclusive.
+
+## Implementation snapshot
+
+The current repository implements account authentication, a responsive library, course and notebook organization, user-selected course and notebook colors, private uploads, saved-document listing, authenticated PDF read sessions, an in-app PDF reader, and persistent blank notebook pages. Blank pages support blank, dotted, ruled, grid, and Cornell paper styles.
+
+Blank page opening and editing, drawing, highlighting, PDF annotations, text extraction, OCR, retrieval, and study-generation features are not implemented yet. The planned annotation layer will be shared by blank notebook pages and PDF pages while keeping uploaded originals unchanged.
 
 ## Current product decision
 

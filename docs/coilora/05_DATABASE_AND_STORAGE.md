@@ -29,11 +29,26 @@ Original uploads are immutable. A replacement creates a new document version rat
 
 ## 3. Core relational entities
 
+### Implemented tables
+
+```text
+profiles
+courses
+notebooks
+notebook_pages
+documents
+```
+
+`notebook_pages` stores an owner, notebook, stable position, and one of five paper styles: `blank`, `dotted`, `ruled`, `grid`, or `cornell`. A composite notebook and owner relationship prevents a page from being attached across ownership boundaries. Row Level Security restricts all page operations to the owner, and page creation and updates require an active notebook.
+
+The following list describes the target relational model as later phases are implemented.
+
 ```text
 profiles
 devices
 courses
 notebooks
+notebook_pages
 documents
 document_versions
 document_pages
@@ -62,6 +77,7 @@ erDiagram
     PROFILE ||--o{ COURSE : owns
     PROFILE ||--o{ NOTEBOOK : owns
     COURSE ||--o{ NOTEBOOK : contains
+    NOTEBOOK ||--o{ NOTEBOOK_PAGE : contains
     NOTEBOOK ||--o{ DOCUMENT : contains
     DOCUMENT ||--o{ DOCUMENT_PAGE : has
     DOCUMENT_PAGE ||--o{ SOURCE_SPAN : contains
@@ -185,5 +201,4 @@ Native offline sync will use a Coilora-owned outbox, idempotent API operations, 
 - [Supabase storage access control](https://supabase.com/docs/guides/storage/security/access-control)
 - [Supabase pgvector](https://supabase.com/docs/guides/database/extensions/pgvector)
 - [PostgreSQL full-text search](https://www.postgresql.org/docs/current/textsearch.html)
-
 
