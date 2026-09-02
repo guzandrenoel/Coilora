@@ -12,70 +12,113 @@
   <em>Shed the overload. Keep what matters.</em>
 </p>
 
-Coilora is a source-grounded study workspace for medical and allied-health students. It is being built around one continuous learning loop:
+Coilora is a source-grounded study workspace for medical and allied-health students. It brings lecture PDFs, personal notes, and annotations into one connected notebook.
+
+The intended learning loop is:
 
 **Import → Annotate → Highlight → Understand → Practice → Review**
 
-The project is in active development. Authentication, course and notebook organization, private document uploads, visual document cards, persistent notebook pages, PDF reading, freehand annotation, and page bookmarks are implemented. Document processing and AI-assisted study features remain planned.
+The project is in active development. Authentication, notebook organization, private uploads, document previews, continuous notebook reading, freehand annotations, and bookmarks are implemented. Document processing and smart study features remain planned.
 
-## Current state
+## Current features
 
-### Accounts and workspace
+### Accounts and organization
 
 - Responsive Next.js landing page and library workspace.
-- Branded interface with navigation icons, motion, and responsive layouts.
 - Email and password authentication, email confirmation, and password recovery.
 - Session refresh, protected library access, and sign-out.
 - Automatic profile creation after registration.
 - Persistent course and notebook creation and listing.
 - Optional course assignment when creating notebooks.
-- Persisted course accent colors and notebook cover colors, including yellow.
+- Persisted course accent colors and notebook cover colors.
+- Course-scoped notebook views.
 - Course and notebook archiving.
 - Course archiving is blocked while the course contains active notebooks.
-- Course-scoped notebook views and a responsive notebook workspace.
-- Persistent named notebook pages with blank, dotted, ruled, grid, and Cornell paper styles.
-- One continuous notebook viewer for standalone notes, all PDF pages, and notes inserted between PDF pages. Opening either a note or a PDF keeps the whole notebook accessible.
-- A shared thumbnail sidebar with collapsible document groups, page creation, renaming, and bookmark filtering. The far-left header panel icon opens and closes it on desktop and mobile.
-- Scroll mode, freehand pen, highlighter, and eraser tools. Optimistic strokes remain visible while saving; failed saves stay on their page with a retry action. Active or unsaved pages remain mounted when scrolled off screen.
+
+### Connected notebook viewer
+
+- One continuous reading area for standalone notes, PDF pages, and notes inserted between PDF pages.
+- Opening a note or PDF keeps the rest of its notebook accessible.
+- Shared thumbnail sidebar with collapsible document groups.
+- A far-left panel icon opens and closes the sidebar.
+- Previous/next navigation and direct jumps from page previews.
+- Fit-page, fit-width, and fixed zoom controls.
+- A back button returns to the containing notebook.
+- Responsive sidebar behavior for desktop and smaller screens.
+
+Standalone notes appear first in their saved order, followed by documents in import order. Notes attached to a PDF appear at their saved source-page positions.
+
+Collapsing a document group hides its sidebar thumbnails, not its pages in the continuous reading area.
+
+### Notes and annotations
+
+- Persistent named notebook pages.
+- Blank, dotted, ruled, grid, and Cornell paper styles.
+- Page creation and renaming from the viewer.
+- Notes can be placed before the first PDF page or after a selected PDF page.
+- Freehand pen, highlighter, and eraser tools for note pages and PDFs.
+- Selectable ink colors.
+- A compact hand icon enables scroll mode without drawing.
+- Accessible control labels, selected states, and a scroll-mode tooltip.
+- Original PDFs remain unchanged; annotations are stored separately.
+
+Completed strokes remain visible while saving. Active, pending, and failed strokes stay mounted when their pages scroll out of view.
+
+Failed saves retain the stroke and provide a retry action. Retries reuse a stable stroke ID to avoid duplicate ink after a lost response.
+
+Pending strokes are held in memory, not in an offline outbox. Keep the viewer open and retry failed saves before leaving. The app's back buttons block navigation while ink is pending, and closing or reloading the browser page requests an unsaved-work warning. Browser-history navigation is not an offline recovery mechanism.
+
+### Bookmarks
+
+- Bookmark individual notebook pages.
+- Bookmark individual PDF pages.
+- Bookmark entire documents from their tiles or sidebar groups.
+- Filter the shared sidebar to bookmarked content.
+- Bookmark state persists through the API and database.
+- PDF bookmark lists are retrieved in batches to avoid truncation at the database's default row limit.
+
+Whole-document bookmarks and individual page bookmarks are independent.
 
 ### Documents and uploads
 
 - File selection and drag-and-drop.
 - Duplicate selection prevention within the current upload queue.
 - Browser-side filename, file-type, and size checks.
-- PDF, PNG, JPG/JPEG, WEBP, TXT, and Markdown support.
-- A maximum file size of 50 MiB (52,428,800 bytes), displayed as 50 MB in the interface.
-- Document metadata stored in PostgreSQL and associated with a notebook.
+- Support for PDF, PNG, JPG/JPEG, WEBP, TXT, and Markdown uploads.
+- Maximum file size of 50 MiB (52,428,800 bytes), displayed as 50 MB in the interface.
+- Document metadata associated with a notebook.
 - Private Supabase Storage with ownership policies.
 - Authenticated upload-session creation and signed file uploads.
 - Per-file transfer percentages and progress bars.
-- Server-side upload completion checks for file presence, expected size, and stored content type.
+- Server-side completion checks for file presence, expected size, and stored content type.
 - Retry controls for failed upload stages.
-- Compact saved-document tiles with actual first-page PDF previews, image previews, and plain-text previews for TXT/Markdown. Previews load near the viewport, with at most two source downloads/renderers running at once.
-- Click a PDF preview or title to open it directly, without separate file-details or reader buttons.
-- Persistent whole-document bookmark ribbons on tiles, also available in the notebook sidebar's Bookmarks filter. These are separate from individual PDF page bookmarks.
-- Automatic saved-list refresh after successful uploads.
-- Authenticated PDF read sessions backed by short-lived signed URLs.
-- Continuous scrolling across notes and documents, previous/next navigation, fit/zoom controls, and jumps from page previews and bookmarks without leaving the notebook.
-- Virtualized main pages and thumbnail grids, with at most two PDF sources cached in the viewer and a four-million-pixel limit per rendered page canvas. Large notebooks do not mount a full-size canvas for every PDF page.
-- Persisted pen, highlighter, eraser, and per-page bookmark controls for PDFs.
-- Named notebook pages can be inserted after a PDF page and remain linked to that document position.
-- PDF rendering that keeps original uploads unchanged.
+- Automatic saved-document refresh after successful uploads.
 
-Standalone notes appear first in their saved order, followed by documents in import order. Notes linked to a PDF appear after their saved source-page position. Document groups can be collapsed in the sidebar without removing their pages from the continuous reading area. Continuous reading currently supports PDFs and notebook pages; other uploaded formats retain their library previews. Very large or complex PDFs still take time to download and render.
+Saved documents use compact tiles with actual first-page PDF previews, image previews, or plain-text previews for TXT/Markdown. Clicking a PDF preview or title opens it directly in its notebook, without separate file-details or reader buttons.
 
-Save retries reuse a stable stroke ID to avoid duplicate ink after a lost response. Pending strokes are held in memory, not an offline outbox: keep the viewer open and retry failed saves before leaving. The app's back buttons wait for pending ink; closing or reloading the browser page warns before discarding it. Browser-history navigation is not an offline recovery mechanism.
+Continuous reading currently supports PDFs and notebook pages. Other supported file formats retain their library previews.
+
+### Large-document handling
+
+- Main pages and sidebar thumbnail grids are virtualized.
+- Only nearby pages render, except pages retained for active or unsaved ink.
+- The viewer caches at most two PDF sources at a time.
+- Each rendered page canvas is limited to four million pixels.
+- Library previews load near the viewport, with at most two source downloads/renderers running concurrently.
+- PDF reading supports documents containing up to 5,000 pages.
+
+These limits avoid creating a full-size canvas for every page in a large notebook. They do not eliminate download or rendering costs: large files and complex PDF pages can still take time to open.
 
 ### Backend and development foundation
 
 - Separate Next.js web and NestJS API workspaces.
 - Supabase access-token verification through JWKS.
 - Protected API routes and a current-user identity endpoint.
-- User-scoped database clients and Row Level Security policies.
-- Versioned database migrations for profiles, courses, notebooks, notebook pages, page bookmarks, annotations, and documents.
-- Row Level Security policies for user-owned notebook pages, bookmarks, annotations, and private documents.
-- Generated database types shared across the API and web applications.
-- TypeScript, linting, API unit tests, API HTTP tests, and production-build checks.
+- User-scoped database clients.
+- Row Level Security policies for notebooks, pages, annotations, bookmarks, and documents.
+- Versioned database migrations.
+- Generated database types used by the API and web applications.
+- TypeScript, linting, unit tests, API HTTP tests, and production-build checks.
 - Product, architecture, security, and delivery documentation.
 
 ## Upload behavior
@@ -84,33 +127,52 @@ Save retries reuse a stable stroke ID to avoid duplicate ink after a lost respon
 2. Choose study materials.
 3. Select the destination under **Save to notebook**.
 4. Click **Upload**.
-5. Watch the transfer progress and verification status.
-6. Find completed uploads under **Saved documents**.
+5. Watch transfer progress and verification status.
+6. Find completed uploads in the notebook's documents section.
 
-The upload queue and saved-document list serve different purposes:
+The upload queue and saved documents serve different purposes:
 
 - The upload queue is temporary and resets when the page reloads.
-- **Remove** and **Clear list** only remove entries from that queue. They do not delete saved files.
+- **Remove** and **Clear list** remove queue entries only. They do not delete saved files.
 - Saved documents are loaded from the API and remain available after a reload.
-- Select the notebook again after reloading to view its documents.
 - Uploads run sequentially. Keep the page open until they finish.
-- Retry controls are available while the current queue remains open. Uploads are not resumable across page reloads.
+- Failed uploads can be retried while their queue entries remain available.
+- Uploads are not resumable across page reloads.
 
 **Uploaded means saved to storage, not processed for studying.**
 
 The completion endpoint checks storage metadata. It does not yet inspect document contents, scan for malware, extract text, perform OCR, or build a search index. Waiting will not start those unimplemented processing stages.
 
-## Planned next
+## Planned work
+
+The following features are not yet implemented.
+
+### Editing and document processing
 
 - Undo and redo for durable annotation edits.
 - Additional page management, including reordering and deletion safeguards.
+- Typed page notes and text-selection highlights.
+- PDF search and citation navigation.
 - Document-content validation and background processing.
 - Text extraction, OCR, and search indexing.
-- Source-grounded explanations with citations.
-- Study-item generation, practice, and review.
-- Native tablet support after validation of the web study workflow.
 
-The [development roadmap](./docs/coilora/10_DEVELOPMENT_ROADMAP.md) describes the intended scope and sequencing. Roadmap features should not be assumed to be implemented.
+### Smart study features
+
+- Source-grounded questions and explanations with clickable citations.
+- Clear insufficient-evidence responses when uploaded sources do not support an answer.
+- Suggested highlights presented for acceptance, rejection, or adjustment.
+- Editable flashcards and practice questions linked to their source pages.
+- Image-occlusion study items.
+- Review queues, spaced-repetition scheduling, and weak-topic tracking.
+
+Smart features are intended to help students work with their own materials. Suggestions must remain reviewable, generated study items must retain source references, and original documents must not be overwritten.
+
+### Platform expansion
+
+- Native tablet applications and stylus-focused workflows.
+- Offline capabilities after the web study workflow is validated.
+
+The [development roadmap](./docs/coilora/10_DEVELOPMENT_ROADMAP.md) describes the intended scope and sequencing. Roadmap features should not be assumed to be available.
 
 ## Local development
 
@@ -167,7 +229,7 @@ Replace `YOUR_PROJECT_REF` and `YOUR_PUBLISHABLE_KEY` with values from the same 
 
 The localhost addresses, port, and `authenticated` audience can remain as shown for the default local setup.
 
-Never commit local environment files, database passwords, service-role keys, or signed upload tokens. The current application uses a publishable key together with the authenticated user's access token for user-scoped database operations.
+Never commit local environment files, database passwords, service-role keys, access tokens, or signed upload credentials. The application uses a publishable key together with the authenticated user's access token for user-scoped database operations.
 
 ### Prepare Supabase
 
@@ -192,7 +254,7 @@ npx supabase db push
 
 This command changes the linked remote database. Do not apply migrations to an unintended project.
 
-The committed migrations create the application tables, ownership policies, and private `documents` storage bucket. Keep this bucket private.
+The repository's migrations create the application tables, ownership policies, and private `documents` storage bucket. Keep this bucket private.
 
 For an existing environment, let the CLI track applied migrations. Do not manually rerun or rewrite an already-applied migration.
 
@@ -217,7 +279,7 @@ Local services:
 - Web application: [http://localhost:3000](http://localhost:3000)
 - API health check: [http://localhost:4000/v1/health](http://localhost:4000/v1/health)
 
-The root `dev` command starts only the web application. Keep the API running for course, notebook, identity, and document operations.
+The root `dev` command starts only the web application. Keep the API running for course, notebook, document, annotation, and bookmark operations.
 
 ## Quality checks
 
@@ -244,28 +306,45 @@ npm run check --workspace @coilora/api
 npm run check --workspace @coilora/web
 ```
 
-Current automated tests cover API schemas, service behavior, notebook-page persistence, document reading, owner-scoped annotation retries, authentication rejection on selected routes, and selected web library behavior. Viewer tests cover mixed note/PDF ordering, insertion positions, scroll anchoring, a 5,000-page virtualized timeline, and bounded PDF resource acquisition and cleanup.
+Automated coverage includes:
 
-Real upload progress and saved-document display have also been checked manually during development. Automated checks are not a substitute for browser testing or verification of deployed authorization policies.
+- API schemas and service behavior.
+- Notebook-page persistence and document reading.
+- Owner- and target-scoped annotation retries.
+- Authentication rejection on selected API routes.
+- Long PDF bookmark lists.
+- Library filtering and sorting.
+- Annotation coordinate calculations.
+- Mixed note/PDF ordering and insertion positions.
+- Scroll anchoring and fit-layout calculations.
+- A simulated 5,000-page virtualized timeline.
+- Bounded PDF resource acquisition, cancellation, eviction, and cleanup.
+
+Automated checks are not a substitute for browser testing with real documents or verification of deployed authorization policies. Passing the timeline tests does not guarantee identical performance across devices or PDF files.
 
 ## Repository structure
 
 ```text
 apps/
   api/
+    src/annotations/      Notebook/PDF annotations and PDF page bookmarks
     src/auth/             Access-token verification and authentication guards
     src/config/           Environment validation
     src/courses/          Course operations
     src/database/         User-scoped clients and generated database types
-    src/documents/        Document metadata and upload services
-    src/notebooks/        Notebook and blank-page operations
+    src/documents/        Document metadata, upload, read, and preview services
+    src/notebooks/        Notebook and note-page operations
     test/                 API HTTP tests and test configuration
 
   web/
     public/brand/         Runtime brand assets
     src/app/              Routes, authentication screens, and layouts
     src/components/       Shared interface components and icons
-    src/features/         Library, upload, and saved-document interfaces
+    src/features/editor/  Annotation canvas and editor controls
+    src/features/library/ Library workspace
+    src/features/materials/ Uploads, document tiles, and previews
+    src/features/notebook/ Shared continuous notebook viewer
+    src/features/reader/  PDF route integration and reading utilities
     src/lib/api/          Authenticated browser-to-API clients
     src/lib/supabase/     Browser, server, and session Supabase clients
     src/types/            Generated database types
@@ -276,18 +355,19 @@ supabase/                 Supabase configuration and database migrations
 
 The repository uses npm workspaces. The web application and API run as separate applications.
 
-A background worker is planned for document processing. It is not implemented yet.
+A background worker for document processing is planned but not implemented.
 
 Start with the [documentation index](./docs/coilora/README.md) for product scope, architecture, security boundaries, API design, and the implementation roadmap.
 
 ## Product boundaries
 
-- The upload workflow stores original file contents without rewriting them and does not overwrite existing objects.
+- Original uploads are stored without rewriting or overwriting their contents.
+- Annotations and inserted note pages are stored separately from source PDFs.
 - Application authorization is enforced through authenticated API routes and database and storage policies.
 - Identifiable patient information is prohibited in the initial release.
 - Document processing and content-safety checks remain incomplete.
-- Planned annotation tools must preserve source documents.
 - Planned explanations and generated study items must preserve citations.
 - Suggested changes to study material must remain under the user's control.
+- Pending web edits do not currently have durable offline recovery.
 
 Coilora is web-first, not web-only. Native tablet applications and stylus-focused workflows are planned after the complete study loop is validated with target students.
