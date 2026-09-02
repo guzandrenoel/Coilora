@@ -117,6 +117,23 @@ describe('AppController (e2e)', () => {
       .expect(401);
   });
 
+  for (const token of [null, 'Bearer not-a-valid-jwt']) {
+    it(`preview sessions reject ${token ? 'invalid' : 'missing'} tokens`, () => {
+      const operation = request(app.getHttpServer()).post(
+        '/v1/documents/00000000-0000-4000-8000-000000000000/preview-session',
+      );
+      if (token) operation.set('Authorization', token);
+      return operation.expect(401);
+    });
+    it(`document bookmarks reject ${token ? 'invalid' : 'missing'} tokens`, () => {
+      const operation = request(app.getHttpServer()).patch(
+        '/v1/notebooks/00000000-0000-4000-8000-000000000000/documents/00000000-0000-4000-8000-000000000000/bookmark',
+      );
+      if (token) operation.set('Authorization', token);
+      return operation.send({ bookmarked: true }).expect(401);
+    });
+  }
+
   it('PDF read sessions reject invalid tokens', () => {
     return request(app.getHttpServer())
       .post('/v1/documents/00000000-0000-4000-8000-000000000000/read-session')

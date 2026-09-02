@@ -79,6 +79,7 @@ export class DocumentPageAnnotationsService {
     const { data, error } = await client
       .from('annotations')
       .insert({
+        ...(input.id ? { id: input.id } : {}),
         owner_id: user.id,
         notebook_page_id: null,
         document_id: documentId,
@@ -92,6 +93,21 @@ export class DocumentPageAnnotationsService {
       .select(annotationSelection)
       .single();
 
+    if (error?.code === '23505' && input.id) {
+      const { data: existing, error: lookupError } = await client
+        .from('annotations')
+        .select(annotationSelection)
+        .eq('id', input.id)
+        .eq('owner_id', user.id)
+        .eq('document_id', documentId)
+        .eq('document_page_number', documentPageNumber)
+        .is('notebook_page_id', null)
+        .maybeSingle();
+      if (!lookupError && existing) return existing;
+      throw new ServiceUnavailableException(
+        'The annotation retry could not be verified.',
+      );
+    }
     if (error?.code === '23503' || error?.code === '42501') {
       throw new NotFoundException('The PDF page is no longer available.');
     }
@@ -135,23 +151,35 @@ export class DocumentPageAnnotationsService {
 
   async listBookmarks(user: AuthenticatedUser, documentId: string) {
     const { client } = await this.getDocument(user, documentId);
-    const { data, error } = await client
-      .from('page_bookmarks')
-      .select('document_page_number')
-      .eq('owner_id', user.id)
-      .eq('document_id', documentId)
-      .order('document_page_number', { ascending: true });
-
-    if (error || !data) {
-      throw new ServiceUnavailableException(
-        'PDF bookmarks could not be loaded.',
-      );
-    }
-    return {
-      pages: data.flatMap((item) =>
+    const pages: number[] = [];
+    let cursor = 0;
+    // Keyset batches avoid silently losing bookmarks beyond the row limit.
+    while (cursor < 5000) {
+      const { data, error } = await client
+        .from('page_bookmarks')
+        .select('document_page_number')
+        .eq('owner_id', user.id)
+        .eq('document_id', documentId)
+        .gt('document_page_number', cursor)
+        .order('document_page_number', { ascending: true })
+        .limit(500);
+      if (error || !data)
+        throw new ServiceUnavailableException(
+          'PDF bookmarks could not be loaded.',
+        );
+      const batch = data.flatMap((item) =>
         item.document_page_number === null ? [] : [item.document_page_number],
-      ),
-    };
+      );
+      pages.push(...batch);
+      if (data.length < 500) break;
+      const last = batch[batch.length - 1];
+      if (!last || last <= cursor)
+        throw new ServiceUnavailableException(
+          'PDF bookmark pagination failed.',
+        );
+      cursor = last;
+    }
+    return { pages };
   }
 
   async setBookmark(

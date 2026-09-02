@@ -19,11 +19,9 @@ const notebookId = '00000000-0000-4000-8000-000000000002';
 const documentId = '00000000-0000-4000-8000-000000000003';
 const otherId = '00000000-0000-4000-8000-000000000004';
 
-const expectedPath =
-  `users/${user.id}/documents/${documentId}/source/v1.pdf`;
+const expectedPath = `users/${user.id}/documents/${documentId}/source/v1.pdf`;
 
-const signedUrl =
-  'https://storage.example.invalid/test.pdf?token=test-token';
+const signedUrl = 'https://storage.example.invalid/test.pdf?token=test-token';
 
 function setup() {
   const document = {
@@ -103,6 +101,82 @@ function setup() {
 }
 
 describe('DocumentReadService', () => {
+  it.each([
+    ['image', 'image/png', 'png'],
+    ['image', 'image/jpeg', 'jpg'],
+    ['image', 'image/webp', 'webp'],
+    ['text', 'text/plain', 'txt'],
+    ['markdown', 'text/plain', 'txt'],
+    ['markdown', 'text/markdown', 'md'],
+    ['markdown', 'text/x-markdown', 'md'],
+  ])(
+    'previews %s/%s using its canonical %s source',
+    async (sourceType, mediaType, extension) => {
+      const { service, document, documentQuery, bucket } = setup();
+      const path = expectedPath.replace('v1.pdf', 'v1.' + extension);
+      documentQuery.maybeSingle.mockResolvedValueOnce({
+        data: {
+          ...document,
+          source_type: sourceType,
+          media_type: mediaType,
+          source_object_path: path,
+        },
+        error: null,
+      });
+      await expect(
+        service.createSession(user, documentId, true),
+      ).resolves.toMatchObject({ documentId, mediaType, expiresIn: 300 });
+      expect(bucket.createSignedUrl).toHaveBeenCalledWith(path, 300);
+    },
+  );
+
+  it('does not allow non-PDF files into the PDF reader endpoint', async () => {
+    const { service, document, documentQuery, bucket } = setup();
+    documentQuery.maybeSingle.mockResolvedValueOnce({
+      data: {
+        ...document,
+        source_type: 'image',
+        media_type: 'image/png',
+        source_object_path: expectedPath.replace('.pdf', '.png'),
+      },
+      error: null,
+    });
+    await expect(service.createSession(user, documentId)).rejects.toThrow(
+      ConflictException,
+    );
+    expect(bucket.createSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { source_type: 'image', media_type: 'application/pdf' },
+    { source_type: 'pdf', media_type: 'image/png' },
+    { source_object_path: expectedPath.replace(user.id, otherId) },
+    { status: 'quarantined' },
+  ])('rejects unsafe preview metadata: %j', async (changes) => {
+    const { service, document, documentQuery, bucket } = setup();
+    documentQuery.maybeSingle.mockResolvedValueOnce({
+      data: { ...document, ...changes },
+      error: null,
+    });
+    await expect(service.createSession(user, documentId, true)).rejects.toThrow(
+      ConflictException,
+    );
+    expect(bucket.createSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it.each(['documents', 'notebooks'])(
+    'does not preview inaccessible %s',
+    async (table) => {
+      const { service, documentQuery, notebookQuery, bucket } = setup();
+      const query = table === 'documents' ? documentQuery : notebookQuery;
+      query.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+      await expect(
+        service.createSession(user, documentId, true),
+      ).rejects.toThrow(NotFoundException);
+      expect(bucket.createSignedUrl).not.toHaveBeenCalled();
+    },
+  );
+
   it('checks ownership and signs the canonical PDF path for five minutes', async () => {
     const {
       service,
@@ -114,9 +188,7 @@ describe('DocumentReadService', () => {
       bucket,
     } = setup();
 
-    await expect(
-      service.createSession(user, documentId),
-    ).resolves.toEqual({
+    await expect(service.createSession(user, documentId)).resolves.toEqual({
       documentId,
       notebookId,
       title: document.title,
@@ -148,25 +220,18 @@ describe('DocumentReadService', () => {
   it.each(['documents', 'notebooks'])(
     'does not sign when the %s lookup finds no accessible record',
     async (table) => {
-      const {
-        service,
-        client,
-        documentQuery,
-        notebookQuery,
-        bucket,
-      } = setup();
+      const { service, client, documentQuery, notebookQuery, bucket } = setup();
 
-      const query =
-        table === 'documents' ? documentQuery : notebookQuery;
+      const query = table === 'documents' ? documentQuery : notebookQuery;
 
       query.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });
 
-      await expect(
-        service.createSession(user, documentId),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.createSession(user, documentId)).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(client.storage.from).not.toHaveBeenCalled();
       expect(bucket.createSignedUrl).not.toHaveBeenCalled();
@@ -176,25 +241,18 @@ describe('DocumentReadService', () => {
   it.each(['documents', 'notebooks'])(
     'does not sign when the %s lookup fails',
     async (table) => {
-      const {
-        service,
-        client,
-        documentQuery,
-        notebookQuery,
-        bucket,
-      } = setup();
+      const { service, client, documentQuery, notebookQuery, bucket } = setup();
 
-      const query =
-        table === 'documents' ? documentQuery : notebookQuery;
+      const query = table === 'documents' ? documentQuery : notebookQuery;
 
       query.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: { code: '08006' },
       });
 
-      await expect(
-        service.createSession(user, documentId),
-      ).rejects.toThrow(ServiceUnavailableException);
+      await expect(service.createSession(user, documentId)).rejects.toThrow(
+        ServiceUnavailableException,
+      );
 
       expect(client.storage.from).not.toHaveBeenCalled();
       expect(bucket.createSignedUrl).not.toHaveBeenCalled();
@@ -212,9 +270,9 @@ describe('DocumentReadService', () => {
       error: null,
     });
 
-    await expect(
-      service.createSession(user, documentId),
-    ).rejects.toThrow(ConflictException);
+    await expect(service.createSession(user, documentId)).rejects.toThrow(
+      ConflictException,
+    );
 
     expect(bucket.createSignedUrl).not.toHaveBeenCalled();
   });
@@ -236,30 +294,27 @@ describe('DocumentReadService', () => {
       error: null,
     });
 
-    await expect(
-      service.createSession(user, documentId),
-    ).rejects.toThrow(ConflictException);
+    await expect(service.createSession(user, documentId)).rejects.toThrow(
+      ConflictException,
+    );
 
     expect(bucket.createSignedUrl).not.toHaveBeenCalled();
   });
 
-  it.each([0, -1, 1.5])(
-    'rejects an invalid revision: %s',
-    async (revision) => {
-      const { service, document, documentQuery, bucket } = setup();
+  it.each([0, -1, 1.5])('rejects an invalid revision: %s', async (revision) => {
+    const { service, document, documentQuery, bucket } = setup();
 
-      documentQuery.maybeSingle.mockResolvedValueOnce({
-        data: { ...document, revision },
-        error: null,
-      });
+    documentQuery.maybeSingle.mockResolvedValueOnce({
+      data: { ...document, revision },
+      error: null,
+    });
 
-      await expect(
-        service.createSession(user, documentId),
-      ).rejects.toThrow(ConflictException);
+    await expect(service.createSession(user, documentId)).rejects.toThrow(
+      ConflictException,
+    );
 
-      expect(bucket.createSignedUrl).not.toHaveBeenCalled();
-    },
-  );
+    expect(bucket.createSignedUrl).not.toHaveBeenCalled();
+  });
 
   it.each([
     null,
@@ -274,9 +329,9 @@ describe('DocumentReadService', () => {
       error: null,
     });
 
-    await expect(
-      service.createSession(user, documentId),
-    ).rejects.toThrow(ConflictException);
+    await expect(service.createSession(user, documentId)).rejects.toThrow(
+      ConflictException,
+    );
 
     expect(bucket.createSignedUrl).not.toHaveBeenCalled();
   });
@@ -290,8 +345,8 @@ describe('DocumentReadService', () => {
 
     bucket.createSignedUrl.mockResolvedValueOnce(response);
 
-    await expect(
-      service.createSession(user, documentId),
-    ).rejects.toThrow(ServiceUnavailableException);
+    await expect(service.createSession(user, documentId)).rejects.toThrow(
+      ServiceUnavailableException,
+    );
   });
 });

@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/features/reader/pdf-layout.test.mjs src/features/library/library-view.test.mjs src/features/editor/annotation-geometry.test.mjs",
+    "test": "node --experimental-strip-types --test src/features/reader/pdf-layout.test.mjs src/features/library/library-view.test.mjs src/features/editor/annotation-geometry.test.mjs src/features/notebook/notebook-timeline.test.mjs src/features/notebook/resource-pool.test.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
     "predev": "node scripts/prepare-pdf-assets.mjs",
     "prebuild": "node scripts/prepare-pdf-assets.mjs"

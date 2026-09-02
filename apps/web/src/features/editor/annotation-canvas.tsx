@@ -1,12 +1,10 @@
 "use client";
-
 import {
   useEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-
 import {
   createPageAnnotation,
   deletePageAnnotation,
@@ -19,7 +17,7 @@ import {
 } from "@/lib/api/document-annotations-client";
 import type {
   AnnotationKind,
-  AnnotationPoint,
+  CreateAnnotationInput,
   PageAnnotation,
 } from "@/lib/api/types";
 import {
@@ -29,39 +27,14 @@ import {
 } from "./annotation-geometry";
 import styles from "./annotation-canvas.module.css";
 
-export type EditorTool = AnnotationKind | "eraser";
-
-type PendingStroke = {
-  id: string;
-  kind: AnnotationKind;
-  points: AnnotationPoint[];
-  color: string;
-  width: number;
-  opacity: number;
+export type EditorTool = AnnotationKind | "eraser" | "pan";
+type PendingStroke = CreateAnnotationInput & { id: string; failed?: boolean };
+const settings = {
+  ink: { width: 0.004, opacity: 1 },
+  highlight: { width: 0.03, opacity: 0.35 },
 };
-
-const toolSettings: Record<
-  AnnotationKind,
-  { width: number; opacity: number }
-> = {
-  ink: {
-    width: 0.004,
-    opacity: 1,
-  },
-  highlight: {
-    width: 0.03,
-    opacity: 0.35,
-  },
-};
-
-function sortAnnotations(
-  annotations: PageAnnotation[],
-) {
-  return [...annotations].sort(
-    (first, second) =>
-      first.z_index - second.z_index,
-  );
-}
+const sorted = (items: PageAnnotation[]) =>
+  [...items].sort((a, b) => a.z_index - b.z_index);
 
 export function AnnotationCanvas({
   notebookId,
@@ -70,6 +43,7 @@ export function AnnotationCanvas({
   documentPageNumber,
   tool,
   color,
+  onBusyChange,
 }: {
   notebookId?: string;
   pageId?: string;
@@ -77,63 +51,54 @@ export function AnnotationCanvas({
   documentPageNumber?: number;
   tool: EditorTool;
   color: string;
+  onBusyChange?: (busy: boolean) => void;
 }) {
-  const [annotations, setAnnotations] = useState<
-    PageAnnotation[]
-  >([]);
-  const [draft, setDraft] = useState<
-    AnnotationPoint[] | null
-  >(null);
-  const [pendingStrokes, setPendingStrokes] = useState<PendingStroke[]>([]);
+  const [annotations, setAnnotations] = useState<PageAnnotation[]>([]);
+  const [draft, setDraft] = useState<PendingStroke | null>(null);
+  const [pending, setPending] = useState<PendingStroke[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pendingOperations, setPendingOperations] =
-    useState(0);
-  const [error, setError] = useState<string | null>(
-    null,
-  );
-
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [operations, setOperations] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const activePointer = useRef<number | null>(null);
-  const draftPoints = useRef<AnnotationPoint[]>([]);
+  const stroke = useRef<PendingStroke | null>(null);
+  const saving = useRef(new Set<string>());
+  const erasing = useRef(new Set<string>());
+  const busy = draft !== null || pending.length > 0 || operations > 0;
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function loadAnnotations() {
+    async function load() {
       setLoading(true);
+      setLoadFailed(false);
       setError(null);
-      setAnnotations([]);
-      setPendingStrokes([]);
-
       try {
         const loaded: PageAnnotation[] = [];
-        let nextPage: number | null = 0;
-
-        while (nextPage !== null) {
-          const result: {
-            items: PageAnnotation[];
-            nextPage: number | null;
-          } =
-            documentId !== undefined && documentPageNumber !== undefined
+        let cursor: number | null = 0;
+        while (cursor !== null && !cancelled) {
+          const result: { items: PageAnnotation[]; nextPage: number | null } =
+            documentId && documentPageNumber
               ? await getDocumentPageAnnotations(
                   documentId,
                   documentPageNumber,
-                  nextPage,
+                  cursor,
                 )
               : await getPageAnnotations(
                   notebookId ?? "",
                   pageId ?? "",
-                  nextPage,
+                  cursor,
                 );
-
           loaded.push(...result.items);
-          nextPage = result.nextPage;
+          cursor = result.nextPage;
         }
-
-        if (!cancelled) {
-          setAnnotations(sortAnnotations(loaded));
-        }
+        if (!cancelled) setAnnotations(sorted(loaded));
       } catch (reason) {
         if (!cancelled) {
+          setLoadFailed(true);
           setError(
             reason instanceof Error
               ? reason.message
@@ -141,252 +106,179 @@ export function AnnotationCanvas({
           );
         }
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
-
-    void loadAnnotations();
-
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [documentId, documentPageNumber, notebookId, pageId]);
+  }, [notebookId, pageId, documentId, documentPageNumber, loadAttempt]);
 
-  function getPoint(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ) {
+  function point(event: ReactPointerEvent<SVGSVGElement>) {
     return getNormalizedPoint(
       event.clientX,
       event.clientY,
       event.currentTarget.getBoundingClientRect(),
     );
   }
-
-  function beginStroke(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ) {
+  function begin(event: ReactPointerEvent<SVGSVGElement>) {
     if (
+      tool === "pan" ||
       tool === "eraser" ||
       loading ||
-      event.button !== 0
-    ) {
+      loadFailed ||
+      event.button !== 0 ||
+      activePointer.current !== null
+    )
       return;
-    }
-
     event.preventDefault();
-    event.currentTarget.setPointerCapture(
-      event.pointerId,
-    );
-
-    const point = getPoint(event);
-
+    event.currentTarget.setPointerCapture(event.pointerId);
     activePointer.current = event.pointerId;
-    draftPoints.current = [point];
-    setDraft([point]);
-  }
-
-  function continueStroke(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ) {
-    if (
-      activePointer.current !== event.pointerId ||
-      tool === "eraser"
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const point = getPoint(event);
-
-    if (
-      draftPoints.current.length >= 4096 ||
-      !shouldAppendPoint(
-        draftPoints.current,
-        point,
-      )
-    ) {
-      return;
-    }
-
-    draftPoints.current = [
-      ...draftPoints.current,
-      point,
-    ];
-
-    setDraft(draftPoints.current);
-  }
-
-  async function finishStroke(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ) {
-    if (
-      activePointer.current !== event.pointerId ||
-      tool === "eraser"
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (
-      event.currentTarget.hasPointerCapture(
-        event.pointerId,
-      )
-    ) {
-      event.currentTarget.releasePointerCapture(
-        event.pointerId,
-      );
-    }
-
-    const point = getPoint(event);
-
-    if (
-      draftPoints.current.length < 4096 &&
-      shouldAppendPoint(
-        draftPoints.current,
-        point,
-        0.0001,
-      )
-    ) {
-      draftPoints.current = [
-        ...draftPoints.current,
-        point,
-      ];
-    }
-
-    const completedPoints = draftPoints.current;
-
-    activePointer.current = null;
-    draftPoints.current = [];
-    setDraft(null);
-
-    if (completedPoints.length < 2) {
-     return;
-    }
-
-    const settings = toolSettings[tool];
-    const pendingId = crypto.randomUUID();
-    const pendingStroke: PendingStroke = {
-      id: pendingId,
+    stroke.current = {
+      id: crypto.randomUUID(),
       kind: tool,
-      points: completedPoints,
+      points: [point(event)],
       color,
-      width: settings.width,
-      opacity: settings.opacity,
+      ...settings[tool],
     };
-
-    setPendingStrokes((current) => [...current, pendingStroke]);
-    setPendingOperations((current) => current + 1);
-    setError(null);
-
+    setDraft(stroke.current);
+  }
+  function move(event: ReactPointerEvent<SVGSVGElement>) {
+    if (event.pointerId !== activePointer.current || !stroke.current) return;
+    event.preventDefault();
+    const next = point(event);
+    if (
+      stroke.current.points.length >= 4096 ||
+      !shouldAppendPoint(stroke.current.points, next)
+    )
+      return;
+    stroke.current = {
+      ...stroke.current,
+      points: [...stroke.current.points, next],
+    };
+    setDraft(stroke.current);
+  }
+  async function save(item: PendingStroke) {
+    if (saving.current.has(item.id)) return;
+    saving.current.add(item.id);
+    setOperations((value) => value + 1);
+    setPending((current) =>
+      current.map((stroke) =>
+        stroke.id === item.id ? { ...stroke, failed: false } : stroke,
+      ),
+    );
     try {
-      const input = {
-        kind: tool,
-        points: completedPoints,
-        color,
-        width: settings.width,
-        opacity: settings.opacity,
+      const input: CreateAnnotationInput = {
+        id: item.id,
+        kind: item.kind,
+        points: item.points,
+        color: item.color,
+        width: item.width,
+        opacity: item.opacity,
       };
       const created =
-        documentId !== undefined && documentPageNumber !== undefined
+        documentId && documentPageNumber
           ? await createDocumentPageAnnotation(
               documentId,
               documentPageNumber,
               input,
             )
-          : await createPageAnnotation(
-              notebookId ?? "",
-              pageId ?? "",
-              input,
-            );
-
+          : await createPageAnnotation(notebookId ?? "", pageId ?? "", input);
       setAnnotations((current) =>
-        sortAnnotations([...current, created]),
+        sorted([
+          ...current.filter((annotation) => annotation.id !== created.id),
+          created,
+        ]),
+      );
+      setPending((current) =>
+        current.filter((stroke) => stroke.id !== item.id),
       );
     } catch (reason) {
+      setPending((current) =>
+        current.map((stroke) =>
+          stroke.id === item.id ? { ...stroke, failed: true } : stroke,
+        ),
+      );
       setError(
-        reason instanceof Error
-          ? reason.message
-          : "The annotation could not be saved.",
+        reason instanceof Error ? reason.message : "Ink could not be saved.",
       );
     } finally {
-      setPendingStrokes((current) =>
-        current.filter((stroke) => stroke.id !== pendingId),
-      );
-      setPendingOperations((current) =>
-        Math.max(0, current - 1),
-      );
+      saving.current.delete(item.id);
+      setOperations((value) => Math.max(0, value - 1));
     }
   }
-
-  function cancelStroke(
-    event: ReactPointerEvent<SVGSVGElement>,
-  ) {
+  function finish(event: ReactPointerEvent<SVGSVGElement>) {
+    if (event.pointerId !== activePointer.current || !stroke.current) return;
+    event.preventDefault();
+    const next = point(event);
+    const current = stroke.current;
     if (
-      activePointer.current !== event.pointerId
-    ) {
-      return;
-    }
-
+      current.points.length < 4096 &&
+      shouldAppendPoint(current.points, next, 0.0001)
+    )
+      current.points = [...current.points, next];
     activePointer.current = null;
-    draftPoints.current = [];
+    stroke.current = null;
     setDraft(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    if (current.points.length < 2) return;
+    setPending((items) => [...items, current]);
+    setError(null);
+    void save(current);
   }
-
-  async function eraseAnnotation(
+  function cancel(event: ReactPointerEvent<SVGSVGElement>) {
+    if (event.pointerId !== activePointer.current) return;
+    // Keep collected ink if the device interrupts a pointer gesture.
+    const current = stroke.current;
+    activePointer.current = null;
+    stroke.current = null;
+    setDraft(null);
+    if (current && current.points.length >= 2) {
+      setPending((items) => [...items, current]);
+      void save(current);
+    }
+  }
+  async function erase(
     annotation: PageAnnotation,
     event: ReactPointerEvent<SVGPathElement>,
   ) {
-    if (tool !== "eraser") return;
-
+    if (tool !== "eraser" || erasing.current.has(annotation.id)) return;
     event.preventDefault();
     event.stopPropagation();
-
-    setAnnotations((current) =>
-      current.filter(
-        (item) => item.id !== annotation.id,
-      ),
+    erasing.current.add(annotation.id);
+    setAnnotations((items) =>
+      items.filter((item) => item.id !== annotation.id),
     );
-    setPendingOperations((current) => current + 1);
+    setOperations((value) => value + 1);
     setError(null);
-
     try {
-      if (documentId !== undefined && documentPageNumber !== undefined) {
+      if (documentId && documentPageNumber)
         await deleteDocumentPageAnnotation(
           documentId,
           documentPageNumber,
           annotation.id,
         );
-      } else {
+      else
         await deletePageAnnotation(
           notebookId ?? "",
           pageId ?? "",
           annotation.id,
         );
-      }
     } catch (reason) {
-      setAnnotations((current) =>
-        sortAnnotations([...current, annotation]),
-      );
+      setAnnotations((items) => sorted([...items, annotation]));
       setError(
         reason instanceof Error
           ? reason.message
           : "The annotation could not be erased.",
       );
     } finally {
-      setPendingOperations((current) =>
-        Math.max(0, current - 1),
-      );
+      erasing.current.delete(annotation.id);
+      setOperations((value) => Math.max(0, value - 1));
     }
   }
-
-  const draftKind =
-    tool === "eraser" ? "ink" : tool;
-  const draftSettings = toolSettings[draftKind];
-
+  const failed = pending.filter((item) => item.failed);
   return (
     <>
       <svg
@@ -395,14 +287,13 @@ export function AnnotationCanvas({
         viewBox="0 0 1 1"
         preserveAspectRatio="none"
         role="img"
-        aria-label="Notebook annotation canvas"
-        aria-busy={loading || pendingOperations > 0}
-        onPointerDown={beginStroke}
-        onPointerMove={continueStroke}
-        onPointerUp={(event) =>
-          void finishStroke(event)
-        }
-        onPointerCancel={cancelStroke}
+        aria-label="Page annotation canvas"
+        aria-busy={loading || operations > 0}
+        onPointerDown={begin}
+        onPointerMove={move}
+        onPointerUp={finish}
+        onPointerCancel={cancel}
+        onLostPointerCapture={cancel}
       >
         {annotations.map((annotation) => (
           <path
@@ -412,57 +303,66 @@ export function AnnotationCanvas({
             stroke={annotation.color}
             strokeWidth={annotation.width}
             opacity={annotation.opacity}
-            pointerEvents={
-              tool === "eraser" ? "stroke" : "none"
-            }
-            onPointerDown={(event) =>
-              void eraseAnnotation(annotation, event)
-            }
+            pointerEvents={tool === "eraser" ? "stroke" : "none"}
+            onPointerDown={(event) => void erase(annotation, event)}
           />
         ))}
-
-        {pendingStrokes.map((stroke) => (
+        {pending.map((item) => (
           <path
             className={styles.stroke}
-            key={stroke.id}
-            d={pointsToSvgPath(stroke.points)}
-            stroke={stroke.color}
-            strokeWidth={stroke.width}
-            opacity={stroke.opacity}
+            key={item.id}
+            d={pointsToSvgPath(item.points)}
+            stroke={item.color}
+            strokeWidth={item.width}
+            opacity={item.opacity}
             pointerEvents="none"
           />
         ))}
-
-        {draft && draft.length > 1 ? (
+        {draft && draft.points.length > 1 ? (
           <path
             className={styles.draft}
-            d={pointsToSvgPath(draft)}
-            stroke={color}
-            strokeWidth={draftSettings.width}
-            opacity={draftSettings.opacity}
+            d={pointsToSvgPath(draft.points)}
+            stroke={draft.color}
+            strokeWidth={draft.width}
+            opacity={draft.opacity}
           />
         ) : null}
       </svg>
-
-      {loading ? (
+      {loading || operations > 0 ? (
         <p className={styles.status} role="status">
-          Loading annotations...
-        </p>
-      ) : pendingOperations > 0 ? (
-        <p className={styles.status} role="status">
-          Saving...
+          {loading ? "Loading annotations..." : "Saving..."}
         </p>
       ) : null}
-
-      {error ? (
+      {error || failed.length ? (
         <div className={styles.error}>
-          <span role="alert">{error}</span>
-          <button
-            type="button"
-            onClick={() => setError(null)}
-          >
-            Dismiss
-          </button>
+          <span role="alert">
+            {failed.length
+              ? "Unsaved ink is kept on this page. Retry before leaving."
+              : error}
+          </span>
+          {failed.length ? (
+            <button
+              type="button"
+              disabled={operations > 0}
+              onClick={() => {
+                setError(null);
+                for (const item of failed) void save(item);
+              }}
+            >
+              Retry save
+            </button>
+          ) : loadFailed ? (
+            <button
+              type="button"
+              onClick={() => setLoadAttempt((value) => value + 1)}
+            >
+              Retry load
+            </button>
+          ) : (
+            <button type="button" onClick={() => setError(null)}>
+              Dismiss
+            </button>
+          )}
         </div>
       ) : null}
     </>

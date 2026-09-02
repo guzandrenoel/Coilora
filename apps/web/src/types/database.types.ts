@@ -155,6 +155,7 @@ export type Database = {
       }
       documents: {
         Row: {
+          bookmarked: boolean
           byte_size: number
           created_at: string
           deleted_at: string | null
@@ -177,6 +178,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bookmarked?: boolean
           byte_size: number
           created_at?: string
           deleted_at?: string | null
@@ -199,6 +201,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bookmarked?: boolean
           byte_size?: number
           created_at?: string
           deleted_at?: string | null

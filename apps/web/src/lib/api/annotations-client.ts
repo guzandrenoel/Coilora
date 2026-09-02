@@ -88,6 +88,7 @@ function isCreateInput(
   value: CreateAnnotationInput,
 ): boolean {
   return (
+    (value.id === undefined || uuidPattern.test(value.id)) &&
     isAnnotationKind(value.kind) &&
     Array.isArray(value.points) &&
     value.points.length >= 2 &&

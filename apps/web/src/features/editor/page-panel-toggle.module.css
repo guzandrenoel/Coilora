@@ -1,0 +1,32 @@
+.toggle {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--navy);
+  cursor: pointer;
+}
+.toggle svg {
+  width: 24px;
+  height: 24px;
+}
+.toggle:hover:not(:disabled) {
+  background: var(--mint-soft);
+}
+.toggle[aria-expanded="true"] {
+  background: var(--navy);
+  color: white;
+}
+.toggle:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -9,13 +9,40 @@ import { UserDatabaseClientFactory } from '../database/user-database-client.fact
 import type { CreateDocumentInput } from './documents.schemas.js';
 
 const documentSelection =
-  'id, notebook_id, title, original_filename, source_type, media_type, status, page_count, byte_size, revision, created_at, updated_at' as const;
+  'id, notebook_id, title, original_filename, source_type, media_type, status, page_count, byte_size, revision, bookmarked, created_at, updated_at' as const;
 
 const pageSize = 20;
 
 @Injectable()
 export class DocumentsService {
   constructor(private readonly clients: UserDatabaseClientFactory) {}
+
+  async setBookmark(
+    user: AuthenticatedUser,
+    notebookId: string,
+    documentId: string,
+    bookmarked: boolean,
+  ) {
+    const client = await this.getNotebookClient(user, notebookId);
+    const { data, error } = await client
+      .from('documents')
+      .update({ bookmarked })
+      .eq('id', documentId)
+      .eq('notebook_id', notebookId)
+      .eq('owner_id', user.id)
+      .is('deleted_at', null)
+      .neq('status', 'awaiting_upload')
+      .select('id, bookmarked')
+      .maybeSingle();
+
+    if (error) {
+      throw new ServiceUnavailableException(
+        'The document bookmark could not be saved.',
+      );
+    }
+    if (!data) throw new NotFoundException('The document was not found.');
+    return data;
+  }
 
   async list(user: AuthenticatedUser, notebookId: string, page: number) {
     const client = await this.getNotebookClient(user, notebookId);

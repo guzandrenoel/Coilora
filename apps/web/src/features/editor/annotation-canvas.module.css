@@ -75,3 +75,8 @@
   font-weight: 750;
   cursor: pointer;
 }
+
+.layer[data-tool="pan"] {
+  touch-action: pan-x pan-y;
+  cursor: grab;
+}

@@ -53,3 +53,7 @@ export const documentPageCountSchema = z
     pageCount: z.number().int().min(1).max(5000),
   })
   .strict();
+
+export const documentBookmarkSchema = z
+  .object({ bookmarked: z.boolean() })
+  .strict();

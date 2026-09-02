@@ -34,8 +34,9 @@ The project is in active development. Authentication, course and notebook organi
 - Course archiving is blocked while the course contains active notebooks.
 - Course-scoped notebook views and a responsive notebook workspace.
 - Persistent named notebook pages with blank, dotted, ruled, grid, and Cornell paper styles.
-- A dedicated page editor with a responsive thumbnail sidebar, page creation, renaming, and bookmark filtering.
-- Freehand pen, highlighter, and eraser tools with optimistic saving so completed strokes do not flicker while the server responds.
+- One continuous notebook viewer for standalone notes, all PDF pages, and notes inserted between PDF pages. Opening either a note or a PDF keeps the whole notebook accessible.
+- A shared thumbnail sidebar with collapsible document groups, page creation, renaming, and bookmark filtering. The far-left header panel icon opens and closes it on desktop and mobile.
+- Scroll mode, freehand pen, highlighter, and eraser tools. Optimistic strokes remain visible while saving; failed saves stay on their page with a retry action. Active or unsaved pages remain mounted when scrolled off screen.
 
 ### Documents and uploads
 
@@ -50,13 +51,20 @@ The project is in active development. Authentication, course and notebook organi
 - Per-file transfer percentages and progress bars.
 - Server-side upload completion checks for file presence, expected size, and stored content type.
 - Retry controls for failed upload stages.
-- Visual saved-document cards with loading, empty, error, recovery, and pagination states.
+- Compact saved-document tiles with actual first-page PDF previews, image previews, and plain-text previews for TXT/Markdown. Previews load near the viewport, with at most two source downloads/renderers running at once.
+- Click a PDF preview or title to open it directly, without separate file-details or reader buttons.
+- Persistent whole-document bookmark ribbons on tiles, also available in the notebook sidebar's Bookmarks filter. These are separate from individual PDF page bookmarks.
 - Automatic saved-list refresh after successful uploads.
 - Authenticated PDF read sessions backed by short-lived signed URLs.
-- An in-app PDF reader with lazy page thumbnails, page navigation, and fit/zoom controls.
+- Continuous scrolling across notes and documents, previous/next navigation, fit/zoom controls, and jumps from page previews and bookmarks without leaving the notebook.
+- Virtualized main pages and thumbnail grids, with at most two PDF sources cached in the viewer and a four-million-pixel limit per rendered page canvas. Large notebooks do not mount a full-size canvas for every PDF page.
 - Persisted pen, highlighter, eraser, and per-page bookmark controls for PDFs.
 - Named notebook pages can be inserted after a PDF page and remain linked to that document position.
 - PDF rendering that keeps original uploads unchanged.
+
+Standalone notes appear first in their saved order, followed by documents in import order. Notes linked to a PDF appear after their saved source-page position. Document groups can be collapsed in the sidebar without removing their pages from the continuous reading area. Continuous reading currently supports PDFs and notebook pages; other uploaded formats retain their library previews. Very large or complex PDFs still take time to download and render.
+
+Save retries reuse a stable stroke ID to avoid duplicate ink after a lost response. Pending strokes are held in memory, not an offline outbox: keep the viewer open and retry failed saves before leaving. The app's back buttons wait for pending ink; closing or reloading the browser page warns before discarding it. Browser-history navigation is not an offline recovery mechanism.
 
 ### Backend and development foundation
 
@@ -236,7 +244,7 @@ npm run check --workspace @coilora/api
 npm run check --workspace @coilora/web
 ```
 
-Current automated tests cover API schemas, service behavior, notebook-page persistence, document reading, authentication rejection on selected routes, and selected web library behavior.
+Current automated tests cover API schemas, service behavior, notebook-page persistence, document reading, owner-scoped annotation retries, authentication rejection on selected routes, and selected web library behavior. Viewer tests cover mixed note/PDF ordering, insertion positions, scroll anchoring, a 5,000-page virtualized timeline, and bounded PDF resource acquisition and cleanup.
 
 Real upload progress and saved-document display have also been checked manually during development. Automated checks are not a substitute for browser testing or verification of deployed authorization policies.
 

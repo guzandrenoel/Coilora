@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 
 import {
@@ -8,19 +7,8 @@ import {
   type SavedDocument,
 } from "@/lib/api/documents-client";
 
-import { formatFileSize } from "./material-file";
+import { DocumentTile } from "./document-tile";
 import styles from "./saved-documents.module.css";
-
-const statusLabels: Record<SavedDocument["status"], string> = {
-  uploaded: "Uploaded",
-  validating: "Validating",
-  quarantined: "Quarantined",
-  extracting: "Extracting text",
-  ocr_required: "OCR required",
-  indexing: "Indexing",
-  ready: "Ready",
-  failed: "Processing failed",
-};
 
 type SavedDocumentsProps = {
   notebookId: string;
@@ -120,56 +108,8 @@ function DocumentList({
       {documents.length > 0 ? (
         <ul className={styles.grid}>
           {documents.map((document) => (
-            <li className={styles.card} key={document.id}>
-              <div className={styles.preview} data-type={document.source_type}>
-                <span>{document.source_type.toUpperCase()}</span>
-                <i />
-                <i />
-                <i />
-              </div>
-
-              <div className={styles.cardBody}>
-                <h3>{document.title}</h3>
-                <p className={styles.meta}>
-                  {document.page_count
-                    ? `${document.page_count} pages · `
-                    : ""}
-                  {formatFileSize(document.byte_size)} · Added{" "}
-                  <time dateTime={document.created_at}>
-                    {new Date(document.created_at).toLocaleDateString(
-                      undefined,
-                      {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      },
-                    )}
-                  </time>
-                </p>
-                <details className={styles.fileDetails}>
-                  <summary>File details</summary>
-                  <p>Original filename: {document.original_filename}</p>
-                </details>
-                {document.status !== "uploaded" ? (
-                  <span className={styles.badge} data-status={document.status}>
-                    {statusLabels[document.status]}
-                  </span>
-                ) : null}
-                {document.source_type === "pdf" &&
-                document.status === "uploaded" ? (
-                  <Link
-                    className={styles.button}
-                    href={`/library/documents/${encodeURIComponent(document.id)}`}
-                    prefetch={false}
-                    target={openInNewTab ? "_blank" : undefined}
-                    rel={openInNewTab ? "noopener noreferrer" : undefined}
-                    aria-label={`Open in Reader${openInNewTab ? " in new tab" : ""}: ${document.title}`}
-                  >
-                    Open in Reader
-                    <span aria-hidden="true">{openInNewTab ? "↗" : "→"}</span>
-                  </Link>
-                ) : null}
-              </div>
+            <li key={document.id}>
+              <DocumentTile document={document} openInNewTab={openInNewTab} />
             </li>
           ))}
         </ul>

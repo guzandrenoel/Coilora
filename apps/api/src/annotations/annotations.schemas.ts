@@ -13,6 +13,7 @@ export const annotationPointSchema = z
 
 export const createAnnotationSchema = z
   .object({
+    id: z.uuid().optional(),
     kind: annotationKindSchema,
     points: z
       .array(annotationPointSchema)

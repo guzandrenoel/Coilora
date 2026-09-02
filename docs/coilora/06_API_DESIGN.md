@@ -105,9 +105,12 @@ Notebook-page creation accepts a page name and `paperStyle` as `blank`, `dotted`
 
 ```text
 POST   /v1/notebooks/:notebookId/documents
+GET    /v1/notebooks/:notebookId/documents
+PATCH  /v1/notebooks/:notebookId/documents/:documentId/bookmark
 POST   /v1/documents/:documentId/upload-session
 POST   /v1/documents/:documentId/upload-complete
 POST   /v1/documents/:documentId/read-session
+POST   /v1/documents/:documentId/preview-session
 PATCH  /v1/documents/:documentId/page-count
 GET    /v1/documents/:documentId
 GET    /v1/documents/:documentId/status
@@ -119,6 +122,10 @@ POST   /v1/documents/:documentId/export
 ```
 
 Creating a document reserves metadata; the upload session returns a signed destination. Upload completion verifies the actual storage object. The read-session endpoint checks ownership and returns short-lived access for the in-app PDF reader. The reader records a validated PDF page count after loading. Background processing and the remaining document endpoints are planned.
+
+Document lists include `bookmarked` and `revision`. The bookmark PATCH accepts only `{ "bookmarked": true | false }` and checks the owner, active notebook, and non-deleted uploaded-or-later document. Whole-document bookmarks are independent of PDF page bookmarks.
+
+The preview-session endpoint uses the same owner, active-notebook, uploaded-status, revision, and canonical private-storage-path checks as read-session. It also accepts the supported image, TXT, and Markdown formats. It returns a five-minute signed source URL with `private, no-store`; previews are rendered locally and do not create public thumbnail objects. The read-session endpoint remains PDF-only.
 
 ### Annotations and synchronization
 
@@ -136,7 +143,13 @@ PUT    /v1/documents/:documentId/pages/:pageNumber/bookmark
 DELETE /v1/documents/:documentId/pages/:pageNumber/bookmark
 ```
 
-The web editor sends one durable normalized stroke after pointer completion and renders an optimistic copy while the request is pending. This avoids a visible save flicker without replacing an entire page state. The future native editor may batch Pencil or stylus changes into durable operations and add snapshot compaction for recovery.
+The web editor sends one durable normalized stroke after pointer completion and renders an optimistic copy while the request is pending. Both annotation POST endpoints accept an optional UUID `id`. The client reuses that ID when retrying a failed save. A duplicate primary key is treated as an existing save only after an owner-scoped lookup verifies the same notebook page, or the same document and PDF page. It cannot return an annotation from another target or owner. Clients that omit `id` retain server-assigned IDs.
+
+The continuous notebook viewer keeps active, pending, and failed strokes mounted outside the visible page window. Failed strokes remain visible with a retry action; they are not persisted in an offline browser outbox. The app back buttons block while ink is pending, and browser unload warns before discarding it. The future native editor may batch Pencil or stylus changes into durable operations and add snapshot compaction for recovery.
+
+PDF bookmark listing uses owner-scoped keyset batches of 500 to return bookmarks beyond the database's default row limit, up to the supported 5,000-page document boundary.
+
+The shared viewer uses the existing notebook-page, document-list, read-session, annotation, and bookmark endpoints. It combines metadata into one reading order rather than flattening or rewriting the PDF file. Only nearby pages and thumbnails render, and a lease-based pool retains at most two PDF sources. No new database migration or unified-content endpoint is required for this presentation layer.
 
 ### Highlights
 

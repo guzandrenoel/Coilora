@@ -1,6 +1,28 @@
 import { describe, expect, it } from 'vitest';
 
-import { createDocumentSchema } from './documents.schemas.js';
+import {
+  createDocumentSchema,
+  documentBookmarkSchema,
+} from './documents.schemas.js';
+
+describe('documentBookmarkSchema', () => {
+  it.each([true, false])(
+    'accepts the boolean bookmark state %s',
+    (bookmarked) => {
+      expect(documentBookmarkSchema.parse({ bookmarked })).toEqual({
+        bookmarked,
+      });
+    },
+  );
+  it.each([
+    {},
+    { bookmarked: 'true' },
+    { bookmarked: 1 },
+    { bookmarked: true, ownerId: 'other' },
+  ])('rejects invalid or extra bookmark fields: %j', (input) => {
+    expect(documentBookmarkSchema.safeParse(input).success).toBe(false);
+  });
+});
 
 const validInput = {
   title: 'Anatomy lecture',

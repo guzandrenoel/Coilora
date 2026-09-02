@@ -2,29 +2,16 @@
   padding: 1.35rem;
   border-top: 1px solid var(--line);
 }
-
 .header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.4rem;
 }
-
-.header > div,
-.details {
-  min-width: 0;
-}
-
 .header h2 {
   margin: 0 0 0.35rem;
   color: var(--navy-deep);
   font-size: 1rem;
   font-weight: 750;
 }
-
 .header p,
-.details p,
 .message,
 .empty {
   margin: 0;
@@ -33,15 +20,23 @@
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
-
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 170px));
+  gap: 1.6rem 1.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+.grid > li {
+  min-width: 0;
+}
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
   min-height: 2.75rem;
   padding: 0.6rem 0.85rem;
-  flex-shrink: 0;
   border: 1px solid var(--line-strong);
   border-radius: 0.75rem;
   background: var(--surface);
@@ -50,84 +45,26 @@
   font-size: 0.76rem;
   font-weight: 700;
 }
-
 .button:hover:not(:disabled) {
   background: var(--mint-soft);
 }
-
 .button:focus-visible {
   outline: 3px solid var(--blue);
   outline-offset: 3px;
 }
-
 .button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
-
-.details h3 {
-  margin: 0 0 0.2rem;
-  color: var(--navy-deep);
-  font-size: 0.86rem;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-
-.fileDetails {
-  margin-top: 0.4rem;
-  font-size: 0.76rem;
-  color: var(--muted);
-}
-
-.fileDetails summary {
-  width: fit-content;
-  padding-block: 0.35rem;
-  cursor: pointer;
-}
-
-.fileDetails summary:hover {
-  color: var(--navy);
-}
-
-.fileDetails summary:focus-visible {
-  outline: 3px solid var(--blue);
-  outline-offset: 3px;
-  border-radius: 0.2rem;
-}
-
-.badge {
-  max-width: 12rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 0.6rem;
-  background: var(--sky-soft);
-  color: var(--navy);
-  font-size: 0.68rem;
-  font-weight: 650;
-  line-height: 1.5;
-}
-
-.badge[data-status="ready"] {
-  background: var(--mint-soft);
-  color: var(--mint-deep);
-}
-
-.badge[data-status="failed"],
-.badge[data-status="quarantined"] {
-  background: var(--coral-soft);
-  color: #943e34;
-}
-
 .empty {
   padding: 1.2rem;
   border: 1px dashed var(--line-strong);
   border-radius: 0.8rem;
   background: var(--surface);
 }
-
 .message {
   margin-top: 0.8rem;
 }
-
 .error {
   margin-block: 1rem;
   padding: 1rem;
@@ -135,121 +72,17 @@
   background: var(--coral-soft);
   color: #943e34;
 }
-
 .error p {
   margin: 0 0 0.75rem;
   font-size: 0.8rem;
   overflow-wrap: anywhere;
 }
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 1rem;
-  margin: 0 0 1rem;
-  padding: 0;
-  list-style: none;
-}
-
-.card {
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 0.9rem;
-  background: white;
-  transition: transform 160ms ease, box-shadow 160ms ease;
-}
-
-.card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgb(18 61 86 / 10%);
-}
-
-.preview {
-  position: relative;
-  display: grid;
-  align-content: end;
-  gap: 0.55rem;
-  min-height: 142px;
-  padding: 1.2rem;
-  overflow: hidden;
-  background: linear-gradient(145deg, #e7eff8, #f8fbff);
-  color: #3d6fae;
-}
-
-.preview::before {
-  position: absolute;
-  inset: 1.05rem auto auto 1.15rem;
-  width: 62px;
-  height: 80px;
-  border-radius: 0.3rem;
-  background: white;
-  box-shadow: 7px 8px 0 #d6e2f1;
-  content: "";
-}
-
-.preview span {
-  position: absolute;
-  z-index: 1;
-  top: 2.7rem;
-  left: 2rem;
-  font-size: 0.7rem;
-  font-weight: 850;
-}
-
-.preview i {
-  height: 2px;
-  margin-left: 88px;
-  border-radius: 999px;
-  background: rgb(61 111 174 / 28%);
-}
-
-.preview i:nth-of-type(2) {
-  width: 72%;
-}
-
-.preview[data-type="image"] {
-  background: linear-gradient(145deg, #e7f3eb, #f9fcfa);
-  color: var(--mint-deep);
-}
-
-.cardBody {
-  display: grid;
-  align-content: start;
-  gap: 0.45rem;
-  min-width: 0;
-  padding: 0.9rem;
-}
-
-.cardBody h3 {
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--navy-deep);
-  font-size: 0.86rem;
-}
-
-.meta {
-  min-height: 2.4em;
-}
-
-.cardBody .button,
-.cardBody .badge {
-  width: fit-content;
-  margin-top: 0.35rem;
-}
-
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .section {
     padding-inline: 1rem;
   }
-
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 440px) {
-  .grid {
-    grid-template-columns: 1fr;
+    gap: 1.25rem;
   }
 }

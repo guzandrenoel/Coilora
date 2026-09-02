@@ -14,16 +14,16 @@ Native SQLite    Future offline tablet data and sync outbox
 
 ## 2. Canonical ownership
 
-| Data | Canonical location |
-|---|---|
-| Accounts, notebooks, metadata | PostgreSQL |
-| Highlights and typed annotations | PostgreSQL |
-| Study items and review history | PostgreSQL |
-| PDF, image, and audio binaries | Private object storage |
-| Extracted source spans and citations | PostgreSQL |
-| Embeddings | PostgreSQL with pgvector |
-| Temporary browser state | IndexedDB |
-| Future native offline state | SQLite/SwiftData |
+| Data                                 | Canonical location       |
+| ------------------------------------ | ------------------------ |
+| Accounts, notebooks, metadata        | PostgreSQL               |
+| Highlights and typed annotations     | PostgreSQL               |
+| Study items and review history       | PostgreSQL               |
+| PDF, image, and audio binaries       | Private object storage   |
+| Extracted source spans and citations | PostgreSQL               |
+| Embeddings                           | PostgreSQL with pgvector |
+| Temporary browser state              | IndexedDB                |
+| Future native offline state          | SQLite/SwiftData         |
 
 Original uploads are immutable. A replacement creates a new document version rather than overwriting the prior object.
 
@@ -37,11 +37,15 @@ courses
 notebooks
 notebook_pages
 documents
-page_annotations
+annotations
 page_bookmarks
 ```
 
-`notebook_pages` stores an owner, notebook, name, stable position, optional PDF-relative placement, and one of five paper styles: `blank`, `dotted`, `ruled`, `grid`, or `cornell`. `page_annotations` stores normalized freehand strokes for either a notebook page or a PDF page. `page_bookmarks` stores exactly one notebook-page or PDF-page target. Composite ownership relationships and Row Level Security prevent cross-owner attachment or access. Deleting a document is restricted while notebook pages are attached to it, which prevents linked student notes from being silently removed.
+`notebook_pages` stores an owner, notebook, name, stable position, optional PDF-relative placement, and one of five paper styles: `blank`, `dotted`, `ruled`, `grid`, or `cornell`. `annotations` stores normalized freehand strokes for either a notebook page or a PDF page. `page_bookmarks` stores exactly one notebook-page or PDF-page target. Composite ownership relationships and Row Level Security prevent cross-owner attachment or access. Deleting a document is restricted while notebook pages are attached to it, which prevents linked student notes from being silently removed.
+
+The continuous viewer derives a single page sequence from these existing records: standalone notes by position, documents by import date, and linked notes after their specified PDF page (zero means before page one). Rendering and collapsed sidebar groups are client-side concerns, not changes to PDF storage. Annotation UUIDs can be supplied by the client for owner- and target-verified save retries. No additional migration is needed for the unified viewer.
+
+`documents.bookmarked` stores an owner-only whole-document bookmark, defaulting to false, independently of `page_bookmarks`. It is added by `20260902150000_add_document_bookmarks.sql` and uses the existing documents ownership policies. Document tile previews currently render from authenticated short-lived source access in the browser; they do not add public storage objects.
 
 The following list describes the target relational model as later phases are implemented.
 

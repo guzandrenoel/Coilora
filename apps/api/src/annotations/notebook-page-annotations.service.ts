@@ -75,6 +75,7 @@ export class NotebookPageAnnotationsService {
     const { data, error } = await client
       .from('annotations')
       .insert({
+        ...(input.id ? { id: input.id } : {}),
         owner_id: user.id,
         notebook_page_id: pageId,
         document_id: null,
@@ -88,6 +89,20 @@ export class NotebookPageAnnotationsService {
       .select(annotationSelection)
       .single();
 
+    if (error?.code === '23505' && input.id) {
+      const { data: existing, error: lookupError } = await client
+        .from('annotations')
+        .select(annotationSelection)
+        .eq('id', input.id)
+        .eq('owner_id', user.id)
+        .eq('notebook_page_id', pageId)
+        .is('document_id', null)
+        .maybeSingle();
+      if (!lookupError && existing) return existing;
+      throw new ServiceUnavailableException(
+        'The annotation retry could not be verified.',
+      );
+    }
     if (error?.code === '23503' || error?.code === '42501') {
       throw new NotFoundException('The notebook page is no longer available.');
     }

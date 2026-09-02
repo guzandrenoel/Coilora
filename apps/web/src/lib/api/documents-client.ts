@@ -1,6 +1,5 @@
 "use client";
 
-
 import { apiRequest } from "./library-client";
 
 export type CreateDocumentInput = {
@@ -183,14 +182,11 @@ export async function uploadDocumentFile(
       resolve();
     };
 
-    xhr.onerror = () =>
-      fail("The upload connection failed. Please retry.");
+    xhr.onerror = () => fail("The upload connection failed. Please retry.");
 
-    xhr.ontimeout = () =>
-      fail("The upload timed out. Please retry.");
+    xhr.ontimeout = () => fail("The upload timed out. Please retry.");
 
-    xhr.onabort = () =>
-      fail("The upload was interrupted. Please retry.");
+    xhr.onabort = () => fail("The upload was interrupted. Please retry.");
 
     try {
       xhr.open("PUT", url.toString());
@@ -243,6 +239,8 @@ export type SavedDocument = {
   byte_size: number;
   status: (typeof savedDocumentStatuses)[number];
   page_count: number | null;
+  bookmarked: boolean;
+  revision: number;
   created_at: string;
 };
 
@@ -263,6 +261,10 @@ function isSavedDocument(value: unknown): value is SavedDocument {
     Number.isSafeInteger(value.byte_size) &&
     value.byte_size > 0 &&
     value.byte_size <= 52428800 &&
+    typeof value.bookmarked === "boolean" &&
+    typeof value.revision === "number" &&
+    Number.isSafeInteger(value.revision) &&
+    value.revision >= 1 &&
     typeof value.status === "string" &&
     savedDocumentStatuses.some((status) => status === value.status) &&
     (value.page_count === null ||
@@ -311,4 +313,26 @@ export async function getSavedDocuments(
   });
 
   return { items, nextPage: body.nextPage };
+}
+
+export async function setSavedDocumentBookmark(
+  notebookId: string,
+  documentId: string,
+  bookmarked: boolean,
+): Promise<boolean> {
+  if (!uuidPattern.test(notebookId) || !uuidPattern.test(documentId)) {
+    throw new Error("Select a valid document.");
+  }
+  const body = await apiRequest(
+    `/v1/notebooks/${encodeURIComponent(notebookId)}/documents/${encodeURIComponent(documentId)}/bookmark`,
+    { method: "PATCH", body: JSON.stringify({ bookmarked }) },
+  );
+  if (
+    !isRecord(body) ||
+    body.id !== documentId ||
+    typeof body.bookmarked !== "boolean"
+  ) {
+    throw new Error("The API returned an unexpected document bookmark.");
+  }
+  return body.bookmarked;
 }

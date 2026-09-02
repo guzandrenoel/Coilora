@@ -7,7 +7,7 @@ export type DocumentReadSession = {
   notebookId: string;
   title: string;
   originalFilename: string;
-  mediaType: "application/pdf";
+  mediaType: string;
   byteSize: number;
   pageCount: number | null;
   revision: number;
@@ -19,17 +19,41 @@ export type DocumentReadSession = {
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const maximumBytes = 52428800;
+const previewExtensions: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "text/plain": "txt",
+  "text/markdown": "md",
+  "text/x-markdown": "md",
+};
 
 export async function createDocumentReadSession(
   documentId: string,
   signal: AbortSignal,
+): Promise<DocumentReadSession> {
+  return requestDocumentSession(documentId, signal, false);
+}
+
+export async function createDocumentPreviewSession(
+  documentId: string,
+  signal: AbortSignal,
+): Promise<DocumentReadSession> {
+  return requestDocumentSession(documentId, signal, true);
+}
+
+async function requestDocumentSession(
+  documentId: string,
+  signal: AbortSignal,
+  preview: boolean,
 ): Promise<DocumentReadSession> {
   if (!uuidPattern.test(documentId)) {
     throw new Error("Select a valid document from your library.");
   }
 
   const body = await apiRequest(
-    `/v1/documents/${encodeURIComponent(documentId)}/read-session`,
+    `/v1/documents/${encodeURIComponent(documentId)}/${preview ? "preview-session" : "read-session"}`,
     { method: "POST", signal },
   );
 
@@ -48,7 +72,9 @@ export async function createDocumentReadSession(
     typeof value.originalFilename !== "string" ||
     !value.originalFilename.trim() ||
     value.originalFilename.length > 255 ||
-    value.mediaType !== "application/pdf" ||
+    typeof value.mediaType !== "string" ||
+    !Object.hasOwn(previewExtensions, value.mediaType) ||
+    (!preview && value.mediaType !== "application/pdf") ||
     value.status !== "uploaded" ||
     typeof value.byteSize !== "number" ||
     !Number.isSafeInteger(value.byteSize) ||
@@ -92,7 +118,7 @@ export async function createDocumentReadSession(
       parts[2] !== "documents" ||
       parts[3] !== documentId ||
       parts[4] !== "source" ||
-      parts[5] !== `v${value.revision}.pdf` ||
+      parts[5] !== `v${value.revision}.${previewExtensions[value.mediaType]}` ||
       !url.searchParams.get("token") ||
       url.searchParams.getAll("token").length !== 1
     ) {
@@ -107,7 +133,7 @@ export async function createDocumentReadSession(
     notebookId: value.notebookId,
     title: value.title,
     originalFilename: value.originalFilename,
-    mediaType: "application/pdf",
+    mediaType: value.mediaType,
     byteSize: value.byteSize,
     pageCount: value.pageCount,
     revision: value.revision,

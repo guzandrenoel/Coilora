@@ -1,7 +1,4 @@
-import {
-  NotFoundException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AuthenticatedUser } from '../auth/auth.types.js';
@@ -44,7 +41,15 @@ function setup() {
 
   const documentQuery = {
     insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
+    neq: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({
+      data: { id: createdDocument.id, bookmarked: true },
+      error: null,
+    }),
     single: vi.fn().mockResolvedValue({
       data: createdDocument,
       error: null,
@@ -77,6 +82,67 @@ function setup() {
 }
 
 describe('DocumentsService', () => {
+  it('updates a whole-document bookmark within an owned active notebook', async () => {
+    const { service, notebookQuery, documentQuery } = setup();
+    await expect(
+      service.setBookmark(user, notebookId, createdDocument.id, true),
+    ).resolves.toEqual({ id: createdDocument.id, bookmarked: true });
+    expect(notebookQuery.eq).toHaveBeenCalledWith('owner_id', user.id);
+    expect(notebookQuery.is).toHaveBeenCalledWith('archived_at', null);
+    expect(documentQuery.update).toHaveBeenCalledWith({ bookmarked: true });
+    expect(documentQuery.eq).toHaveBeenCalledWith('id', createdDocument.id);
+    expect(documentQuery.eq).toHaveBeenCalledWith('notebook_id', notebookId);
+    expect(documentQuery.eq).toHaveBeenCalledWith('owner_id', user.id);
+    expect(documentQuery.is).toHaveBeenCalledWith('deleted_at', null);
+    expect(documentQuery.neq).toHaveBeenCalledWith('status', 'awaiting_upload');
+  });
+
+  it('can remove a whole-document bookmark', async () => {
+    const { service, documentQuery } = setup();
+    documentQuery.maybeSingle.mockResolvedValueOnce({
+      data: { id: createdDocument.id, bookmarked: false },
+      error: null,
+    });
+    await expect(
+      service.setBookmark(user, notebookId, createdDocument.id, false),
+    ).resolves.toEqual({ id: createdDocument.id, bookmarked: false });
+    expect(documentQuery.update).toHaveBeenCalledWith({ bookmarked: false });
+  });
+
+  it('cannot bookmark in an inaccessible or archived notebook', async () => {
+    const { service, notebookQuery, documentQuery } = setup();
+    notebookQuery.maybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: null,
+    });
+    await expect(
+      service.setBookmark(user, notebookId, createdDocument.id, true),
+    ).rejects.toThrow(NotFoundException);
+    expect(documentQuery.update).not.toHaveBeenCalled();
+  });
+
+  it('reports a missing or inaccessible document bookmark target', async () => {
+    const { service, documentQuery } = setup();
+    documentQuery.maybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: null,
+    });
+    await expect(
+      service.setBookmark(user, notebookId, createdDocument.id, true),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('reports bookmark storage failure without claiming it was saved', async () => {
+    const { service, documentQuery } = setup();
+    documentQuery.maybeSingle.mockResolvedValueOnce({
+      data: null,
+      error: { code: '08006' },
+    });
+    await expect(
+      service.setBookmark(user, notebookId, createdDocument.id, true),
+    ).rejects.toThrow(ServiceUnavailableException);
+  });
+
   it('checks notebook ownership and creates pending metadata', async () => {
     const { service, clients, notebookQuery, documentQuery } = setup();
 

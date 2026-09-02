@@ -112,6 +112,7 @@ export type PageAnnotation = {
 };
 
 export type CreateAnnotationInput = {
+  id?: string;
   kind: AnnotationKind;
   points: AnnotationPoint[];
   color: string;

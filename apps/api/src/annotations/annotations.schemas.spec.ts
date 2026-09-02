@@ -21,6 +21,17 @@ describe('annotation schemas', () => {
     expect(createAnnotationSchema.parse(stroke)).toEqual(stroke);
   });
 
+  it('accepts a stable UUID for save retries and rejects malformed IDs', () => {
+    const id = '00000000-0000-4000-8000-000000000010';
+    expect(createAnnotationSchema.parse({ ...stroke, id })).toEqual({
+      ...stroke,
+      id,
+    });
+    expect(
+      createAnnotationSchema.safeParse({ ...stroke, id: 'invalid' }).success,
+    ).toBe(false);
+  });
+
   it('rejects points outside the normalized page', () => {
     expect(
       createAnnotationSchema.safeParse({

@@ -9,12 +9,26 @@ import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { UserDatabaseClientFactory } from '../database/user-database-client.factory.js';
 
 const readUrlLifetimeSeconds = 300;
+const previewFormats = new Map([
+  ['pdf:application/pdf', 'pdf'],
+  ['image:image/png', 'png'],
+  ['image:image/jpeg', 'jpg'],
+  ['image:image/webp', 'webp'],
+  ['text:text/plain', 'txt'],
+  ['markdown:text/plain', 'txt'],
+  ['markdown:text/markdown', 'md'],
+  ['markdown:text/x-markdown', 'md'],
+]);
 
 @Injectable()
 export class DocumentReadService {
   constructor(private readonly clients: UserDatabaseClientFactory) {}
 
-  async createSession(user: AuthenticatedUser, documentId: string) {
+  async createSession(
+    user: AuthenticatedUser,
+    documentId: string,
+    preview = false,
+  ) {
     const client = this.clients.create(user);
 
     const { data: document, error: documentError } = await client
@@ -55,12 +69,14 @@ export class DocumentReadService {
       throw new NotFoundException('The notebook was not found.');
     }
 
-    if (
-      document.source_type !== 'pdf' ||
-      document.media_type !== 'application/pdf'
-    ) {
+    const extension = previewFormats.get(
+      `${document.source_type}:${document.media_type}`,
+    );
+    if (!extension || (!preview && extension !== 'pdf')) {
       throw new ConflictException(
-        'The document reader currently supports PDF files only.',
+        preview
+          ? 'This document format cannot be previewed.'
+          : 'The document reader currently supports PDF files only.',
       );
     }
 
@@ -77,7 +93,7 @@ export class DocumentReadService {
 
     const expectedPath =
       `users/${user.id}/documents/${document.id}/source/` +
-      `v${document.revision}.pdf`;
+      `v${document.revision}.${extension}`;
 
     if (document.source_object_path !== expectedPath) {
       throw new ConflictException(

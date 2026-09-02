@@ -22,6 +22,16 @@ import { parseWithSchema } from '../validation/zod-validation.js';
 export class DocumentReadController {
   constructor(private readonly reads: DocumentReadService) {}
 
+  @Post(':documentId/preview-session')
+  @HttpCode(200)
+  @Header('Cache-Control', 'private, no-store')
+  createPreviewSession(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('documentId', new ParseUUIDPipe()) documentId: string,
+  ) {
+    return this.reads.createSession(user, documentId, true);
+  }
+
   @Post(':documentId/read-session')
   @HttpCode(200)
   @Header('Cache-Control', 'private, no-store')
