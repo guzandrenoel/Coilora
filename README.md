@@ -55,6 +55,8 @@ Collapsing a document group hides its sidebar thumbnails, not its pages in the c
 - Persistent named notebook pages.
 - Blank, dotted, ruled, grid, and Cornell paper styles.
 - Page creation and renaming from the viewer.
+- Confirmed soft deletion from the three-dot menus in the viewer and notebook overview (requires the page soft-delete migration).
+- Authenticated delete/restore requests with owner checks. Deleted pages are excluded from normal page lists and cannot be edited through the API.
 - Notes can be placed before the first PDF page or after a selected PDF page.
 - Freehand pen, highlighter, and eraser tools for note pages and PDFs.
 - Selectable ink colors.
@@ -67,6 +69,10 @@ Completed strokes remain visible while saving. Active, pending, and failed strok
 Failed saves retain the stroke and provide a retry action. Retries reuse a stable stroke ID to avoid duplicate ink after a lost response.
 
 Pending strokes are held in memory, not in an offline outbox. Keep the viewer open and retry failed saves before leaving. The app's back buttons block navigation while ink is pending, and closing or reloading the browser page requests an unsaved-work warning. Browser-history navigation is not an offline recovery mechanism.
+
+Deleting a note preserves its content, source position, annotations, and bookmarks. It does not remove an imported document or PDF page. The viewer blocks deletion while that page has active or unsaved ink, then selects a remaining page if necessary. Deleting the last page of an otherwise empty notebook returns to the notebook overview. Restoration currently has an API endpoint and client helper; a Trash/Restore interface is not implemented yet.
+
+The `20260903110334_add_notebook_page_soft_delete.sql` migration adds the soft-delete column and database protections. In environments where it has not been applied, existing page reads and renaming remain compatible, while delete/restore return an explicit unavailable error without removing anything. Code commits and Git pushes do not apply database migrations. The API/web type snapshots include the soft-delete column.
 
 ### Bookmarks
 
@@ -150,7 +156,7 @@ The following features are not yet implemented.
 ### Editing and document processing
 
 - Undo and redo for durable annotation edits.
-- Additional page management, including reordering and deletion safeguards.
+- Page reordering and a Trash/Restore interface.
 - Typed page notes and text-selection highlights.
 - PDF search and citation navigation.
 - Document-content validation and background processing.
@@ -310,6 +316,8 @@ Automated coverage includes:
 
 - API schemas and service behavior.
 - Notebook-page persistence and document reading.
+- Page delete/restore ownership filters, repeat requests, active-page edit guards, and pre-migration compatibility.
+- Remaining-page selection after deleting a note from the continuous viewer.
 - Owner- and target-scoped annotation retries.
 - Authentication rejection on selected API routes.
 - Long PDF bookmark lists.
@@ -321,6 +329,14 @@ Automated coverage includes:
 - Bounded PDF resource acquisition, cancellation, eviction, and cleanup.
 
 Automated checks are not a substitute for browser testing with real documents or verification of deployed authorization policies. Passing the timeline tests does not guarantee identical performance across devices or PDF files.
+
+After applying the soft-delete migration to the intended development project, run its database regression checks with:
+
+```bash
+npx supabase db query --linked --file supabase/tests/notebook_page_soft_delete.sql
+```
+
+This requires a CLI version with `db query`. It creates synthetic users and content inside a transaction, checks deletion, restoration, owner isolation, and retained annotations/bookmarks as the authenticated database role, then rolls back the fixtures. It does not read or modify existing pages.
 
 ## Repository structure
 

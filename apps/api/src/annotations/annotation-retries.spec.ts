@@ -99,6 +99,22 @@ function setup() {
 }
 
 describe('annotation save retries', () => {
+  it('blocks annotation reads, saves and erasing when the notebook page is trashed', async () => {
+    const { notes, pages, client } = setup();
+    pages.get.mockRejectedValue(
+      new NotFoundException('The notebook page was not found.'),
+    );
+    await expect(notes.list(user, notebookId, pageId, 0)).rejects.toThrow(
+      NotFoundException,
+    );
+    await expect(notes.create(user, notebookId, pageId, input)).rejects.toThrow(
+      NotFoundException,
+    );
+    await expect(
+      notes.remove(user, notebookId, pageId, input.id!),
+    ).rejects.toThrow(NotFoundException);
+    expect(client.from).not.toHaveBeenCalled();
+  });
   it('returns the saved notebook stroke only after checking the page and owner', async () => {
     const { notes, annotation, pages } = setup();
     await expect(

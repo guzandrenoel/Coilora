@@ -118,6 +118,20 @@ describe('AppController (e2e)', () => {
   });
 
   for (const token of [null, 'Bearer not-a-valid-jwt']) {
+    it(`page deletion rejects ${token ? 'invalid' : 'missing'} tokens`, () => {
+      const operation = request(app.getHttpServer()).delete(
+        '/v1/notebooks/00000000-0000-4000-8000-000000000000/pages/00000000-0000-4000-8000-000000000001',
+      );
+      if (token) operation.set('Authorization', token);
+      return operation.expect(401);
+    });
+    it(`page restoration rejects ${token ? 'invalid' : 'missing'} tokens`, () => {
+      const operation = request(app.getHttpServer()).post(
+        '/v1/notebooks/00000000-0000-4000-8000-000000000000/pages/00000000-0000-4000-8000-000000000001/restore',
+      );
+      if (token) operation.set('Authorization', token);
+      return operation.expect(401);
+    });
     it(`preview sessions reject ${token ? 'invalid' : 'missing'} tokens`, () => {
       const operation = request(app.getHttpServer()).post(
         '/v1/documents/00000000-0000-4000-8000-000000000000/preview-session',

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import styles from "./library-workspace.module.css";
 
 export function LibraryDialog({
@@ -8,11 +14,13 @@ export function LibraryDialog({
   busy,
   onClose,
   children,
+  fallbackFocusRef,
 }: {
   title: string;
   busy: boolean;
   onClose: () => void;
   children: ReactNode;
+  fallbackFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -21,6 +29,7 @@ export function LibraryDialog({
     const previousLabel =
       previous?.getAttribute("aria-label") ?? previous?.textContent;
     const dialog = ref.current;
+    const fallbackFocus = fallbackFocusRef?.current;
     dialog?.showModal();
     dialog?.querySelector<HTMLInputElement>("input")?.focus();
     return () => {
@@ -33,9 +42,10 @@ export function LibraryDialog({
           previousLabel
       )
         previous.focus();
+      else if (fallbackFocus?.isConnected) fallbackFocus.focus();
       else document.getElementById("library-title")?.focus();
     };
-  }, []);
+  }, [fallbackFocusRef]);
   return (
     <dialog
       ref={ref}

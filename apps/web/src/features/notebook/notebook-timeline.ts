@@ -18,6 +18,29 @@ export const noteKey = (id: string) => `note:${id}`;
 export const documentKey = (id: string) => `document:${id}`;
 export const pdfKey = (id: string, page: number) => `pdf:${id}:${page}`;
 
+export function selectionAfterNoteDeletion(
+  entries: TimelineEntry[],
+  pageId: string,
+  activeKey?: string,
+): TimelineEntry | undefined {
+  const removed = noteKey(pageId);
+  if (activeKey && activeKey !== removed) {
+    const current = entries.find((entry) => entry.key === activeKey);
+    if (current) return current;
+  }
+  const index = entries.findIndex((entry) => entry.key === removed);
+  return (
+    entries
+      .slice(index + 1)
+      .find((entry) => entry.kind !== "document" && entry.key !== removed) ??
+    entries
+      .slice(0, Math.max(0, index))
+      .reverse()
+      .find((entry) => entry.kind !== "document") ??
+    entries.find((entry) => entry.key !== removed)
+  );
+}
+
 export function buildTimeline(
   pages: NotebookPage[],
   documents: SavedDocument[],

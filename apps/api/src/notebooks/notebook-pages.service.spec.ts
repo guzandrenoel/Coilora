@@ -37,6 +37,7 @@ function setup(pageRows = [savedPage]) {
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     range: vi.fn().mockResolvedValue({ data: pageRows, error: null }),
     single: vi.fn().mockResolvedValue({ data: savedPage, error: null }),
@@ -77,6 +78,7 @@ describe('NotebookPagesService', () => {
     expect(notebookQuery.is).toHaveBeenCalledWith('archived_at', null);
     expect(pageQuery.eq).toHaveBeenCalledWith('owner_id', user.id);
     expect(pageQuery.eq).toHaveBeenCalledWith('notebook_id', notebookId);
+    expect(pageQuery.is).toHaveBeenCalledWith('deleted_at', null);
     expect(pageQuery.order).toHaveBeenCalledWith('position', {
       ascending: true,
     });

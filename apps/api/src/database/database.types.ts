@@ -244,6 +244,7 @@ export type Database = {
         Row: {
           after_document_page_number: number | null
           created_at: string
+          deleted_at: string | null
           document_id: string | null
           id: string
           notebook_id: string
@@ -256,6 +257,7 @@ export type Database = {
         Insert: {
           after_document_page_number?: number | null
           created_at?: string
+          deleted_at?: string | null
           document_id?: string | null
           id?: string
           notebook_id: string
@@ -268,6 +270,7 @@ export type Database = {
         Update: {
           after_document_page_number?: number | null
           created_at?: string
+          deleted_at?: string | null
           document_id?: string | null
           id?: string
           notebook_id?: string

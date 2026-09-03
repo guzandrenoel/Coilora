@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import {
   createNotebookPage,
@@ -13,6 +13,8 @@ import {
   type PaperStyle,
 } from "@/lib/api/types";
 import { LibraryDialog } from "./library-dialog";
+import { NotebookPageMenu } from "@/features/notebook/notebook-page-menu";
+import { NotebookPageDeleteDialog } from "@/features/notebook/notebook-page-delete-dialog";
 import workspaceStyles from "./library-workspace.module.css";
 import styles from "./notebook-pages.module.css";
 
@@ -29,6 +31,7 @@ function PaperPreview({ paperStyle }: { paperStyle: PaperStyle }) {
 }
 
 export function NotebookPages({ notebookId }: { notebookId: string }) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const [pages, setPages] = useState<NotebookPage[]>([]);
   const [page, setPage] = useState(0);
   const [nextPage, setNextPage] = useState<number | null>(null);
@@ -38,6 +41,8 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
   const [addOpen, setAddOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<NotebookPage | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,9 +54,7 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
         setPages((current) => {
           if (page === 0) return result.items;
 
-          const merged = new Map(
-            current.map((item) => [item.id, item]),
-          );
+          const merged = new Map(current.map((item) => [item.id, item]));
 
           for (const item of result.items) {
             merged.set(item.id, item);
@@ -126,9 +129,7 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
       setAddOpen(false);
     } catch (error) {
       setFormError(
-        error instanceof Error
-          ? error.message
-          : "The page could not be added.",
+        error instanceof Error ? error.message : "The page could not be added.",
       );
     } finally {
       setBusy(false);
@@ -136,16 +137,20 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
   }
 
   return (
-    <section
-      className={styles.section}
-      aria-labelledby="notebook-notes-title"
-    >
+    <section className={styles.section} aria-labelledby="notebook-notes-title">
       <header className={styles.header}>
         <div>
-          <h2 id="notebook-notes-title">Notes</h2>
+          <h2 id="notebook-notes-title" tabIndex={-1} ref={headingRef}>
+            Notes
+          </h2>
           <p>Add blank paper for your own notes.</p>
         </div>
       </header>
+      {notice ? (
+        <p className={styles.status} role="status">
+          {notice}
+        </p>
+      ) : null}
 
       {loadError ? (
         <div className={styles.error}>
@@ -174,26 +179,24 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
         <ol className={styles.grid}>
           {pages.map((notebookPage, index) => {
             const pageNumber = index + 1;
-            const paperStyleName =
-              paperStyleNames[notebookPage.paper_style];
+            const paperStyleName = paperStyleNames[notebookPage.paper_style];
 
             return (
-              <li
-                className={styles.pageCard}
-                key={notebookPage.id}
-              >
+              <li className={styles.pageCard} key={notebookPage.id}>
                 <Link
                   href={`/library/notebooks/${encodeURIComponent(
                     notebookId,
                   )}/pages/${encodeURIComponent(notebookPage.id)}`}
                   aria-label={`Open page ${pageNumber}, ${paperStyleName} paper`}
                 >
-                  <PaperPreview
-                    paperStyle={notebookPage.paper_style}
-                  />
+                  <PaperPreview paperStyle={notebookPage.paper_style} />
                   <strong>{notebookPage.title}</strong>
                   <span>{paperStyleName}</span>
                 </Link>
+                <NotebookPageMenu
+                  page={notebookPage}
+                  onDelete={setDeleteTarget}
+                />
               </li>
             );
           })}
@@ -246,10 +249,7 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
               maxLength={120}
               defaultValue={`Page ${pages.length + 1}`}
             />
-            <fieldset
-              className={styles.picker}
-              disabled={busy}
-            >
+            <fieldset className={styles.picker} disabled={busy}>
               <legend>Choose a paper style</legend>
 
               <div className={styles.options}>
@@ -265,9 +265,7 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
 
                     <span className={styles.choice}>
                       <PaperPreview paperStyle={paperStyle} />
-                      <strong>
-                        {paperStyleNames[paperStyle]}
-                      </strong>
+                      <strong>{paperStyleNames[paperStyle]}</strong>
                     </span>
                   </label>
                 ))}
@@ -275,10 +273,7 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
             </fieldset>
 
             {formError ? (
-              <p
-                className={styles.formError}
-                role="alert"
-              >
+              <p className={styles.formError} role="alert">
                 {formError}
               </p>
             ) : null}
@@ -303,6 +298,28 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
             </div>
           </form>
         </LibraryDialog>
+      ) : null}
+      {deleteTarget ? (
+        <NotebookPageDeleteDialog
+          notebookId={notebookId}
+          page={deleteTarget}
+          fallbackFocusRef={headingRef}
+          onClose={() => {
+            setDeleteTarget(null);
+          }}
+          onDeleted={(deleted) => {
+            setPages((current) =>
+              current.filter((item) => item.id !== deleted.id),
+            );
+            setNotice(`Deleted ${deleted.title}.`);
+            // Offset pagination shifts after deletion. Reload from the start
+            // rather than skipping the first row in the next batch.
+            setPage(0);
+            setNextPage(null);
+            setLoading(true);
+            setReloadVersion((value) => value + 1);
+          }}
+        />
       ) : null}
     </section>
   );

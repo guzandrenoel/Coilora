@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -33,6 +34,7 @@ import {
   layoutTimeline,
   noteKey,
   rowAtOffset,
+  selectionAfterNoteDeletion,
   timelineWidth,
   visibleRows,
   type NotebookZoom,
@@ -47,6 +49,7 @@ import {
 import { NotebookPageSurface } from "./notebook-page-surface";
 import { NotebookSidebar } from "./notebook-sidebar";
 import { NotebookPageDialog, type PageDialog } from "./notebook-page-dialog";
+import { NotebookPageDeleteDialog } from "./notebook-page-delete-dialog";
 import styles from "./notebook-viewer.module.css";
 
 const colors = ["#173f5f", "#d94f70", "#e6b800", "#2b8a6e", "#7b61c9"];
@@ -58,6 +61,7 @@ export function NotebookViewer({
   notebookId: string;
   initialKey: string;
 }) {
+  const router = useRouter();
   const [pages, setPages] = useState<NotebookPage[]>([]);
   const [documents, setDocuments] = useState<SavedDocument[]>([]);
   const [title, setTitle] = useState("Notebook");
@@ -74,6 +78,8 @@ export function NotebookViewer({
   const [scrollTop, setScrollTop] = useState(0);
   const [pinned, setPinned] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<PageDialog | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<NotebookPage | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pdfBookmarks, setPdfBookmarks] = useState<Record<string, number[]>>(
     {},
   );
@@ -367,6 +373,36 @@ export function NotebookViewer({
     toggleRef.current?.focus();
   }
   const notebookHref = `/library?notebook=${encodeURIComponent(notebookId)}`;
+  function pageDeleted(page: NotebookPage) {
+    const next = selectionAfterNoteDeletion(entries, page.id, active?.key);
+    setPages((current) => current.filter((item) => item.id !== page.id));
+    setNotice(`Deleted ${page.title}.`);
+    if (!next) {
+      router.replace(notebookHref);
+      return;
+    }
+    if (next.key !== active?.key) jump(next.key);
+    // Keep refresh and copied links off a page that has just been removed.
+    if (
+      window.location.pathname ===
+      `/library/notebooks/${encodeURIComponent(notebookId)}/pages/${encodeURIComponent(page.id)}`
+    ) {
+      const href =
+        next.kind === "note"
+          ? `/library/notebooks/${encodeURIComponent(notebookId)}/pages/${encodeURIComponent(next.page.id)}`
+          : next.document.source_type === "pdf" &&
+              next.document.status === "uploaded"
+            ? `/library/documents/${encodeURIComponent(next.document.id)}`
+            : notebookHref;
+      if (href === notebookHref) router.replace(href);
+      else
+        window.history.replaceState(
+          window.history.state,
+          "",
+          `${href}#${encodeURIComponent(next.key)}`,
+        );
+    }
+  }
   const selectedIndex = active
     ? entries.findIndex((entry) => entry.key === active.key)
     : -1;
@@ -542,6 +578,14 @@ export function NotebookViewer({
           </button>
         </div>
       ) : null}
+      {notice && !pinned.size ? (
+        <div className={styles.saveNotice} role="status">
+          {notice}
+          <button type="button" onClick={() => setNotice(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
       {pinned.size ? (
         <div className={styles.saveNotice}>
           Ink on {pinned.size} page(s) is active, saving, or needs a retry.{" "}
@@ -572,6 +616,8 @@ export function NotebookViewer({
             onBookmark={(entry) => void toggleBookmark(entry)}
             onEnsureBookmarks={ensureBookmarks}
             onRename={(page) => setDialog({ kind: "rename", page })}
+            onDelete={setDeleteTarget}
+            busyPages={pinned}
             onAdd={() => setDialog({ kind: "add" })}
           />
         ) : null}
@@ -664,6 +710,23 @@ export function NotebookViewer({
             );
             jump(noteKey(page.id));
           }}
+        />
+      ) : null}
+      {deleteTarget ? (
+        <NotebookPageDeleteDialog
+          notebookId={notebookId}
+          page={deleteTarget}
+          fallbackFocusRef={viewportRef}
+          blocked={
+            pinned.has(noteKey(deleteTarget.id)) ||
+            bookmarkBusy.has(noteKey(deleteTarget.id))
+              ? "Finish saving this page before deleting it."
+              : undefined
+          }
+          onClose={() => {
+            setDeleteTarget(null);
+          }}
+          onDeleted={pageDeleted}
         />
       ) : null}
     </main>

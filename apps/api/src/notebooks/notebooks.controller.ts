@@ -110,6 +110,34 @@ export class NotebooksController {
     );
   }
 
+  @Delete(':notebookId/pages/:pageId')
+  @HttpCode(200)
+  deletePage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Param('pageId') pageId: string,
+  ) {
+    return this.pages.remove(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(notebookPageIdSchema, pageId),
+    );
+  }
+
+  @Post(':notebookId/pages/:pageId/restore')
+  @HttpCode(200)
+  restorePage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Param('pageId') pageId: string,
+  ) {
+    return this.pages.restore(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(notebookPageIdSchema, pageId),
+    );
+  }
+
   @Patch(':notebookId')
   update(
     @CurrentUser() user: AuthenticatedUser,

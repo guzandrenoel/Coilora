@@ -1,0 +1,101 @@
+.actions {
+  position: relative;
+  width: max-content;
+  margin-left: auto;
+}
+.trigger {
+  min-width: 32px;
+  min-height: 28px;
+  border: 0;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--navy);
+  cursor: pointer;
+}
+.trigger:hover,
+.trigger[aria-expanded="true"] {
+  background: var(--mint-soft);
+}
+.menu {
+  position: absolute;
+  z-index: 5;
+  bottom: calc(100% + 4px);
+  right: 0;
+  width: 132px;
+  padding: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: white;
+  box-shadow: 0 5px 18px rgb(18 61 86 / 18%);
+}
+.menu button {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  padding: 0.45rem;
+  border: 0;
+  border-radius: 0.3rem;
+  background: white;
+  color: var(--navy);
+  text-align: left;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.menu button:hover {
+  background: var(--surface);
+}
+.menu .danger {
+  color: #943e34;
+}
+.hint {
+  margin: 0.25rem;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+.deleteForm {
+  display: grid;
+  gap: 0.8rem;
+}
+.deleteForm p {
+  margin: 0;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.error {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--coral-soft);
+  color: #943e34;
+}
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+.buttons button {
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: white;
+  color: var(--navy);
+  font: inherit;
+  cursor: pointer;
+}
+.buttons .deleteButton {
+  background: #943e34;
+  border-color: #943e34;
+  color: white;
+}
+.actions button:focus-visible,
+.buttons button:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.actions button:disabled,
+.buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

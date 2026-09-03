@@ -5,6 +5,7 @@ import type { NotebookPage } from "@/lib/api/types";
 import type { NotebookPdfPool } from "./notebook-pdf-pool";
 import type { TimelineEntry } from "./notebook-timeline";
 import { PdfPageCanvas } from "./pdf-page-canvas";
+import { NotebookPageMenu } from "./notebook-page-menu";
 import styles from "./notebook-viewer.module.css";
 
 type Props = {
@@ -18,6 +19,8 @@ type Props = {
   onBookmark: (entry: TimelineEntry) => void;
   onEnsureBookmarks: (documentId: string) => Promise<void>;
   onRename: (page: NotebookPage) => void;
+  onDelete: (page: NotebookPage) => void;
+  busyPages: Set<string>;
   onAdd: () => void;
 };
 export function NotebookSidebar(props: Props) {
@@ -221,6 +224,8 @@ function ThumbnailGrid({
   onBookmark,
   bookmarkBusy,
   onRename,
+  onDelete,
+  busyPages,
 }: Props & {
   items: TimelineEntry[];
   marked: (entry: TimelineEntry) => boolean;
@@ -291,7 +296,6 @@ function ThumbnailGrid({
                     <VisibleThumbnail pool={pool} entry={entry} />
                   ) : null}
                 </span>
-                <span className={styles.thumbnailTitle}>{title}</span>
               </button>
               <button
                 type="button"
@@ -303,16 +307,28 @@ function ThumbnailGrid({
               >
                 <BookmarkIcon />
               </button>
-              {entry.kind === "note" ? (
+              <div className={styles.thumbnailCaption}>
                 <button
                   type="button"
-                  className={styles.rename}
-                  aria-label={`Rename ${title}`}
-                  onClick={() => onRename(entry.page)}
+                  className={styles.thumbnailTitle}
+                  title={title}
+                  onClick={() => onJump(entry.key)}
                 >
-                  •••
+                  {title}
                 </button>
-              ) : null}
+                {entry.kind === "note" ? (
+                  <NotebookPageMenu
+                    page={entry.page}
+                    onRename={onRename}
+                    onDelete={onDelete}
+                    deleteBlocked={
+                      busyPages.has(entry.key) || bookmarkBusy.has(entry.key)
+                        ? "Finish saving this page before deleting it."
+                        : undefined
+                    }
+                  />
+                ) : null}
+              </div>
             </div>
           );
         })}

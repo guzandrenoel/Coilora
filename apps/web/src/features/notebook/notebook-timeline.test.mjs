@@ -7,6 +7,7 @@ import {
   timelineWidth,
   visibleRows,
   anchoredScroll,
+  selectionAfterNoteDeletion,
 } from "./notebook-timeline.ts";
 
 const note = (id, position, extra = {}) => ({
@@ -28,6 +29,56 @@ const pdf = (id, count, extra = {}) => ({
   ...extra,
 });
 const viewport = { width: 1000, height: 800 };
+
+test("deleting a note selects the next page, then the previous page", () => {
+  const rows = buildTimeline([note("a", 1), note("b", 2), note("c", 3)], []);
+  assert.equal(selectionAfterNoteDeletion(rows, "a", "note:a")?.key, "note:b");
+  assert.equal(selectionAfterNoteDeletion(rows, "b", "note:b")?.key, "note:c");
+  assert.equal(selectionAfterNoteDeletion(rows, "c", "note:c")?.key, "note:b");
+  assert.equal(selectionAfterNoteDeletion(rows, "a", "note:c")?.key, "note:c");
+  assert.equal(
+    selectionAfterNoteDeletion(
+      buildTimeline([note("a", 1)], []),
+      "a",
+      "note:a",
+    ),
+    undefined,
+  );
+  assert.equal(selectionAfterNoteDeletion([], "missing"), undefined);
+});
+
+test("deletion navigation retains PDF pages and document headings", () => {
+  const rows = buildTimeline(
+    [
+      note("first", 1),
+      note("inserted", 2, {
+        document_id: "pdf",
+        after_document_page_number: 1,
+      }),
+    ],
+    [pdf("pdf", 2)],
+  );
+  assert.equal(
+    selectionAfterNoteDeletion(rows, "first", "note:first")?.key,
+    "pdf:pdf:1",
+  );
+  assert.equal(
+    selectionAfterNoteDeletion(rows, "inserted", "note:inserted")?.key,
+    "pdf:pdf:2",
+  );
+  assert.equal(
+    selectionAfterNoteDeletion(rows, "inserted", "pdf:pdf:1")?.key,
+    "pdf:pdf:1",
+  );
+  const unavailable = buildTimeline(
+    [note("first", 1)],
+    [pdf("failed", null, { status: "failed" })],
+  );
+  assert.equal(
+    selectionAfterNoteDeletion(unavailable, "first", "note:first")?.key,
+    "document:failed",
+  );
+});
 
 test("notes, PDFs and inserted notes have one stable order", () => {
   const rows = buildTimeline(

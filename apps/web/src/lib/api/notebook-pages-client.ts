@@ -135,8 +135,7 @@ export async function createNotebookPage(
         title: cleanTitle,
         paperStyle,
         documentId: placement?.documentId ?? null,
-        afterDocumentPageNumber:
-          placement?.afterDocumentPageNumber ?? null,
+        afterDocumentPageNumber: placement?.afterDocumentPageNumber ?? null,
       }),
     },
   );
@@ -156,8 +155,7 @@ export async function updateNotebookPage(
     !uuidPattern.test(notebookId) ||
     !uuidPattern.test(pageId) ||
     (title !== undefined && (!title || title.length > 120)) ||
-    (input.bookmarked !== undefined &&
-      typeof input.bookmarked !== "boolean") ||
+    (input.bookmarked !== undefined && typeof input.bookmarked !== "boolean") ||
     (title === undefined && input.bookmarked === undefined)
   ) {
     throw new Error("Choose a valid page change.");
@@ -185,5 +183,54 @@ export async function updateNotebookPage(
   ) {
     throw new Error("The API returned an unexpected notebook page response.");
   }
+  return body;
+}
+
+export async function deleteNotebookPage(
+  notebookId: string,
+  pageId: string,
+): Promise<void> {
+  if (!uuidPattern.test(notebookId) || !uuidPattern.test(pageId)) {
+    throw new Error("Select a valid notebook page.");
+  }
+
+  const body = await apiRequest(
+    `/v1/notebooks/${encodeURIComponent(notebookId)}/pages/${encodeURIComponent(pageId)}`,
+    { method: "DELETE" },
+  );
+
+  if (
+    !isRecord(body) ||
+    body.id !== pageId ||
+    body.notebook_id !== notebookId ||
+    body.deleted !== true
+  ) {
+    throw new Error("The API returned an unexpected page deletion response.");
+  }
+}
+
+export async function restoreNotebookPage(
+  notebookId: string,
+  pageId: string,
+): Promise<NotebookPage> {
+  if (!uuidPattern.test(notebookId) || !uuidPattern.test(pageId)) {
+    throw new Error("Select a valid notebook page.");
+  }
+
+  const body = await apiRequest(
+    `/v1/notebooks/${encodeURIComponent(notebookId)}/pages/${encodeURIComponent(pageId)}/restore`,
+    { method: "POST" },
+  );
+
+  if (
+    !isNotebookPage(body) ||
+    body.id !== pageId ||
+    body.notebook_id !== notebookId
+  ) {
+    throw new Error(
+      "The API returned an unexpected page restoration response.",
+    );
+  }
+
   return body;
 }
