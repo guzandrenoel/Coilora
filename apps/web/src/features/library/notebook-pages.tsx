@@ -42,7 +42,6 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<NotebookPage | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,11 +145,6 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
           <p>Add blank paper for your own notes.</p>
         </div>
       </header>
-      {notice ? (
-        <p className={styles.status} role="status">
-          {notice}
-        </p>
-      ) : null}
 
       {loadError ? (
         <div className={styles.error}>
@@ -311,7 +305,6 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
             setPages((current) =>
               current.filter((item) => item.id !== deleted.id),
             );
-            setNotice(`Deleted ${deleted.title}.`);
             // Offset pagination shifts after deletion. Reload from the start
             // rather than skipping the first row in the next batch.
             setPage(0);

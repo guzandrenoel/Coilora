@@ -79,7 +79,6 @@ export function NotebookViewer({
   const [pinned, setPinned] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<PageDialog | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<NotebookPage | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [pdfBookmarks, setPdfBookmarks] = useState<Record<string, number[]>>(
     {},
   );
@@ -376,7 +375,6 @@ export function NotebookViewer({
   function pageDeleted(page: NotebookPage) {
     const next = selectionAfterNoteDeletion(entries, page.id, active?.key);
     setPages((current) => current.filter((item) => item.id !== page.id));
-    setNotice(`Deleted ${page.title}.`);
     if (!next) {
       router.replace(notebookHref);
       return;
@@ -575,14 +573,6 @@ export function NotebookViewer({
             }}
           >
             {loaded ? "Dismiss" : "Retry"}
-          </button>
-        </div>
-      ) : null}
-      {notice && !pinned.size ? (
-        <div className={styles.saveNotice} role="status">
-          {notice}
-          <button type="button" onClick={() => setNotice(null)}>
-            Dismiss
           </button>
         </div>
       ) : null}
