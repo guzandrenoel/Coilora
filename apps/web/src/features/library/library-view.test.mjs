@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { visibleNotebooks } from "./library-view.ts";
+import {
+  isLibraryId,
+  libraryHref,
+  visibleNotebooks,
+} from "./library-view.ts";
 
 import { coverColors, isCoverColor } from "../../lib/api/types.ts";
 
@@ -33,6 +37,36 @@ const notebooks = [
   },
 ];
 const ids = (items) => items.map((item) => item.id);
+
+test("each library view has a distinct reloadable route", () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+
+  assert.equal(
+    libraryHref({ view: "notebook", notebookId: id }),
+    `/library?notebook=${id}`,
+  );
+  assert.equal(
+    libraryHref({ view: "notebooks", courseId: id }),
+    `/library?course=${id}`,
+  );
+  assert.equal(
+    libraryHref({ view: "notebooks", courseId: "uncategorized" }),
+    "/library?course=uncategorized",
+  );
+  assert.equal(libraryHref({ view: "import" }), "/library?view=import");
+  assert.equal(
+    libraryHref({ view: "import", targetNotebookId: id }),
+    `/library?view=import&target=${id}`,
+  );
+  assert.equal(libraryHref(), "/library");
+});
+
+test("library route identifiers require UUIDs", () => {
+  assert.equal(isLibraryId("00000000-0000-4000-8000-000000000001"), true);
+  for (const value of ["", "notebook-id", "../library", null, undefined]) {
+    assert.equal(isLibraryId(value), false);
+  }
+});
 
 test("notebooks sort by most recently updated without changing source order", () => {
   assert.deepEqual(

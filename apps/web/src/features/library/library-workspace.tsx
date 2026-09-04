@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import {
@@ -30,6 +31,7 @@ import { CourseColorPicker, courseAccentColors } from "./course-color-picker";
 
 import { LibraryCollections } from "./library-collections";
 import { LibraryDialog } from "./library-dialog";
+import { libraryHref } from "./library-view";
 import styles from "./library-workspace.module.css";
 
 type View = "notebooks" | "notebook" | "import";
@@ -49,13 +51,20 @@ function message(error: unknown) {
 
 export function LibraryWorkspace({
   displayName,
+  initialCourseId = "",
+  initialImportNotebookId = "",
   initialNotebookId = "",
+  initialView = "notebooks",
   signOutAction,
 }: {
   displayName: string;
+  initialCourseId?: string;
+  initialImportNotebookId?: string;
   initialNotebookId?: string;
+  initialView?: Extract<View, "notebooks" | "import">;
   signOutAction: () => Promise<void>;
 }) {
+  const router = useRouter();
   const [view, setView] = useState<View>("notebooks");
   const [courses, setCourses] = useState<Course[]>([]);
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
@@ -74,7 +83,6 @@ export function LibraryWorkspace({
   const mutationLock = useRef(false);
   const dataEpoch = useRef(0);
   const lastRefresh = useRef(0);
-  const initialNotebookApplied = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,26 +94,53 @@ export function LibraryWorkspace({
         setLoadError(null);
         setCourses(nextCourses);
         setNotebooks(nextNotebooks);
-        if (
-          !initialNotebookApplied.current &&
-          initialNotebookId &&
-          nextNotebooks.some((notebook) => notebook.id === initialNotebookId)
-        ) {
-          initialNotebookApplied.current = true;
+        const requestedNotebook = nextNotebooks.find(
+          (notebook) => notebook.id === initialNotebookId,
+        );
+        const requestedCourseAvailable =
+          initialCourseId === "uncategorized" ||
+          nextCourses.some((course) => course.id === initialCourseId);
+        const importTargetAvailable =
+          !initialImportNotebookId ||
+          nextNotebooks.some(
+            (notebook) => notebook.id === initialImportNotebookId,
+          );
+
+        if (requestedNotebook) {
           setActiveNotebookId(initialNotebookId);
+          setCourseId("");
           setView("notebook");
+        } else if (initialNotebookId) {
+          setActiveNotebookId("");
+          setCourseId("");
+          setView("notebooks");
+          router.replace(libraryHref(), { scroll: false });
+        } else if (initialView === "import") {
+          setActiveNotebookId("");
+          setCourseId("");
+          setImportMounted(true);
+          setImportNotebookId(
+            importTargetAvailable ? initialImportNotebookId : "",
+          );
+          setView("import");
+          if (!importTargetAvailable) {
+            router.replace(libraryHref({ view: "import" }), { scroll: false });
+          }
+        } else if (initialCourseId && !requestedCourseAvailable) {
+          setActiveNotebookId("");
+          setCourseId("");
+          setView("notebooks");
+          router.replace(libraryHref(), { scroll: false });
+        } else {
+          setActiveNotebookId("");
+          setCourseId(initialCourseId);
+          setImportNotebookId((current) =>
+            nextNotebooks.some((notebook) => notebook.id === current)
+              ? current
+              : "",
+          );
+          setView("notebooks");
         }
-        setCourseId((current) =>
-          current === "uncategorized" ||
-          nextCourses.some((course) => course.id === current)
-            ? current
-            : "",
-        );
-        setImportNotebookId((current) =>
-          nextNotebooks.some((notebook) => notebook.id === current)
-            ? current
-            : "",
-        );
       })
       .catch((error: unknown) => {
         if (!cancelled && epoch === dataEpoch.current)
@@ -117,7 +152,14 @@ export function LibraryWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [initialNotebookId, loadVersion]);
+  }, [
+    initialCourseId,
+    initialImportNotebookId,
+    initialNotebookId,
+    initialView,
+    loadVersion,
+    router,
+  ]);
 
   useEffect(() => {
     function revalidate() {
@@ -154,17 +196,51 @@ export function LibraryWorkspace({
   const disabled = busy || loading || !!loadError;
   const firstName = displayName.trim().split(/\s+/)[0] || "Student";
 
-  function navigate(next: View) {
-    setView(next);
+  function updateRoute(href: string) {
+    if (`${window.location.pathname}${window.location.search}` !== href) {
+      router.push(href, { scroll: false });
+    }
+  }
+
+  function focusHeading() {
     requestAnimationFrame(() =>
       document.getElementById("library-title")?.focus(),
     );
   }
 
+  function openLibrary(nextCourseId = "") {
+    setActiveNotebookId("");
+    setCourseId(nextCourseId);
+    setView("notebooks");
+    updateRoute(
+      libraryHref({ view: "notebooks", courseId: nextCourseId || undefined }),
+    );
+    focusHeading();
+  }
+
+  function openNotebook(notebookId: string) {
+    setActiveNotebookId(notebookId);
+    setCourseId("");
+    setView("notebook");
+    updateRoute(libraryHref({ view: "notebook", notebookId }));
+    focusHeading();
+  }
+
   function openImport(notebookId = "") {
+    const targetNotebookId =
+      !isUploading && notebookId ? notebookId : importNotebookId;
     if (!isUploading && notebookId) setImportNotebookId(notebookId);
+    setActiveNotebookId("");
+    setCourseId("");
     setImportMounted(true);
-    navigate("import");
+    setView("import");
+    updateRoute(
+      libraryHref({
+        view: "import",
+        targetNotebookId: targetNotebookId || undefined,
+      }),
+    );
+    focusHeading();
   }
 
   function openDialog(next: Dialog) {
@@ -219,8 +295,7 @@ export function LibraryWorkspace({
           created,
           ...current.filter((item) => item.id !== created.id),
         ]);
-        setCourseId(created.id);
-        navigate("notebooks");
+        openLibrary(created.id);
       } else if (dialog.type === "notebook") {
         const created = await createNotebook({
           title: name,
@@ -231,8 +306,7 @@ export function LibraryWorkspace({
           created,
           ...current.filter((item) => item.id !== created.id),
         ]);
-        setActiveNotebookId(created.id);
-        navigate("notebook");
+        openNotebook(created.id);
       } else if (dialog.type === "editNotebook") {
         const updated = await updateNotebook(dialog.item.id, {
           title: name,
@@ -268,8 +342,7 @@ export function LibraryWorkspace({
           current === dialog.item.id ? "" : current,
         );
         if (activeNotebookId === dialog.item.id) {
-          setActiveNotebookId("");
-          navigate("notebooks");
+          openLibrary();
         }
       }
       setDialog(null);
@@ -328,10 +401,7 @@ export function LibraryWorkspace({
         <button
           className={styles.brand}
           type="button"
-          onClick={() => {
-            setCourseId("");
-            navigate("notebooks");
-          }}
+          onClick={() => openLibrary()}
           aria-label="Coilora library"
         >
           <span className={styles.brandMark}>
@@ -352,10 +422,7 @@ export function LibraryWorkspace({
             aria-current={
               view === "notebooks" && !courseId ? "page" : undefined
             }
-            onClick={() => {
-              setCourseId("");
-              navigate("notebooks");
-            }}
+            onClick={() => openLibrary()}
           >
             <LibraryIcon />
             <span>All notebooks</span>
@@ -388,10 +455,7 @@ export function LibraryWorkspace({
                   (view === "notebook" &&
                     activeNotebook?.course_id === course.id)
                 }
-                onClick={() => {
-                  setCourseId(course.id);
-                  navigate("notebooks");
-                }}
+                onClick={() => openLibrary(course.id)}
               >
                 <span
                   className={styles.courseDot}
@@ -449,10 +513,7 @@ export function LibraryWorkspace({
           <div className={styles.breadcrumb}>
             <button
               type="button"
-              onClick={() => {
-                setCourseId("");
-                navigate("notebooks");
-              }}
+              onClick={() => openLibrary()}
             >
               Library
             </button>
@@ -462,11 +523,10 @@ export function LibraryWorkspace({
                 <button
                   type="button"
                   onClick={() => {
-                    setCourseId(
+                    openLibrary(
                       (view === "notebook" ? activeCourse : selectedCourse)
                         ?.id ?? "",
                     );
-                    navigate("notebooks");
                   }}
                 >
                   {(view === "notebook" ? activeCourse : selectedCourse)?.name}
@@ -668,11 +728,8 @@ export function LibraryWorkspace({
               notebooks={notebooks}
               courses={courses}
               courseId={courseId}
-              onCourseChange={setCourseId}
-              onOpen={(notebook) => {
-                setActiveNotebookId(notebook.id);
-                navigate("notebook");
-              }}
+              onCourseChange={openLibrary}
+              onOpen={(notebook) => openNotebook(notebook.id)}
               onCreate={newNotebook}
               onEdit={(notebook) =>
                 openDialog({ type: "editNotebook", item: notebook })
@@ -703,7 +760,7 @@ export function LibraryWorkspace({
                 <button
                   className={styles.secondary}
                   type="button"
-                  onClick={() => navigate("notebooks")}
+                  onClick={() => openLibrary()}
                 >
                   Back to notebooks
                 </button>
@@ -718,7 +775,15 @@ export function LibraryWorkspace({
                 notebookId={importNotebookId}
                 notebooksLoading={loading}
                 notebookError={loadError}
-                onNotebookChange={setImportNotebookId}
+                onNotebookChange={(notebookId) => {
+                  setImportNotebookId(notebookId);
+                  updateRoute(
+                    libraryHref({
+                      view: "import",
+                      targetNotebookId: notebookId || undefined,
+                    }),
+                  );
+                }}
                 onRefreshNotebooks={refresh}
                 onBusyChange={(uploading) => {
                   if (uploading) dataEpoch.current += 1;
