@@ -237,6 +237,7 @@ export function LibraryWorkspace({
         const updated = await updateNotebook(dialog.item.id, {
           title: name,
           coverColor: isCoverColor(color) ? color : "sage",
+          courseId: String(data.get("courseId") ?? "") || null,
         });
         setNotebooks((current) =>
           current.map((item) => (item.id === updated.id ? updated : item)),
@@ -796,7 +797,8 @@ export function LibraryWorkspace({
                     />
                   </>
                 )}
-                {dialog.type === "notebook" ? (
+                {dialog.type === "notebook" ||
+                dialog.type === "editNotebook" ? (
                   <>
                     <label htmlFor="collection-course">
                       Course <span>(optional)</span>
@@ -804,7 +806,11 @@ export function LibraryWorkspace({
                     <select
                       id="collection-course"
                       name="courseId"
-                      defaultValue={dialog.courseId}
+                      defaultValue={
+                        dialog.type === "editNotebook"
+                          ? (dialog.item.course_id ?? "")
+                          : dialog.courseId
+                      }
                       disabled={busy}
                     >
                       <option value="">No course</option>

@@ -46,6 +46,7 @@ export const updateNotebookSchema = z
   .object({
     title: createNotebookSchema.shape.title,
     coverColor: coverColorSchema,
+    courseId: z.uuid('Select a valid course.').nullable().optional(),
   })
   .strict();
 

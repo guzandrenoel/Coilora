@@ -68,25 +68,60 @@ export class NotebooksService {
     return data;
   }
 
-  async update(
+    async update(
     user: AuthenticatedUser,
     notebookId: string,
     input: UpdateNotebookInput,
   ) {
-    const { data, error } = await this.clients
-      .create(user)
+    const client = this.clients.create(user);
+
+    if (input.courseId !== undefined && input.courseId !== null) {
+      const { data: destinationCourse, error: courseError } = await client
+        .from('courses')
+        .select('id')
+        .eq('id', input.courseId)
+        .eq('owner_id', user.id)
+        .is('archived_at', null)
+        .maybeSingle();
+
+      if (courseError) {
+        throw new ServiceUnavailableException(
+          'The selected course could not be verified.',
+        );
+      }
+
+      if (!destinationCourse) {
+        throw new BadRequestException('The selected course is unavailable.');
+      }
+    }
+
+    const updateValues = {
+      title: input.title,
+      cover_color: input.coverColor,
+      ...(input.courseId !== undefined
+        ? { course_id: input.courseId }
+        : {}),
+    };
+
+    const { data, error } = await client
       .from('notebooks')
-      .update({ title: input.title, cover_color: input.coverColor })
+      .update(updateValues)
       .eq('id', notebookId)
       .eq('owner_id', user.id)
       .is('archived_at', null)
       .select(notebookSelection)
       .maybeSingle();
-    if (error)
+
+    if (error) {
       throw new ServiceUnavailableException(
         'The notebook could not be updated.',
       );
-    if (!data) throw new NotFoundException('The notebook was not found.');
+    }
+
+    if (!data) {
+      throw new NotFoundException('The notebook was not found.');
+    }
+
     return data;
   }
 

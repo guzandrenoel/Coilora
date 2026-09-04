@@ -207,7 +207,11 @@ export async function updateCourse(
 
 export async function updateNotebook(
   id: string,
-  input: { title: string; coverColor: CoverColor },
+  input: {
+    title: string;
+    coverColor: CoverColor;
+    courseId?: string | null;
+  },
 ): Promise<Notebook> {
   const body = await apiRequest(`/v1/notebooks/${encodeURIComponent(id)}`, {
     method: "PATCH",

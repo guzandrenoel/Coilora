@@ -53,6 +53,7 @@ describe('library schemas', () => {
       }).success,
     ).toBe(false);
   });
+
   it('defaults new notebooks to sage', () => {
     expect(createNotebookSchema.parse({ title: 'Notes' }).coverColor).toBe(
       'sage',
@@ -88,22 +89,59 @@ describe('library schemas', () => {
     },
   );
 
-  it('rejects incomplete updates and owner or course reassignment', () => {
+  it('rejects incomplete updates and owner reassignment', () => {
     for (const body of [
       {},
       { title: 'Notes' },
       { title: ' ', coverColor: 'sage' },
       { title: 'Notes', coverColor: 'sage', owner_id: 'someone-else' },
-      { title: 'Notes', coverColor: 'sage', courseId: null },
     ]) {
       expect(updateNotebookSchema.safeParse(body).success).toBe(false);
     }
+
     expect(
       updateCourseSchema.safeParse({ name: ' ', owner_id: 'other' }).success,
     ).toBe(false);
+
     expect(updateCourseSchema.parse({ name: '  Anatomy ' })).toEqual({
       name: 'Anatomy',
     });
+  });
+
+  it('accepts moving a notebook to a course or no course', () => {
+    const courseId = '8f79c627-855f-4527-bc21-ddf130172aeb';
+
+    expect(
+      updateNotebookSchema.parse({
+        title: 'Notes',
+        coverColor: 'sage',
+        courseId,
+      }),
+    ).toEqual({
+      title: 'Notes',
+      coverColor: 'sage',
+      courseId,
+    });
+
+    expect(
+      updateNotebookSchema.parse({
+        title: 'Notes',
+        coverColor: 'sage',
+        courseId: null,
+      }),
+    ).toEqual({
+      title: 'Notes',
+      coverColor: 'sage',
+      courseId: null,
+    });
+
+    expect(
+      updateNotebookSchema.safeParse({
+        title: 'Notes',
+        coverColor: 'sage',
+        courseId: 'not-a-uuid',
+      }).success,
+    ).toBe(false);
   });
 
   it('trims valid course and notebook names', () => {
@@ -117,12 +155,14 @@ describe('library schemas', () => {
 
   it('rejects blank names and invalid course identifiers', () => {
     expect(createCourseSchema.safeParse({ name: '   ' }).success).toBe(false);
+
     expect(
       createNotebookSchema.safeParse({
         title: 'Lecture notes',
         courseId: 'not-a-uuid',
       }).success,
     ).toBe(false);
+
     expect(
       notebookListQuerySchema.safeParse({ courseId: 'not-a-uuid' }).success,
     ).toBe(false);
