@@ -57,3 +57,9 @@ export const documentPageCountSchema = z
 export const documentBookmarkSchema = z
   .object({ bookmarked: z.boolean() })
   .strict();
+
+export const moveDocumentSchema = z
+  .object({
+    destinationNotebookId: z.uuid('Select a valid destination notebook.'),
+  })
+  .strict();

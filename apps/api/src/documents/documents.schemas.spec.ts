@@ -3,7 +3,27 @@ import { describe, expect, it } from 'vitest';
 import {
   createDocumentSchema,
   documentBookmarkSchema,
+  moveDocumentSchema,
 } from './documents.schemas.js';
+
+describe('moveDocumentSchema', () => {
+  const destinationNotebookId = '00000000-0000-4000-8000-000000000004';
+
+  it('accepts one valid destination notebook identifier', () => {
+    expect(moveDocumentSchema.parse({ destinationNotebookId })).toEqual({
+      destinationNotebookId,
+    });
+  });
+
+  it.each([
+    {},
+    { destinationNotebookId: '' },
+    { destinationNotebookId: 'not-a-uuid' },
+    { destinationNotebookId, ownerId: 'other' },
+  ])('rejects an invalid document move: %j', (input) => {
+    expect(moveDocumentSchema.safeParse(input).success).toBe(false);
+  });
+});
 
 describe('documentBookmarkSchema', () => {
   it.each([true, false])(

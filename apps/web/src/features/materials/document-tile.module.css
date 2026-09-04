@@ -99,6 +99,60 @@ a.open:hover .preview {
   color: #89958e;
   cursor: pointer;
 }
+.menu {
+  position: absolute;
+  z-index: 1;
+  top: 0.15rem;
+  left: 0.15rem;
+}
+.menu summary {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 90%);
+  color: var(--navy);
+  cursor: pointer;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  list-style: none;
+}
+.menu summary::-webkit-details-marker {
+  display: none;
+}
+.menu summary:hover {
+  background: var(--mint-soft);
+}
+.menu > div {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  left: 0;
+  min-width: 150px;
+  padding: 0.35rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.65rem;
+  background: var(--surface);
+  box-shadow: 0 10px 25px rgb(18 61 86 / 16%);
+}
+.menu button {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--navy-deep);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.menu button:hover:not(:disabled) {
+  background: var(--mint-soft);
+}
 .bookmark svg {
   width: 23px;
   height: 23px;
@@ -113,11 +167,17 @@ a.open:hover .preview {
   background: var(--mint-soft);
 }
 .bookmark:focus-visible,
+.menu summary:focus-visible,
+.menu button:focus-visible,
 .retry:focus-visible {
   outline: 3px solid var(--blue);
   outline-offset: 2px;
 }
 .bookmark:disabled {
+  cursor: wait;
+}
+.menu button:disabled {
+  opacity: 0.55;
   cursor: wait;
 }
 .tile[data-compact="true"] .title {

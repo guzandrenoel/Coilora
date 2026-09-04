@@ -511,10 +511,7 @@ export function LibraryWorkspace({
       <main className={styles.main} id="library-content">
         <div className={styles.topbar}>
           <div className={styles.breadcrumb}>
-            <button
-              type="button"
-              onClick={() => openLibrary()}
-            >
+            <button type="button" onClick={() => openLibrary()}>
               Library
             </button>
             {(view === "notebook" ? activeCourse : selectedCourse) ? (
@@ -742,7 +739,7 @@ export function LibraryWorkspace({
             activeNotebook ? (
               <div className={styles.notebookBody}>
                 <NotebookPages
-                  key={activeNotebook.id}
+                  key={`${activeNotebook.id}:${documentsVersion}`}
                   notebookId={activeNotebook.id}
                 />
                 <div className={styles.documents}>
@@ -750,6 +747,10 @@ export function LibraryWorkspace({
                     key={`${activeNotebook.id}:${documentsVersion}`}
                     notebookId={activeNotebook.id}
                     notebookTitle={activeNotebook.title}
+                    notebooks={notebooks}
+                    onMoved={() =>
+                      setDocumentsVersion((current) => current + 1)
+                    }
                     openInNewTab={isUploading}
                   />
                 </div>

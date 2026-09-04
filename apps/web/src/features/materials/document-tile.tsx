@@ -15,11 +15,13 @@ export function DocumentTile({
   openInNewTab = false,
   compact = false,
   onBookmarkChange,
+  onMoveRequest,
 }: {
   document: SavedDocument;
   openInNewTab?: boolean;
   compact?: boolean;
   onBookmarkChange?: (documentId: string, bookmarked: boolean) => void;
+  onMoveRequest?: (document: SavedDocument) => void;
 }) {
   const [bookmarked, setBookmarked] = useState(document.bookmarked);
   const [saving, setSaving] = useState(false);
@@ -105,6 +107,23 @@ export function DocumentTile({
       >
         <BookmarkIcon />
       </button>
+      {onMoveRequest ? (
+        <details className={styles.menu}>
+          <summary aria-label={`Options for ${document.title}`}>•••</summary>
+          <div>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={(event) => {
+                event.currentTarget.closest("details")?.removeAttribute("open");
+                onMoveRequest(document);
+              }}
+            >
+              Move to notebook
+            </button>
+          </div>
+        </details>
+      ) : null}
       {previewError ? (
         <button
           type="button"

@@ -1,24 +1,31 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 
 import {
   getSavedDocuments,
+  moveSavedDocument,
   type SavedDocument,
 } from "@/lib/api/documents-client";
+import type { Notebook } from "@/lib/api/types";
 
+import { LibraryDialog } from "@/features/library/library-dialog";
 import { DocumentTile } from "./document-tile";
 import styles from "./saved-documents.module.css";
 
 type SavedDocumentsProps = {
   notebookId: string;
   notebookTitle: string;
+  notebooks: Notebook[];
+  onMoved?: () => void;
   openInNewTab?: boolean;
 };
 
 export function SavedDocuments({
   notebookId,
   notebookTitle,
+  notebooks,
+  onMoved,
   openInNewTab = false,
 }: SavedDocumentsProps) {
   const headingId = useId();
@@ -40,6 +47,8 @@ export function SavedDocuments({
         <DocumentList
           key={notebookId}
           notebookId={notebookId}
+          notebooks={notebooks}
+          onMoved={onMoved}
           openInNewTab={openInNewTab}
         />
       ) : null}
@@ -49,9 +58,13 @@ export function SavedDocuments({
 
 function DocumentList({
   notebookId,
+  notebooks,
+  onMoved,
   openInNewTab,
 }: {
   notebookId: string;
+  notebooks: Notebook[];
+  onMoved?: () => void;
   openInNewTab: boolean;
 }) {
   const [documents, setDocuments] = useState<SavedDocument[]>([]);
@@ -60,6 +73,50 @@ function DocumentList({
   const [retryVersion, setRetryVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [movingDocument, setMovingDocument] = useState<SavedDocument | null>(
+    null,
+  );
+  const [destinationNotebookId, setDestinationNotebookId] = useState("");
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const [isMoving, setIsMoving] = useState(false);
+
+  const destinationNotebooks = notebooks.filter(
+    (notebook) => notebook.id !== notebookId,
+  );
+
+  function requestMove(document: SavedDocument) {
+    setMovingDocument(document);
+    setDestinationNotebookId(destinationNotebooks[0]?.id ?? "");
+    setMoveError(null);
+  }
+
+  async function submitMove(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!movingDocument || !destinationNotebookId || isMoving) return;
+
+    setIsMoving(true);
+    setMoveError(null);
+    try {
+      await moveSavedDocument(
+        notebookId,
+        movingDocument.id,
+        destinationNotebookId,
+      );
+      setDocuments((current) =>
+        current.filter((document) => document.id !== movingDocument.id),
+      );
+      setMovingDocument(null);
+      onMoved?.();
+    } catch (error) {
+      setMoveError(
+        error instanceof Error
+          ? error.message
+          : "The document could not be moved.",
+      );
+    } finally {
+      setIsMoving(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -109,7 +166,11 @@ function DocumentList({
         <ul className={styles.grid}>
           {documents.map((document) => (
             <li key={document.id}>
-              <DocumentTile document={document} openInNewTab={openInNewTab} />
+              <DocumentTile
+                document={document}
+                openInNewTab={openInNewTab}
+                onMoveRequest={requestMove}
+              />
             </li>
           ))}
         </ul>
@@ -161,6 +222,73 @@ function DocumentList({
 
       {documents.length > 0 ? (
         <p className={styles.message}>Your original files stay unchanged.</p>
+      ) : null}
+
+      {movingDocument ? (
+        <LibraryDialog
+          title="Move document"
+          busy={isMoving}
+          onClose={() => setMovingDocument(null)}
+        >
+          <form
+            className={styles.moveForm}
+            onSubmit={(event) => void submitMove(event)}
+          >
+            <p>
+              Move <strong>{movingDocument.title}</strong> and its connected
+              notes, annotations, and bookmarks to another notebook.
+            </p>
+
+            {destinationNotebooks.length > 0 ? (
+              <>
+                <label htmlFor="document-destination">
+                  Destination notebook
+                </label>
+                <select
+                  id="document-destination"
+                  value={destinationNotebookId}
+                  disabled={isMoving}
+                  required
+                  onChange={(event) =>
+                    setDestinationNotebookId(event.currentTarget.value)
+                  }
+                >
+                  {destinationNotebooks.map((notebook) => (
+                    <option key={notebook.id} value={notebook.id}>
+                      {notebook.title}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <p>Create another notebook before moving this document.</p>
+            )}
+
+            {moveError ? (
+              <p className={styles.moveError} role="alert">
+                {moveError}
+              </p>
+            ) : null}
+
+            <div className={styles.moveActions}>
+              <button
+                className={styles.button}
+                type="button"
+                disabled={isMoving}
+                onClick={() => setMovingDocument(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.moveButton}
+                type="submit"
+                disabled={isMoving || !destinationNotebookId}
+              >
+                {isMoving ? "Moving..." : "Move document"}
+              </button>
+            </div>
+          </form>
+        </LibraryDialog>
       ) : null}
     </div>
   );

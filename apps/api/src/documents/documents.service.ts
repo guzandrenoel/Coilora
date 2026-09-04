@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -16,6 +18,47 @@ const pageSize = 20;
 @Injectable()
 export class DocumentsService {
   constructor(private readonly clients: UserDatabaseClientFactory) {}
+
+  async move(
+    user: AuthenticatedUser,
+    sourceNotebookId: string,
+    documentId: string,
+    destinationNotebookId: string,
+  ) {
+    const client = this.clients.create(user);
+    const { data, error } = await client.rpc('move_document_to_notebook', {
+      p_source_notebook_id: sourceNotebookId,
+      p_document_id: documentId,
+      p_destination_notebook_id: destinationNotebookId,
+    });
+
+    if (error?.code === 'P0002') {
+      throw new NotFoundException('The document was not found.');
+    }
+    if (error?.code === '23503') {
+      throw new BadRequestException('The selected notebook is unavailable.');
+    }
+    if (error?.code === '40001') {
+      throw new ConflictException(
+        'The document changed during the move. Please try again.',
+      );
+    }
+    if (error || !data) {
+      throw new ServiceUnavailableException('The document could not be moved.');
+    }
+    if (
+      typeof data !== 'object' ||
+      Array.isArray(data) ||
+      data.id !== documentId ||
+      data.notebook_id !== destinationNotebookId
+    ) {
+      throw new ServiceUnavailableException(
+        'The document move returned an unexpected result.',
+      );
+    }
+
+    return data;
+  }
 
   async setBookmark(
     user: AuthenticatedUser,

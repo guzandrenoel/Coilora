@@ -20,6 +20,7 @@ import {
   createDocumentSchema,
   documentBookmarkSchema,
   listDocumentsQuerySchema,
+  moveDocumentSchema,
 } from './documents.schemas.js';
 import { DocumentsService } from './documents.service.js';
 
@@ -27,6 +28,23 @@ import { DocumentsService } from './documents.service.js';
 @UseGuards(SupabaseAuthGuard)
 export class DocumentsController {
   constructor(private readonly documents: DocumentsService) {}
+
+  @Patch(':documentId/move')
+  @Header('Cache-Control', 'no-store')
+  move(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Param('documentId') documentId: string,
+    @Body() body: unknown,
+  ) {
+    const input = parseWithSchema(moveDocumentSchema, body);
+    return this.documents.move(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(z.uuid('Select a valid document.'), documentId),
+      input.destinationNotebookId,
+    );
+  }
 
   @Patch(':documentId/bookmark')
   @Header('Cache-Control', 'no-store')

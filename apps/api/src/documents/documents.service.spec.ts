@@ -1,4 +1,9 @@
-import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AuthenticatedUser } from '../auth/auth.types.js';
@@ -13,6 +18,7 @@ const user: AuthenticatedUser = {
 };
 
 const notebookId = '00000000-0000-4000-8000-000000000002';
+const destinationNotebookId = '00000000-0000-4000-8000-000000000004';
 
 const input: CreateDocumentInput = {
   title: 'Anatomy lecture',
@@ -57,6 +63,13 @@ function setup() {
   };
 
   const client = {
+    rpc: vi.fn().mockResolvedValue({
+      data: {
+        ...createdDocument,
+        notebook_id: destinationNotebookId,
+      },
+      error: null,
+    }),
     from: vi.fn((table: string) => {
       if (table === 'notebooks') {
         return notebookQuery;
@@ -82,6 +95,69 @@ function setup() {
 }
 
 describe('DocumentsService', () => {
+  it('moves a document through the authenticated transactional RPC', async () => {
+    const { service, clients, client } = setup();
+
+    await expect(
+      service.move(user, notebookId, createdDocument.id, destinationNotebookId),
+    ).resolves.toMatchObject({
+      id: createdDocument.id,
+      notebook_id: destinationNotebookId,
+    });
+
+    expect(clients.create).toHaveBeenCalledWith(user);
+    expect(client.rpc).toHaveBeenCalledExactlyOnceWith(
+      'move_document_to_notebook',
+      {
+        p_source_notebook_id: notebookId,
+        p_document_id: createdDocument.id,
+        p_destination_notebook_id: destinationNotebookId,
+      },
+    );
+  });
+
+  it.each([
+    {
+      caseName: 'an inaccessible source document',
+      code: 'P0002',
+      exception: NotFoundException,
+    },
+    {
+      caseName: 'an unavailable or archived destination notebook',
+      code: '23503',
+      exception: BadRequestException,
+    },
+    {
+      caseName: 'a concurrent move',
+      code: '40001',
+      exception: ConflictException,
+    },
+    {
+      caseName: 'a database failure',
+      code: '08006',
+      exception: ServiceUnavailableException,
+    },
+  ])('maps $caseName safely', async ({ code, exception }) => {
+    const { service, client } = setup();
+    client.rpc.mockResolvedValueOnce({ data: null, error: { code } });
+
+    await expect(
+      service.move(user, notebookId, createdDocument.id, destinationNotebookId),
+    ).rejects.toThrow(exception);
+  });
+
+  it('rejects an unexpected document move response', async () => {
+    const { service, client } = setup();
+    client.rpc.mockResolvedValueOnce({
+      data: { id: createdDocument.id, notebook_id: notebookId },
+      error: null,
+    });
+
+    await expect(
+      service.move(user, notebookId, createdDocument.id, destinationNotebookId),
+    ).rejects.toThrow(ServiceUnavailableException);
+  });
+
   it('updates a whole-document bookmark within an owned active notebook', async () => {
     const { service, notebookQuery, documentQuery } = setup();
     await expect(

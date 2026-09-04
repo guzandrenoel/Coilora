@@ -449,7 +449,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      move_document_to_notebook: {
+        Args: {
+          p_destination_notebook_id: string
+          p_document_id: string
+          p_source_notebook_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

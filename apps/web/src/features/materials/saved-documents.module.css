@@ -77,6 +77,54 @@
   font-size: 0.8rem;
   overflow-wrap: anywhere;
 }
+.moveForm {
+  display: grid;
+  gap: 0.8rem;
+}
+.moveForm p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.moveForm label {
+  color: var(--navy-deep);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.moveForm select {
+  width: 100%;
+  min-height: 2.9rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.7rem;
+  background: var(--surface);
+  color: var(--navy-deep);
+}
+.moveError {
+  color: #943e34 !important;
+}
+.moveActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+.moveButton {
+  min-height: 2.75rem;
+  padding: 0.6rem 0.95rem;
+  border: 1px solid var(--navy);
+  border-radius: 0.75rem;
+  background: var(--navy);
+  color: white;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+.moveButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 @media (max-width: 480px) {
   .section {
     padding-inline: 1rem;

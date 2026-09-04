@@ -315,6 +315,38 @@ export async function getSavedDocuments(
   return { items, nextPage: body.nextPage };
 }
 
+export async function moveSavedDocument(
+  sourceNotebookId: string,
+  documentId: string,
+  destinationNotebookId: string,
+): Promise<SavedDocument> {
+  if (
+    !uuidPattern.test(sourceNotebookId) ||
+    !uuidPattern.test(documentId) ||
+    !uuidPattern.test(destinationNotebookId)
+  ) {
+    throw new Error("Select a valid document and destination notebook.");
+  }
+
+  const body = await apiRequest(
+    `/v1/notebooks/${encodeURIComponent(sourceNotebookId)}/documents/${encodeURIComponent(documentId)}/move`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ destinationNotebookId }),
+    },
+  );
+
+  if (
+    !isSavedDocument(body) ||
+    body.id !== documentId ||
+    body.notebook_id !== destinationNotebookId
+  ) {
+    throw new Error("The API returned an unexpected document move.");
+  }
+
+  return body;
+}
+
 export async function setSavedDocumentBookmark(
   notebookId: string,
   documentId: string,
