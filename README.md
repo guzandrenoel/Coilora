@@ -62,7 +62,8 @@ Collapsing a document group hides its sidebar thumbnails, not its pages in the c
 - Freehand pen, highlighter, and eraser tools for note pages and PDFs.
 - Select and drag saved strokes while keeping them within page boundaries.
 - Undo and redo the latest 100 annotation creates, moves, and erases from the current viewer session, including standard keyboard shortcuts.
-- Selectable ink colors.
+- Icon-only drawing tools with a responsive contextual settings dock.
+- Separate remembered Pen and Highlighter colors, thicknesses, quick colors, and a custom palette. Highlighter opacity is also configurable.
 - The select tool is the neutral default, scrolling on empty page space and moving saved strokes when dragged.
 - Accessible control labels, selected states, and tooltips.
 - Original PDFs remain unchanged; annotations are stored separately.

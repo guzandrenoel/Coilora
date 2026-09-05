@@ -16,6 +16,8 @@ export function NotebookPageSurface({
   pool,
   tool,
   color,
+  strokeWidth,
+  opacity,
   visible,
   onSize,
   onBusy,
@@ -28,6 +30,8 @@ export function NotebookPageSurface({
   pool: NotebookPdfPool;
   tool: EditorTool;
   color: string;
+  strokeWidth: number;
+  opacity: number;
   visible: boolean;
   onSize: (key: string, size: PageSize) => void;
   onBusy: (key: string, busy: boolean) => void;
@@ -90,6 +94,8 @@ export function NotebookPageSurface({
             }
             tool={tool}
             color={color}
+            strokeWidth={strokeWidth}
+            opacity={opacity}
             disabled={editorDisabled}
             refreshVersion={annotationRefreshVersion}
             onBusyChange={reportBusy}

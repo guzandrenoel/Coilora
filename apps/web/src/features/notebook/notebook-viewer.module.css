@@ -102,13 +102,6 @@
   align-items: center;
   gap: 0.7rem;
 }
-.pageControls > button {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.4rem;
-  flex: none;
-}
 .pageControls {
   grid-column: 3;
   display: flex;
@@ -143,9 +136,6 @@ button.primary {
   border-color: white;
   background: white;
   color: var(--navy);
-}
-.pageControls > button[aria-pressed="true"] > svg {
-  fill: #bc644f;
 }
 .historyControls {
   position: absolute;
@@ -182,24 +172,6 @@ button.primary {
 .historyControls svg {
   width: 18px;
   height: 18px;
-}
-.colors {
-  display: flex;
-  flex: none;
-  gap: 0.45rem;
-  padding: 0.3rem;
-}
-.colors button {
-  min-height: 0;
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  padding: 0;
-  border: 2px solid white;
-  box-shadow: 0 0 0 1px var(--line-strong);
-}
-.colors button[aria-pressed="true"] {
-  box-shadow: 0 0 0 3px var(--blue);
 }
 .zoom {
   display: flex;
@@ -716,6 +688,9 @@ button.primary {
   }
   .workspace[data-sidebar-open="true"] .historyControls {
     left: 0.75rem;
+  }
+  .workspace[data-settings-open="true"] .historyControls {
+    top: 4.75rem;
   }
   .sidebar {
     position: absolute;

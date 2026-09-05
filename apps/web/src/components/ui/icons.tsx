@@ -133,6 +133,15 @@ export function HighlighterIcon(props: IconProps) {
   );
 }
 
+export function EraserIcon(props: IconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="m7 19-4-4L14.5 3.5a2.1 2.1 0 0 1 3 0l3 3a2.1 2.1 0 0 1 0 3L11 19H7Z" />
+      <path d="m11 7 6 6M7 19h13" />
+    </IconFrame>
+  );
+}
+
 export function SparkIcon(props: IconProps) {
   return (
     <IconFrame {...props}>

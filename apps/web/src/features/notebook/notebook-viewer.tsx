@@ -10,11 +10,22 @@ import {
   useState,
 } from "react";
 import {
+  EraserIcon,
+  HighlighterIcon,
   HomeIcon,
+  PenIcon,
   RedoIcon,
   SelectIcon,
   UndoIcon,
 } from "@/components/ui/icons";
+import { AnnotationSettingsDock } from "@/features/editor/annotation-settings-dock";
+import {
+  annotationPreferencesStorageKey,
+  defaultAnnotationToolPreferences,
+  parseAnnotationToolPreferences,
+  type DrawingStyle,
+  type DrawingTool,
+} from "@/features/editor/annotation-tool-settings";
 import { PagePanelToggle } from "@/features/editor/page-panel-toggle";
 import type { EditorTool } from "@/features/editor/annotation-canvas";
 import {
@@ -69,8 +80,6 @@ import { NotebookPageDialog, type PageDialog } from "./notebook-page-dialog";
 import { NotebookPageDeleteDialog } from "./notebook-page-delete-dialog";
 import styles from "./notebook-viewer.module.css";
 
-const colors = ["#173f5f", "#d94f70", "#e6b800", "#2b8a6e", "#7b61c9"];
-
 export function NotebookViewer({
   notebookId,
   initialKey,
@@ -88,7 +97,16 @@ export function NotebookViewer({
   const [pool, setPool] = useState<NotebookPdfPool | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tool, setTool] = useState<EditorTool>("select");
-  const [color, setColor] = useState(colors[0]);
+  const [toolPreferences, setToolPreferences] = useState(() => {
+    if (typeof window === "undefined") return defaultAnnotationToolPreferences();
+    try {
+      return parseAnnotationToolPreferences(
+        window.localStorage.getItem(annotationPreferencesStorageKey),
+      );
+    } catch {
+      return defaultAnnotationToolPreferences();
+    }
+  });
   const [annotationHistory, setAnnotationHistory] = useState(
     emptyAnnotationHistory,
   );
@@ -127,6 +145,16 @@ export function NotebookViewer({
       alive.current = false;
     };
   }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        annotationPreferencesStorageKey,
+        JSON.stringify(toolPreferences),
+      );
+    } catch {
+      // Tool settings remain usable for the current viewer session.
+    }
+  }, [toolPreferences]);
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -460,27 +488,6 @@ export function NotebookViewer({
       setBookmarkBusy(new Set(savingBookmarks.current));
     }
   }
-  function addNote() {
-    if (
-      active?.kind === "document" &&
-      active.document.source_type === "pdf" &&
-      active.document.status === "uploaded"
-    )
-      setDialog({ kind: "add", documentId: active.document.id, afterPage: 0 });
-    else if (active?.kind === "pdf")
-      setDialog({
-        kind: "add",
-        documentId: active.document.id,
-        afterPage: active.pageNumber,
-      });
-    else if (active?.kind === "note" && active.page.document_id)
-      setDialog({
-        kind: "add",
-        documentId: active.page.document_id,
-        afterPage: active.page.after_document_page_number ?? 0,
-      });
-    else setDialog({ kind: "add" });
-  }
   function closeSidebar() {
     setSidebarOpen(false);
     toggleRef.current?.focus();
@@ -534,6 +541,16 @@ export function NotebookViewer({
     )
       index += direction;
     if (entries[index]) jump(entries[index].key);
+  }
+  const drawingTool: DrawingTool | null =
+    tool === "ink" || tool === "highlight" ? tool : null;
+  const drawingStyle = toolPreferences[drawingTool ?? "ink"];
+  function updateDrawingStyle(next: DrawingStyle) {
+    if (!drawingTool) return;
+    setToolPreferences((current) => ({
+      ...current,
+      [drawingTool]: next,
+    }));
   }
 
   return (
@@ -616,7 +633,7 @@ export function NotebookViewer({
                 <button
                   type="button"
                   key={option}
-                  className={option === "select" ? styles.iconTool : undefined}
+                  className={styles.iconTool}
                   aria-label={
                     {
                       select: "Select and move annotations",
@@ -639,32 +656,17 @@ export function NotebookViewer({
                   {
                     {
                       select: <SelectIcon />,
-                      ink: "Pen",
-                      highlight: "Highlighter",
-                      eraser: "Eraser",
+                      ink: <PenIcon />,
+                      highlight: <HighlighterIcon />,
+                      eraser: <EraserIcon />,
                     }[option]
                   }
                 </button>
               ),
             )}
           </div>
-          <div className={styles.colors} role="group" aria-label="Ink color">
-            {colors.map((value) => (
-              <button
-                type="button"
-                key={value}
-                style={{ backgroundColor: value }}
-                aria-label={`Use ${value} ink`}
-                aria-pressed={color === value}
-                onClick={() => setColor(value)}
-              />
-            ))}
-          </div>
         </nav>
         <div className={styles.pageControls}>
-          <button type="button" onClick={addNote} disabled={!loaded}>
-            + Add note
-          </button>
           <label className={styles.zoom}>
             Zoom{" "}
             <select
@@ -703,7 +705,11 @@ export function NotebookViewer({
           </button>
         </div>
       ) : null}
-      <div className={styles.workspace} data-sidebar-open={sidebarOpen}>
+      <div
+        className={styles.workspace}
+        data-sidebar-open={sidebarOpen}
+        data-settings-open={Boolean(drawingTool)}
+      >
         {sidebarOpen ? (
           <button
             type="button"
@@ -730,6 +736,15 @@ export function NotebookViewer({
             busyPages={pinned}
             onAdd={() => setDialog({ kind: "add" })}
             annotationVersions={thumbnailAnnotationVersions}
+          />
+        ) : null}
+        {drawingTool ? (
+          <AnnotationSettingsDock
+            key={drawingTool}
+            tool={drawingTool}
+            style={drawingStyle}
+            sidebarOpen={sidebarOpen}
+            onChange={updateDrawingStyle}
           />
         ) : null}
         <div
@@ -798,7 +813,9 @@ export function NotebookViewer({
                   notebookId={notebookId}
                   pool={pool}
                   tool={tool}
-                  color={color}
+                  color={drawingStyle.color}
+                  strokeWidth={drawingStyle.width}
+                  opacity={drawingStyle.opacity}
                   visible={
                     row.top + row.height >= scrollTop - 400 &&
                     row.top <= scrollTop + viewport.height + 400

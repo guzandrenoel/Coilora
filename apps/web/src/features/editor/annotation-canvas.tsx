@@ -42,11 +42,6 @@ type MoveGesture = {
   start: { x: number; y: number };
 };
 
-const settings = {
-  ink: { width: 0.004, opacity: 1 },
-  highlight: { width: 0.03, opacity: 0.35 },
-};
-
 const sorted = (items: PageAnnotation[]) =>
   [...items].sort((a, b) => a.z_index - b.z_index);
 
@@ -58,6 +53,8 @@ export function AnnotationCanvas({
   targetKey,
   tool,
   color,
+  strokeWidth,
+  opacity,
   disabled = false,
   refreshVersion = 0,
   onBusyChange,
@@ -70,6 +67,8 @@ export function AnnotationCanvas({
   targetKey: string;
   tool: EditorTool;
   color: string;
+  strokeWidth: number;
+  opacity: number;
   disabled?: boolean;
   refreshVersion?: number;
   onBusyChange?: (busy: boolean) => void;
@@ -212,7 +211,8 @@ export function AnnotationCanvas({
       kind: tool,
       points: [point(event.clientX, event.clientY)],
       color,
-      ...settings[tool],
+      width: strokeWidth,
+      opacity,
     };
     setDraft(stroke.current);
   }
