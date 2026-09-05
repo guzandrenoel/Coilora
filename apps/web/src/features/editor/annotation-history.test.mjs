@@ -2,11 +2,28 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  annotationHistoryShortcut,
   completeHistoryStep,
   emptyAnnotationHistory,
   historyEntry,
   recordAnnotationHistory,
 } from "./annotation-history.ts";
+
+test("Ctrl/Cmd+Z and Ctrl/Cmd+Y resolve to annotation history actions", () => {
+  assert.equal(annotationHistoryShortcut({ key: "z", ctrlKey: true }), "undo");
+  assert.equal(annotationHistoryShortcut({ key: "Z", metaKey: true }), "undo");
+  assert.equal(
+    annotationHistoryShortcut({ key: "z", ctrlKey: true, shiftKey: true }),
+    "redo",
+  );
+  assert.equal(annotationHistoryShortcut({ key: "y", ctrlKey: true }), "redo");
+  assert.equal(annotationHistoryShortcut({ key: "y", metaKey: true }), "redo");
+  assert.equal(annotationHistoryShortcut({ key: "z" }), null);
+  assert.equal(
+    annotationHistoryShortcut({ key: "z", ctrlKey: true, altKey: true }),
+    null,
+  );
+});
 
 const entry = (id) => ({
   target: {

@@ -32,6 +32,7 @@ import {
 import { PagePanelToggle } from "@/features/editor/page-panel-toggle";
 import type { EditorTool } from "@/features/editor/annotation-canvas";
 import {
+  annotationHistoryShortcut,
   completeHistoryStep,
   emptyAnnotationHistory,
   historyEntry,
@@ -496,7 +497,7 @@ export function NotebookViewer({
     }));
   }, []);
 
-  async function stepHistory(direction: "undo" | "redo") {
+  const stepHistory = useCallback(async (direction: "undo" | "redo") => {
     if (historyBusyRef.current || pinned.size) return;
     const currentHistory = annotationHistoryRef.current;
     const entry = historyEntry(currentHistory, direction);
@@ -568,12 +569,32 @@ export function NotebookViewer({
       historyBusyRef.current = false;
       setHistoryBusy(false);
     }
-  }
+  }, [pinned.size]);
 
   const canUndo =
     annotationHistory.past.length > 0 && !historyBusy && !pinned.size;
   const canRedo =
     annotationHistory.future.length > 0 && !historyBusy && !pinned.size;
+  useEffect(() => {
+    const handleHistoryShortcut = (event: KeyboardEvent) => {
+      const direction = annotationHistoryShortcut(event);
+      if (!direction || event.defaultPrevented) return;
+      const target = event.target;
+      const isTyping =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable);
+      if (isTyping || !(direction === "undo" ? canUndo : canRedo)) return;
+      event.preventDefault();
+      void stepHistory(direction);
+    };
+
+    window.addEventListener("keydown", handleHistoryShortcut, true);
+    return () =>
+      window.removeEventListener("keydown", handleHistoryShortcut, true);
+  }, [canRedo, canUndo, stepHistory]);
+
   function jump(key: string) {
     pendingJump.current = key;
     setJumpVersion((value) => value + 1);
@@ -733,32 +754,6 @@ export function NotebookViewer({
     <main
       className={styles.viewer}
       onKeyDown={(event) => {
-        const target = event.target;
-        const isTyping =
-          target instanceof HTMLInputElement ||
-          target instanceof HTMLTextAreaElement ||
-          target instanceof HTMLSelectElement ||
-          (target instanceof HTMLElement && target.isContentEditable);
-        const key = event.key.toLowerCase();
-        const modifier = event.ctrlKey || event.metaKey;
-        const direction =
-          modifier && key === "z"
-            ? event.shiftKey
-              ? "redo"
-              : "undo"
-            : modifier && key === "y"
-              ? "redo"
-              : null;
-        if (
-          direction &&
-          !event.altKey &&
-          !isTyping &&
-          (direction === "undo" ? canUndo : canRedo)
-        ) {
-          event.preventDefault();
-          void stepHistory(direction);
-          return;
-        }
         if (
           event.key === "Escape" &&
           zoomMenuRef.current?.open

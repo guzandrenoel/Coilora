@@ -10,6 +10,22 @@ export const emptyAnnotationHistory: AnnotationHistoryState = {
   future: [],
 };
 
+export type AnnotationHistoryDirection = "undo" | "redo";
+
+export function annotationHistoryShortcut(input: {
+  key: string;
+  ctrlKey?: boolean;
+  metaKey?: boolean;
+  shiftKey?: boolean;
+  altKey?: boolean;
+}): AnnotationHistoryDirection | null {
+  if (input.altKey || (!input.ctrlKey && !input.metaKey)) return null;
+  const key = input.key.toLowerCase();
+  if (key === "z") return input.shiftKey ? "redo" : "undo";
+  if (key === "y") return "redo";
+  return null;
+}
+
 const historyLimit = 100;
 
 export function recordAnnotationHistory(
