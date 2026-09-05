@@ -30,6 +30,12 @@
   stroke-linejoin: round;
 }
 
+.pencilGrain {
+  fill: none;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+}
+
 .layer[data-tool="eraser"] .stroke {
   cursor: pointer;
   pointer-events: stroke;

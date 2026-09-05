@@ -107,16 +107,34 @@
 }
 .tools {
   display: flex;
+  align-items: flex-end;
   flex: none;
-  gap: 0.2rem;
+  gap: 0;
+  height: 58px;
+  padding: 0 0.35rem;
+  overflow: hidden;
+  border: 1px solid rgb(18 61 86 / 12%);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff, #f8f8f5);
+  box-shadow: 0 3px 10px rgb(4 25 39 / 14%);
 }
 .tools .iconTool {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 40px;
-  height: 40px;
+  height: 58px;
   padding: 0;
+  overflow: visible;
+  border-color: transparent;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: var(--navy);
+  transition: background 120ms ease;
+}
+.header .tools .iconTool:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgb(18 61 86 / 6%);
 }
 .tools button[aria-pressed="true"],
 .filters button[aria-pressed="true"],
@@ -125,9 +143,42 @@ button.primary {
   color: white;
 }
 .header .tools button[aria-pressed="true"] {
-  border-color: white;
-  background: white;
+  border-color: transparent;
+  background: #e4edef;
   color: var(--navy);
+  box-shadow: inset 0 0 0 1px rgb(18 61 86 / 7%);
+}
+.tools .iconTool > svg {
+  width: 21px;
+  height: 21px;
+}
+.tools .iconTool > .toolArtwork {
+  display: block;
+  width: 36px;
+  height: 61px;
+  margin-bottom: -9px;
+  background-image: url("/annotation-tools.png");
+  background-repeat: no-repeat;
+  background-position-y: -15px;
+  background-size: 369px 110px;
+}
+.toolArtwork[data-tool="ink"] {
+  background-position-x: -11px;
+}
+.toolArtwork[data-tool="pencil"] {
+  background-position-x: -61px;
+}
+.toolArtwork[data-tool="highlight"] {
+  background-position-x: -157px;
+}
+.toolArtwork[data-tool="eraser"] {
+  background-position-x: -301px;
+}
+.tools .iconTool > .textToolArtwork {
+  width: 25px;
+  height: 25px;
+  margin-bottom: 16px;
+  filter: none;
 }
 .historyControls {
   position: absolute;
@@ -470,7 +521,12 @@ button.primary {
 .thumbnailScroll {
   overflow-y: auto;
   overflow-anchor: none;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.thumbnailScroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 .thumbnailTrack {
   position: relative;

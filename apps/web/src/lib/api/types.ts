@@ -82,7 +82,7 @@ export type NotebookPage = {
   updated_at: string;
 };
 
-export const annotationKinds = ["ink", "highlight", "text"] as const;
+export const annotationKinds = ["ink", "pencil", "highlight", "text"] as const;
 
 export type AnnotationKind = (typeof annotationKinds)[number];
 

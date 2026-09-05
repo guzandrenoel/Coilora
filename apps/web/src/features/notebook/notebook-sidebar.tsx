@@ -450,14 +450,25 @@ function ThumbnailAnnotations({
             </foreignObject>
           );
         }
+        const path = pointsToSvgPath(annotation.points);
         return (
-          <path
-            key={annotation.id}
-            d={pointsToSvgPath(annotation.points)}
-            stroke={annotation.color}
-            strokeWidth={annotation.width}
-            opacity={annotation.opacity}
-          />
+          <g key={annotation.id}>
+            <path
+              d={path}
+              stroke={annotation.color}
+              strokeWidth={annotation.width}
+              opacity={annotation.opacity}
+            />
+            {annotation.kind === "pencil" ? (
+              <path
+                d={path}
+                stroke={annotation.color}
+                strokeWidth={annotation.width * 0.62}
+                strokeDasharray={`${annotation.width * 1.5} ${annotation.width * 0.85}`}
+                opacity={Math.min(1, annotation.opacity + 0.12)}
+              />
+            ) : null}
+          </g>
         );
       })}
     </svg>

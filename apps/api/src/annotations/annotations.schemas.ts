@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-export const annotationKindSchema = z.enum(['ink', 'highlight', 'text']);
+export const annotationKindSchema = z.enum([
+  'ink',
+  'pencil',
+  'highlight',
+  'text',
+]);
 
 const normalizedCoordinateSchema = z.number().finite().min(0).max(1);
 

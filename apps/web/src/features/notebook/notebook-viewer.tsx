@@ -10,13 +10,9 @@ import {
   useState,
 } from "react";
 import {
-  EraserIcon,
-  HighlighterIcon,
   HomeIcon,
-  PenIcon,
   RedoIcon,
   SelectIcon,
-  TextIcon,
   UndoIcon,
   ZoomInIcon,
   ZoomOutIcon,
@@ -87,6 +83,47 @@ import { NotebookSidebar } from "./notebook-sidebar";
 import { NotebookPageDialog, type PageDialog } from "./notebook-page-dialog";
 import { NotebookPageDeleteDialog } from "./notebook-page-delete-dialog";
 import styles from "./notebook-viewer.module.css";
+
+function AnnotationToolArtwork({ tool }: { tool: EditorTool }) {
+  if (tool === "select") return <SelectIcon />;
+
+  if (
+    tool === "ink" ||
+    tool === "pencil" ||
+    tool === "highlight" ||
+    tool === "eraser"
+  )
+    return (
+      <span
+        className={styles.toolArtwork}
+        data-tool={tool}
+        aria-hidden="true"
+      />
+    );
+
+  return (
+    <svg
+      className={`${styles.toolArtwork} ${styles.textToolArtwork}`}
+      viewBox="0 0 28 28"
+      aria-hidden="true"
+    >
+      <path
+        d="M3.5 7V4.5h15V7M11 4.5v17M7.5 21.5h7"
+        fill="none"
+        stroke="#173f5f"
+        strokeLinecap="square"
+        strokeWidth="2"
+      />
+      <path
+        d="M21.5 14.5v9M17 19h9"
+        fill="none"
+        stroke="#173f5f"
+        strokeLinecap="square"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
 
 export function NotebookViewer({
   notebookId,
@@ -740,8 +777,20 @@ export function NotebookViewer({
     if (entries[index]) jump(entries[index].key);
   }
   const drawingTool: DrawingTool | null =
-    tool === "ink" || tool === "highlight" || tool === "text" ? tool : null;
+    tool === "pencil"
+      ? "ink"
+      : tool === "ink" || tool === "highlight" || tool === "text"
+        ? tool
+        : null;
   const drawingStyle = toolPreferences[drawingTool ?? "ink"];
+  const activeDrawingStyle =
+    tool === "pencil"
+      ? {
+          ...drawingStyle,
+          width: Math.min(drawingStyle.width, 0.0032),
+          opacity: Math.min(drawingStyle.opacity, 0.78),
+        }
+      : drawingStyle;
   function updateDrawingStyle(next: DrawingStyle) {
     if (!drawingTool) return;
     setToolPreferences((current) => ({
@@ -806,7 +855,9 @@ export function NotebookViewer({
         </div>
         <nav className={styles.editingControls} aria-label="Notebook tools">
           <div className={styles.tools} role="group" aria-label="Editing tool">
-            {(["select", "ink", "highlight", "eraser", "text"] as const).map(
+            {(
+              ["select", "ink", "pencil", "highlight", "eraser", "text"] as const
+            ).map(
               (option) => (
                 <button
                   type="button"
@@ -816,6 +867,7 @@ export function NotebookViewer({
                     {
                       select: "Select and move annotations",
                       ink: "Pen",
+                      pencil: "Pencil",
                       highlight: "Highlighter",
                       eraser: "Eraser",
                       text: "Text",
@@ -825,6 +877,7 @@ export function NotebookViewer({
                     {
                       select: "Select and move annotations",
                       ink: "Draw with pen",
+                      pencil: "Draw with pencil",
                       highlight: "Highlight",
                       eraser: "Erase annotations",
                       text: "Type text",
@@ -833,15 +886,7 @@ export function NotebookViewer({
                   aria-pressed={tool === option}
                   onClick={() => setTool(option)}
                 >
-                  {
-                    {
-                      select: <SelectIcon />,
-                      ink: <PenIcon />,
-                      highlight: <HighlighterIcon />,
-                      eraser: <EraserIcon />,
-                      text: <TextIcon />,
-                    }[option]
-                  }
+                  <AnnotationToolArtwork tool={option} />
                 </button>
               ),
             )}
@@ -970,9 +1015,9 @@ export function NotebookViewer({
                   notebookId={notebookId}
                   pool={pool}
                   tool={tool}
-                  color={drawingStyle.color}
-                  strokeWidth={drawingStyle.width}
-                  opacity={drawingStyle.opacity}
+                  color={activeDrawingStyle.color}
+                  strokeWidth={activeDrawingStyle.width}
+                  opacity={activeDrawingStyle.opacity}
                   visible={
                     row.top + row.height >= scrollTop - 400 &&
                     row.top <= scrollTop + viewport.height + 400

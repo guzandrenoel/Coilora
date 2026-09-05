@@ -22,6 +22,16 @@ describe('annotation schemas', () => {
     expect(createAnnotationSchema.parse(stroke)).toEqual(stroke);
   });
 
+  it('accepts a persistent pencil stroke', () => {
+    const pencil = {
+      ...stroke,
+      kind: 'pencil',
+      width: 0.0032,
+      opacity: 0.78,
+    };
+    expect(createAnnotationSchema.parse(pencil)).toEqual(pencil);
+  });
+
   it('accepts text annotations and trims their content', () => {
     expect(
       createAnnotationSchema.parse({

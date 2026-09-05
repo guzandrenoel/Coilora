@@ -596,6 +596,17 @@ export function AnnotationCanvas({
                 pointerEvents={tool === "eraser" ? "stroke" : "none"}
                 onPointerDown={(event) => void erase(annotation, event)}
               />
+              {annotation.kind === "pencil" ? (
+                <path
+                  className={styles.pencilGrain}
+                  d={path}
+                  stroke={annotation.color}
+                  strokeWidth={annotation.width * 0.62}
+                  strokeDasharray={`${annotation.width * 1.5} ${annotation.width * 0.85}`}
+                  opacity={Math.min(1, annotation.opacity + 0.12)}
+                  pointerEvents="none"
+                />
+              ) : null}
               {tool === "select" ? (
                 <path
                   className={styles.hitArea}
@@ -618,26 +629,52 @@ export function AnnotationCanvas({
         ) : null}
         {pending.map((item) => {
           if (item.kind === "text") return null;
+          const path = pointsToSvgPath(item.points);
           return (
-            <path
-              className={styles.stroke}
-              key={item.id}
-              d={pointsToSvgPath(item.points)}
-              stroke={item.color}
-              strokeWidth={item.width}
-              opacity={item.opacity}
-              pointerEvents="none"
-            />
+            <g key={item.id}>
+              <path
+                className={styles.stroke}
+                d={path}
+                stroke={item.color}
+                strokeWidth={item.width}
+                opacity={item.opacity}
+                pointerEvents="none"
+              />
+              {item.kind === "pencil" ? (
+                <path
+                  className={styles.pencilGrain}
+                  d={path}
+                  stroke={item.color}
+                  strokeWidth={item.width * 0.62}
+                  strokeDasharray={`${item.width * 1.5} ${item.width * 0.85}`}
+                  opacity={Math.min(1, item.opacity + 0.12)}
+                  pointerEvents="none"
+                />
+              ) : null}
+            </g>
           );
         })}
         {draft && draft.points.length > 1 ? (
-          <path
-            className={styles.draft}
-            d={pointsToSvgPath(draft.points)}
-            stroke={draft.color}
-            strokeWidth={draft.width}
-            opacity={draft.opacity}
-          />
+          <g>
+            <path
+              className={styles.draft}
+              d={pointsToSvgPath(draft.points)}
+              stroke={draft.color}
+              strokeWidth={draft.width}
+              opacity={draft.opacity}
+            />
+            {draft.kind === "pencil" ? (
+              <path
+                className={styles.pencilGrain}
+                d={pointsToSvgPath(draft.points)}
+                stroke={draft.color}
+                strokeWidth={draft.width * 0.62}
+                strokeDasharray={`${draft.width * 1.5} ${draft.width * 0.85}`}
+                opacity={Math.min(1, draft.opacity + 0.12)}
+                pointerEvents="none"
+              />
+            ) : null}
+          </g>
         ) : null}
       </svg>
       {renderedAnnotations.map((annotation) => {
