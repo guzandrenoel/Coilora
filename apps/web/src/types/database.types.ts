@@ -45,6 +45,7 @@ export type Database = {
           created_at: string
           document_id: string | null
           document_page_number: number | null
+          font_size: number | null
           id: string
           kind: string
           notebook_page_id: string | null
@@ -52,6 +53,7 @@ export type Database = {
           owner_id: string
           points: Json
           revision: number
+          text_content: string | null
           updated_at: string
           width: number
           z_index: number
@@ -61,6 +63,7 @@ export type Database = {
           created_at?: string
           document_id?: string | null
           document_page_number?: number | null
+          font_size?: number | null
           id?: string
           kind: string
           notebook_page_id?: string | null
@@ -68,6 +71,7 @@ export type Database = {
           owner_id: string
           points: Json
           revision?: number
+          text_content?: string | null
           updated_at?: string
           width: number
           z_index?: number
@@ -77,6 +81,7 @@ export type Database = {
           created_at?: string
           document_id?: string | null
           document_page_number?: number | null
+          font_size?: number | null
           id?: string
           kind?: string
           notebook_page_id?: string | null
@@ -84,6 +89,7 @@ export type Database = {
           owner_id?: string
           points?: Json
           revision?: number
+          text_content?: string | null
           updated_at?: string
           width?: number
           z_index?: number

@@ -86,6 +86,7 @@ export function NotebookPageSurface({
         {entry.kind === "note" || pdfReady ? (
           <AnnotationCanvas
             targetKey={entry.key}
+            pageHeight={row.paperHeight}
             notebookId={entry.kind === "note" ? notebookId : undefined}
             pageId={entry.kind === "note" ? entry.page.id : undefined}
             documentId={entry.kind === "pdf" ? entry.document.id : undefined}

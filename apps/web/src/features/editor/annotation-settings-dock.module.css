@@ -81,6 +81,14 @@
   border-radius: 999px;
   background: currentColor;
 }
+.textSizeSample {
+  display: inline-grid;
+  place-items: center;
+  height: 24px;
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  line-height: 1;
+}
 .opacities button span {
   display: block;
   width: 22px;

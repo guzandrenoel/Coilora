@@ -133,6 +133,33 @@ describe('annotation save retries', () => {
     expect(annotation.eq).toHaveBeenCalledWith('notebook_page_id', pageId);
     expect(annotation.is).toHaveBeenCalledWith('document_id', null);
   });
+  it('maps text fields into the stored annotation columns', async () => {
+    const { notes, annotation } = setup();
+    const textInput: CreateAnnotationInput = {
+      ...input,
+      kind: 'text',
+      text: 'Key finding',
+      fontSize: 0.025,
+    };
+    annotation.single.mockResolvedValueOnce({
+      data: {
+        ...textInput,
+        text_content: textInput.text,
+        font_size: textInput.fontSize,
+      },
+      error: null,
+    });
+
+    await notes.create(user, notebookId, pageId, textInput);
+
+    expect(annotation.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'text',
+        text_content: 'Key finding',
+        font_size: 0.025,
+      }),
+    );
+  });
   it('does not expose a UUID collision outside the notebook page', async () => {
     const { notes, annotation } = setup();
     annotation.maybeSingle.mockResolvedValueOnce({ data: null, error: null });

@@ -16,7 +16,10 @@ import {
   PenIcon,
   RedoIcon,
   SelectIcon,
+  TextIcon,
   UndoIcon,
+  ZoomInIcon,
+  ZoomOutIcon,
 } from "@/components/ui/icons";
 import { AnnotationSettingsDock } from "@/features/editor/annotation-settings-dock";
 import {
@@ -59,9 +62,13 @@ import type { NotebookPage } from "@/lib/api/types";
 import {
   anchoredScroll,
   buildTimeline,
+  clampNotebookZoom,
   layoutTimeline,
+  MAX_NOTEBOOK_ZOOM,
+  MIN_NOTEBOOK_ZOOM,
   noteKey,
   rowAtOffset,
+  scaleNotebookZoom,
   selectionAfterNoteDeletion,
   timelineWidth,
   visibleRows,
@@ -130,7 +137,14 @@ export function NotebookViewer({
   const savingBookmarks = useRef(new Set<string>());
   const viewportRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const zoomMenuRef = useRef<HTMLDetailsElement>(null);
   const previousRows = useRef<TimelineRow[]>([]);
+  const previousTimelineWidth = useRef(viewport.width);
+  const pendingZoomAnchor = useRef<{ x: number; y: number } | null>(null);
+  const pinchGesture = useRef<{
+    distance: number;
+    scale: number;
+  } | null>(null);
   const pendingJump = useRef<string | null>(initialKey);
   const [jumpVersion, setJumpVersion] = useState(0);
   const bookmarkLoads = useRef(new Map<string, Promise<void>>());
@@ -261,10 +275,23 @@ export function NotebookViewer({
     () => layoutTimeline(entries, sizes, viewport, zoom),
     [entries, sizes, viewport, zoom],
   );
+  const totalWidth = useMemo(
+    () => timelineWidth(rows, viewport.width),
+    [rows, viewport.width],
+  );
   useLayoutEffect(() => {
     const element = viewportRef.current;
     if (!element || !rows.length) return;
-    let top = anchoredScroll(previousRows.current, rows, element.scrollTop);
+    const oldRows = previousRows.current;
+    const previousScrollTop = element.scrollTop;
+    const zoomAnchor = pendingZoomAnchor.current;
+    let top = zoomAnchor
+      ? anchoredScroll(
+          oldRows,
+          rows,
+          previousScrollTop + zoomAnchor.y,
+        ) - zoomAnchor.y
+      : anchoredScroll(oldRows, rows, previousScrollTop);
     if (pendingJump.current) {
       const target = rows.find((row) => row.entry.key === pendingJump.current);
       const fallback =
@@ -273,9 +300,34 @@ export function NotebookViewer({
       if (target) pendingJump.current = null;
     }
     element.scrollTop = top;
+    if (zoomAnchor && oldRows.length) {
+      const oldOffset = previousScrollTop + zoomAnchor.y;
+      const oldRow = oldRows[rowAtOffset(oldRows, oldOffset)];
+      const nextRow = oldRow
+        ? rows.find((row) => row.entry.key === oldRow.entry.key)
+        : undefined;
+      if (
+        oldRow &&
+        nextRow &&
+        oldRow.entry.kind !== "document" &&
+        nextRow.entry.kind !== "document"
+      ) {
+        const oldPaperLeft =
+          (previousTimelineWidth.current - oldRow.width) / 2;
+        const nextPaperLeft = (totalWidth - nextRow.width) / 2;
+        const paperRatio =
+          (element.scrollLeft + zoomAnchor.x - oldPaperLeft) / oldRow.width;
+        element.scrollLeft = Math.max(
+          0,
+          nextPaperLeft + paperRatio * nextRow.width - zoomAnchor.x,
+        );
+      }
+    }
     previousRows.current = rows;
+    previousTimelineWidth.current = totalWidth;
+    pendingZoomAnchor.current = null;
     setScrollTop(element.scrollTop);
-  }, [rows, jumpVersion, initialKey]);
+  }, [rows, totalWidth, jumpVersion, initialKey]);
   const range = visibleRows(rows, scrollTop, viewport.height);
   const rowsByKey = useMemo(
     () => new Map(rows.map((row) => [row.entry.key, row])),
@@ -292,10 +344,124 @@ export function NotebookViewer({
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + rows[rows.length - 1].height + 16
     : 0;
-  const totalWidth = useMemo(
-    () => timelineWidth(rows, viewport.width),
-    [rows, viewport.width],
+  const rowNearViewport =
+    rows[rowAtOffset(rows, scrollTop + Math.min(150, viewport.height / 4))];
+  const zoomRow =
+    rowNearViewport?.entry.kind !== "document"
+      ? rowNearViewport
+      : rows.find((row) => row.entry.kind !== "document");
+  const zoomScale =
+    typeof zoom === "number"
+      ? clampNotebookZoom(zoom)
+      : zoomRow && zoomRow.entry.kind !== "document"
+        ? zoomRow.width /
+          (sizes[zoomRow.entry.key]?.width ??
+            (zoomRow.entry.kind === "note" ? 595 : 612))
+        : 1;
+  const zoomScaleRef = useRef(zoomScale);
+  useEffect(() => {
+    zoomScaleRef.current = zoomScale;
+  }, [zoomScale]);
+  const zoomPercent = Math.round(zoomScale * 100);
+
+  const setZoomAround = useCallback(
+    (next: NotebookZoom, clientX?: number, clientY?: number) => {
+      const element = viewportRef.current;
+      if (element) {
+        const bounds = element.getBoundingClientRect();
+        pendingZoomAnchor.current = {
+          x:
+            clientX === undefined
+              ? element.clientWidth / 2
+              : clientX - bounds.left,
+          y:
+            clientY === undefined
+              ? element.clientHeight / 2
+              : clientY - bounds.top,
+        };
+      }
+      const safeNext =
+        typeof next === "number" ? clampNotebookZoom(next) : next;
+      setZoom((current) => {
+        if (current === safeNext) {
+          pendingZoomAnchor.current = null;
+          return current;
+        }
+        return safeNext;
+      });
+    },
+    [],
   );
+
+  const changeZoom = useCallback(
+    (factor: number, clientX?: number, clientY?: number) => {
+      setZoomAround(
+        scaleNotebookZoom(zoomScaleRef.current, factor),
+        clientX,
+        clientY,
+      );
+    },
+    [setZoomAround],
+  );
+
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!element) return;
+
+    const distance = (touches: TouchList) =>
+      Math.hypot(
+        touches[0].clientX - touches[1].clientX,
+        touches[0].clientY - touches[1].clientY,
+      );
+    const beginPinch = (event: TouchEvent) => {
+      if (tool !== "select" || event.touches.length !== 2) return;
+      pinchGesture.current = {
+        distance: Math.max(1, distance(event.touches)),
+        scale: zoomScaleRef.current,
+      };
+    };
+    const movePinch = (event: TouchEvent) => {
+      const gesture = pinchGesture.current;
+      if (!gesture || event.touches.length !== 2) return;
+      event.preventDefault();
+      const midpointX =
+        (event.touches[0].clientX + event.touches[1].clientX) / 2;
+      const midpointY =
+        (event.touches[0].clientY + event.touches[1].clientY) / 2;
+      setZoomAround(
+        gesture.scale * (distance(event.touches) / gesture.distance),
+        midpointX,
+        midpointY,
+      );
+    };
+    const endPinch = (event: TouchEvent) => {
+      if (event.touches.length < 2) pinchGesture.current = null;
+    };
+    const zoomWithWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      const pixels =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? event.deltaY * 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? event.deltaY * element.clientHeight
+            : event.deltaY;
+      changeZoom(Math.exp(-pixels * 0.0015), event.clientX, event.clientY);
+    };
+
+    element.addEventListener("wheel", zoomWithWheel, { passive: false });
+    element.addEventListener("touchstart", beginPinch, { passive: true });
+    element.addEventListener("touchmove", movePinch, { passive: false });
+    element.addEventListener("touchend", endPinch);
+    element.addEventListener("touchcancel", endPinch);
+    return () => {
+      element.removeEventListener("wheel", zoomWithWheel);
+      element.removeEventListener("touchstart", beginPinch);
+      element.removeEventListener("touchmove", movePinch);
+      element.removeEventListener("touchend", endPinch);
+      element.removeEventListener("touchcancel", endPinch);
+    };
+  }, [changeZoom, setZoomAround, tool]);
 
   const onSize = useCallback((key: string, size: PageSize) => {
     setSizes((current) =>
@@ -361,8 +527,18 @@ export function NotebookViewer({
         const updated = await updateTargetAnnotation(
           entry.target,
           current.id,
-          desired.points,
-          annotationRevisions.current.get(current.id) ?? current.revision,
+          {
+            points: desired.points,
+            revision:
+              annotationRevisions.current.get(current.id) ?? current.revision,
+            ...(desired.kind === "text"
+              ? {
+                  text: desired.text_content ?? "",
+                  fontSize: desired.font_size ?? 0.025,
+                  color: desired.color,
+                }
+              : {}),
+          },
         );
         replayed =
           direction === "undo"
@@ -543,7 +719,7 @@ export function NotebookViewer({
     if (entries[index]) jump(entries[index].key);
   }
   const drawingTool: DrawingTool | null =
-    tool === "ink" || tool === "highlight" ? tool : null;
+    tool === "ink" || tool === "highlight" || tool === "text" ? tool : null;
   const drawingStyle = toolPreferences[drawingTool ?? "ink"];
   function updateDrawingStyle(next: DrawingStyle) {
     if (!drawingTool) return;
@@ -581,6 +757,13 @@ export function NotebookViewer({
         ) {
           event.preventDefault();
           void stepHistory(direction);
+          return;
+        }
+        if (
+          event.key === "Escape" &&
+          zoomMenuRef.current?.open
+        ) {
+          zoomMenuRef.current.open = false;
           return;
         }
         if (
@@ -628,7 +811,7 @@ export function NotebookViewer({
         </div>
         <nav className={styles.editingControls} aria-label="Notebook tools">
           <div className={styles.tools} role="group" aria-label="Editing tool">
-            {(["select", "ink", "highlight", "eraser"] as const).map(
+            {(["select", "ink", "highlight", "eraser", "text"] as const).map(
               (option) => (
                 <button
                   type="button"
@@ -640,6 +823,7 @@ export function NotebookViewer({
                       ink: "Pen",
                       highlight: "Highlighter",
                       eraser: "Eraser",
+                      text: "Text",
                     }[option]
                   }
                   title={
@@ -648,6 +832,7 @@ export function NotebookViewer({
                       ink: "Draw with pen",
                       highlight: "Highlight",
                       eraser: "Erase annotations",
+                      text: "Type text",
                     }[option]
                   }
                   aria-pressed={tool === option}
@@ -659,6 +844,7 @@ export function NotebookViewer({
                       ink: <PenIcon />,
                       highlight: <HighlighterIcon />,
                       eraser: <EraserIcon />,
+                      text: <TextIcon />,
                     }[option]
                   }
                 </button>
@@ -666,30 +852,6 @@ export function NotebookViewer({
             )}
           </div>
         </nav>
-        <div className={styles.pageControls}>
-          <label className={styles.zoom}>
-            Zoom{" "}
-            <select
-              value={zoom}
-              onChange={(event) =>
-                setZoom(
-                  event.target.value === "page" ||
-                    event.target.value === "width"
-                    ? event.target.value
-                    : Number(event.target.value),
-                )
-              }
-            >
-              <option value="page">Fit page</option>
-              <option value="width">Fit width</option>
-              {[0.5, 0.75, 1, 1.25, 1.5, 2].map((value) => (
-                <option key={value} value={value}>
-                  {value * 100}%
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
       </header>
       {error ? (
         <div className={styles.error} role="alert">
@@ -831,6 +993,72 @@ export function NotebookViewer({
               ) : null,
             )}
           </div>
+        </div>
+        <div
+          className={styles.zoomControls}
+          role="group"
+          aria-label="Page zoom"
+        >
+          <button
+            type="button"
+            aria-label="Zoom out"
+            title="Zoom out"
+            disabled={zoomScale <= MIN_NOTEBOOK_ZOOM + 0.001}
+            onClick={() => changeZoom(1 / 1.15)}
+          >
+            <ZoomOutIcon />
+          </button>
+          <details
+            ref={zoomMenuRef}
+            className={styles.zoomPicker}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                event.currentTarget.open = false;
+              }
+            }}
+          >
+            <summary
+              aria-label={`Zoom is ${zoomPercent} percent. Choose zoom level.`}
+              title="Choose zoom level"
+            >
+              {zoomPercent}%
+            </summary>
+            <div className={styles.zoomMenu} aria-label="Zoom presets">
+              {(
+                [
+                  ["Fit page", "page"],
+                  ["Fit width", "width"],
+                  ["50%", 0.5],
+                  ["75%", 0.75],
+                  ["100%", 1],
+                  ["125%", 1.25],
+                  ["150%", 1.5],
+                  ["200%", 2],
+                ] as const
+              ).map(([label, value]) => (
+                <button
+                  type="button"
+                  key={label}
+                  aria-pressed={zoom === value}
+                  onClick={() => {
+                    setZoomAround(value);
+                    if (zoomMenuRef.current) zoomMenuRef.current.open = false;
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </details>
+          <button
+            type="button"
+            aria-label="Zoom in"
+            title="Zoom in"
+            disabled={zoomScale >= MAX_NOTEBOOK_ZOOM - 0.001}
+            onClick={() => changeZoom(1.15)}
+          >
+            <ZoomInIcon />
+          </button>
         </div>
       </div>
       <footer className={styles.footer}>

@@ -119,6 +119,32 @@ describe('annotation updates', () => {
     expect(annotation.is).toHaveBeenCalledWith('document_id', null);
   });
 
+  it('edits text through the same revision check', async () => {
+    const { notes, annotation } = setup();
+    const textUpdate: UpdateAnnotationInput = {
+      ...input,
+      text: 'Updated explanation',
+      fontSize: 0.03,
+      color: '#173f5f',
+    };
+
+    await notes.update(
+      user,
+      notebookId,
+      pageId,
+      annotationId,
+      textUpdate,
+    );
+
+    expect(annotation.update).toHaveBeenCalledWith({
+      points: input.points,
+      revision: 4,
+      text_content: 'Updated explanation',
+      font_size: 0.03,
+      color: '#173f5f',
+    });
+  });
+
   it('moves an annotation only on its exact owned PDF page', async () => {
     const { pdf, annotation, document, notebook } = setup();
 

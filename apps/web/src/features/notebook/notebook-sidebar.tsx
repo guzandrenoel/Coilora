@@ -1,12 +1,18 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BookmarkIcon } from "@/components/ui/icons";
-import { pointsToSvgPath } from "@/features/editor/annotation-geometry";
+import {
+  getAnnotationBounds,
+  pointsToSvgPath,
+} from "@/features/editor/annotation-geometry";
 import { getPageAnnotations } from "@/lib/api/annotations-client";
 import { getDocumentPageAnnotations } from "@/lib/api/document-annotations-client";
 import type { NotebookPage, PageAnnotation } from "@/lib/api/types";
 import type { NotebookPdfPool } from "./notebook-pdf-pool";
-import type { TimelineEntry } from "./notebook-timeline";
+import {
+  rememberExpandedDocument,
+  type TimelineEntry,
+} from "./notebook-timeline";
 import { PdfPageCanvas } from "./pdf-page-canvas";
 import { NotebookPageMenu } from "./notebook-page-menu";
 import styles from "./notebook-viewer.module.css";
@@ -66,7 +72,15 @@ export function NotebookSidebar(props: Props) {
   );
   useEffect(() => {
     if (activeDocumentId) {
-      if (activeIsPdf) void onEnsureBookmarks(activeDocumentId);
+      if (activeIsPdf) {
+        void onEnsureBookmarks(activeDocumentId);
+        // Reaching a PDF is a one-way disclosure signal. Scrolling away must
+        // not undo the open state the user was just working with.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setExpanded((current) =>
+          rememberExpandedDocument(current, activeDocumentId),
+        );
+      }
     }
   }, [activeDocumentId, activeIsPdf, onEnsureBookmarks]);
   const marked = (entry: TimelineEntry) =>
@@ -147,7 +161,7 @@ export function NotebookSidebar(props: Props) {
           const open =
             filter === "bookmarks"
               ? !collapsedBookmarks.has(id)
-              : (expanded[id] ?? activeDocumentId === id);
+              : (expanded[id] ?? false);
           return (
             <section className={styles.documentGroup} key={id}>
               <div className={styles.groupHeader}>
@@ -412,15 +426,40 @@ function ThumbnailAnnotations({
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      {annotations.map((annotation) => (
-        <path
-          key={annotation.id}
-          d={pointsToSvgPath(annotation.points)}
-          stroke={annotation.color}
-          strokeWidth={annotation.width}
-          opacity={annotation.opacity}
-        />
-      ))}
+      {annotations.map((annotation) => {
+        if (annotation.kind === "text") {
+          const bounds = getAnnotationBounds(annotation.points);
+          return (
+            <foreignObject
+              key={annotation.id}
+              x={bounds.x}
+              y={bounds.y}
+              width={bounds.width}
+              height={bounds.height}
+            >
+              <div
+                className={styles.thumbnailTextAnnotation}
+                style={{
+                  color: annotation.color,
+                  fontSize: `${annotation.font_size ?? 0.025}px`,
+                  opacity: annotation.opacity,
+                }}
+              >
+                {annotation.text_content}
+              </div>
+            </foreignObject>
+          );
+        }
+        return (
+          <path
+            key={annotation.id}
+            d={pointsToSvgPath(annotation.points)}
+            stroke={annotation.color}
+            strokeWidth={annotation.width}
+            opacity={annotation.opacity}
+          />
+        );
+      })}
     </svg>
   );
 }

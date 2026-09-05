@@ -22,6 +22,8 @@ const annotationSelection = [
   'color',
   'width',
   'opacity',
+  'text_content',
+  'font_size',
   'z_index',
   'revision',
   'created_at',
@@ -92,6 +94,9 @@ export class DocumentPageAnnotationsService {
         color: input.color,
         width: input.width,
         opacity: input.opacity,
+        ...(input.kind === 'text'
+          ? { text_content: input.text, font_size: input.fontSize }
+          : {}),
       })
       .select(annotationSelection)
       .single();
@@ -166,7 +171,13 @@ export class DocumentPageAnnotationsService {
     );
     const { data, error } = await client
       .from('annotations')
-      .update({ points: input.points, revision: input.revision + 1 })
+      .update({
+        points: input.points,
+        revision: input.revision + 1,
+        ...(input.text !== undefined ? { text_content: input.text } : {}),
+        ...(input.fontSize !== undefined ? { font_size: input.fontSize } : {}),
+        ...(input.color !== undefined ? { color: input.color } : {}),
+      })
       .eq('id', annotationId)
       .eq('owner_id', user.id)
       .eq('document_id', documentId)
@@ -178,7 +189,7 @@ export class DocumentPageAnnotationsService {
 
     if (error) {
       throw new ServiceUnavailableException(
-        'The PDF annotation could not be moved.',
+        'The PDF annotation could not be updated.',
       );
     }
     if (data) return data;
@@ -195,12 +206,12 @@ export class DocumentPageAnnotationsService {
 
     if (lookupError) {
       throw new ServiceUnavailableException(
-        'The PDF annotation move could not be checked.',
+        'The PDF annotation update could not be checked.',
       );
     }
     if (!existing) throw new NotFoundException('The annotation was not found.');
     throw new ConflictException(
-      'The annotation changed before it could be moved. Try again.',
+      'The annotation changed before it could be updated. Try again.',
     );
   }
 

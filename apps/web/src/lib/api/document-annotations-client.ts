@@ -63,6 +63,15 @@ function isAnnotation(
     typeof value.opacity === "number" &&
     value.opacity >= 0 &&
     value.opacity <= 1 &&
+    (value.kind === "text"
+      ? typeof value.text_content === "string" &&
+        value.text_content.trim().length >= 1 &&
+        value.text_content.length <= 2000 &&
+        typeof value.font_size === "number" &&
+        Number.isFinite(value.font_size) &&
+        value.font_size >= 0.01 &&
+        value.font_size <= 0.12
+      : value.text_content === null && value.font_size === null) &&
     typeof value.z_index === "number" &&
     Number.isSafeInteger(value.z_index) &&
     value.z_index > 0 &&
@@ -122,6 +131,31 @@ export async function createDocumentPageAnnotation(
   input: CreateAnnotationInput,
 ) {
   validateTarget(documentId, pageNumber);
+  if (
+    !isKind(input.kind) ||
+    !Array.isArray(input.points) ||
+    input.points.length < 2 ||
+    input.points.length > 4096 ||
+    !input.points.every(isPoint) ||
+    !colorPattern.test(input.color) ||
+    !Number.isFinite(input.width) ||
+    input.width < 0.0005 ||
+    input.width > 0.1 ||
+    !Number.isFinite(input.opacity) ||
+    input.opacity < 0 ||
+    input.opacity > 1 ||
+    (input.kind === "text"
+      ? typeof input.text !== "string" ||
+        input.text.trim().length < 1 ||
+        input.text.length > 2000 ||
+        typeof input.fontSize !== "number" ||
+        !Number.isFinite(input.fontSize) ||
+        input.fontSize < 0.01 ||
+        input.fontSize > 0.12
+      : input.text !== undefined || input.fontSize !== undefined)
+  ) {
+    throw new Error("Choose a valid annotation.");
+  }
   const body = await apiRequest(
     `/v1/documents/${encodeURIComponent(
       documentId,
@@ -169,6 +203,13 @@ export async function updateDocumentPageAnnotation(
     input.points.length < 2 ||
     input.points.length > 4096 ||
     !input.points.every(isPoint)
+    || (input.text !== undefined &&
+      (input.text.trim().length < 1 || input.text.length > 2000))
+    || (input.fontSize !== undefined &&
+      (!Number.isFinite(input.fontSize) ||
+        input.fontSize < 0.01 ||
+        input.fontSize > 0.12))
+    || (input.color !== undefined && !colorPattern.test(input.color))
   ) {
     throw new Error("Choose a valid annotation position.");
   }

@@ -12,6 +12,11 @@ export const metadata: Metadata = {
   },
   description:
     "A calm, source-grounded study workspace for medical and allied-health students.",
+  icons: {
+    icon: "/brand/coilora-favicon.png",
+    shortcut: "/brand/coilora-favicon.png",
+    apple: "/brand/coilora-favicon.png",
+  },
 };
 
 type RootLayoutProps = Readonly<{

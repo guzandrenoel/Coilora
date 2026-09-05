@@ -1,4 +1,4 @@
-export type DrawingTool = "ink" | "highlight";
+export type DrawingTool = "ink" | "highlight" | "text";
 
 export type DrawingStyle = {
   color: string;
@@ -27,6 +27,12 @@ const defaults: AnnotationToolPreferences = {
     opacity: 0.35,
     recentColors: ["#fff36a", "#ff9aa2", "#76c442"],
   },
+  text: {
+    color: "#173f5f",
+    width: 0.025,
+    opacity: 1,
+    recentColors: ["#173f5f", "#111111", "#d94f70"],
+  },
 };
 
 export function defaultAnnotationToolPreferences(): AnnotationToolPreferences {
@@ -36,6 +42,7 @@ export function defaultAnnotationToolPreferences(): AnnotationToolPreferences {
       ...defaults.highlight,
       recentColors: [...defaults.highlight.recentColors],
     },
+    text: { ...defaults.text, recentColors: [...defaults.text.recentColors] },
   };
 }
 
@@ -93,6 +100,7 @@ export function parseAnnotationToolPreferences(
     return {
       ink: normalizeStyle(parsed.ink, fallback.ink),
       highlight: normalizeStyle(parsed.highlight, fallback.highlight),
+      text: normalizeStyle(parsed.text, fallback.text),
     };
   } catch {
     return fallback;

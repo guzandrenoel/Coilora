@@ -20,6 +20,10 @@
   touch-action: pan-x pan-y;
 }
 
+.layer[data-tool="text"] {
+  cursor: text;
+}
+
 .stroke {
   fill: none;
   stroke-linecap: round;
@@ -57,6 +61,41 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: none;
+}
+
+.textAnnotation {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  cursor: grab;
+  color: var(--navy);
+  font-family: Arial, sans-serif;
+  font-weight: 500;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  user-select: none;
+}
+
+.textAnnotation:active {
+  cursor: grabbing;
+}
+
+.textEditor {
+  position: absolute;
+  z-index: 3;
+  resize: none;
+  box-sizing: border-box;
+  padding: 0.35rem 0.45rem;
+  border: 2px solid var(--blue);
+  border-radius: 0.35rem;
+  outline: 0;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 3px 12px rgb(18 61 86 / 16%);
+  font-family: Arial, sans-serif;
+  font-weight: 500;
+  line-height: 1.25;
+  touch-action: manipulation;
 }
 
 .error {

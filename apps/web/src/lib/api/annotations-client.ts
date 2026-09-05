@@ -65,6 +65,15 @@ function isPageAnnotation(
     Number.isFinite(value.opacity) &&
     value.opacity >= 0 &&
     value.opacity <= 1 &&
+    (value.kind === "text"
+      ? typeof value.text_content === "string" &&
+        value.text_content.trim().length >= 1 &&
+        value.text_content.length <= 2000 &&
+        typeof value.font_size === "number" &&
+        Number.isFinite(value.font_size) &&
+        value.font_size >= 0.01 &&
+        value.font_size <= 0.12
+      : value.text_content === null && value.font_size === null) &&
     typeof value.z_index === "number" &&
     Number.isSafeInteger(value.z_index) &&
     value.z_index > 0 &&
@@ -92,7 +101,16 @@ function isCreateInput(value: CreateAnnotationInput): boolean {
     value.width <= 0.1 &&
     Number.isFinite(value.opacity) &&
     value.opacity >= 0 &&
-    value.opacity <= 1
+    value.opacity <= 1 &&
+    (value.kind === "text"
+      ? typeof value.text === "string" &&
+        value.text.trim().length >= 1 &&
+        value.text.length <= 2000 &&
+        typeof value.fontSize === "number" &&
+        Number.isFinite(value.fontSize) &&
+        value.fontSize >= 0.01 &&
+        value.fontSize <= 0.12
+      : value.text === undefined && value.fontSize === undefined)
   );
 }
 
@@ -214,6 +232,13 @@ export async function updatePageAnnotation(
     input.points.length < 2 ||
     input.points.length > 4096 ||
     !input.points.every(isAnnotationPoint)
+    || (input.text !== undefined &&
+      (input.text.trim().length < 1 || input.text.length > 2000))
+    || (input.fontSize !== undefined &&
+      (!Number.isFinite(input.fontSize) ||
+        input.fontSize < 0.01 ||
+        input.fontSize > 0.12))
+    || (input.color !== undefined && !colorPattern.test(input.color))
   ) {
     throw new Error("Choose a valid annotation position.");
   }

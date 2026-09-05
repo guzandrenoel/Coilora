@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -22,6 +23,7 @@ import type {
   PageAnnotation,
 } from "@/lib/api/types";
 import {
+  createTextBoxPoints,
   getAnnotationBounds,
   getNormalizedPoint,
   pointsToSvgPath,
@@ -32,9 +34,17 @@ import styles from "./annotation-canvas.module.css";
 
 export type EditorTool = AnnotationKind | "eraser" | "select";
 
-type PendingStroke = CreateAnnotationInput & {
+type PendingAnnotation = CreateAnnotationInput & {
   id: string;
   failed?: boolean;
+};
+
+type TextDraft = {
+  annotation?: PageAnnotation;
+  points: PageAnnotation["points"];
+  text: string;
+  color: string;
+  fontSize: number;
 };
 
 type MoveGesture = {
@@ -44,6 +54,7 @@ type MoveGesture = {
 
 const sorted = (items: PageAnnotation[]) =>
   [...items].sort((a, b) => a.z_index - b.z_index);
+const defaultTextFontSize = 0.025;
 
 export function AnnotationCanvas({
   notebookId,
@@ -51,6 +62,7 @@ export function AnnotationCanvas({
   documentId,
   documentPageNumber,
   targetKey,
+  pageHeight,
   tool,
   color,
   strokeWidth,
@@ -65,6 +77,7 @@ export function AnnotationCanvas({
   documentId?: string;
   documentPageNumber?: number;
   targetKey: string;
+  pageHeight: number;
   tool: EditorTool;
   color: string;
   strokeWidth: number;
@@ -92,8 +105,9 @@ export function AnnotationCanvas({
     [documentId, documentPageNumber, notebookId, pageId, targetKey],
   );
   const [annotations, setAnnotations] = useState<PageAnnotation[]>([]);
-  const [draft, setDraft] = useState<PendingStroke | null>(null);
-  const [pending, setPending] = useState<PendingStroke[]>([]);
+  const [draft, setDraft] = useState<PendingAnnotation | null>(null);
+  const [pending, setPending] = useState<PendingAnnotation[]>([]);
+  const [textDraft, setTextDraft] = useState<TextDraft | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [moveDraft, setMoveDraft] = useState<PageAnnotation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,14 +116,16 @@ export function AnnotationCanvas({
   const [operations, setOperations] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const textEditorRef = useRef<HTMLTextAreaElement>(null);
   const activePointer = useRef<number | null>(null);
-  const stroke = useRef<PendingStroke | null>(null);
+  const stroke = useRef<PendingAnnotation | null>(null);
   const moveGesture = useRef<MoveGesture | null>(null);
   const moveDraftRef = useRef<PageAnnotation | null>(null);
   const saving = useRef(new Set<string>());
   const erasing = useRef(new Set<string>());
   const busy =
     draft !== null ||
+    textDraft !== null ||
     moveDraft !== null ||
     pending.length > 0 ||
     operations > 0;
@@ -117,6 +133,13 @@ export function AnnotationCanvas({
   useEffect(() => {
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
+
+  useLayoutEffect(() => {
+    if (!textDraft) return;
+    const editor = textEditorRef.current;
+    if (!editor) return;
+    editor.focus();
+  }, [textDraft]);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,12 +221,22 @@ export function AnnotationCanvas({
       loading ||
       loadFailed ||
       operations > 0 ||
+      textDraft !== null ||
       event.button !== 0 ||
       activePointer.current !== null
     ) {
       return;
     }
     event.preventDefault();
+    if (tool === "text") {
+      setTextDraft({
+        points: createTextBoxPoints(point(event.clientX, event.clientY)),
+        text: "",
+        color,
+        fontSize: strokeWidth,
+      });
+      return;
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
     activePointer.current = event.pointerId;
     stroke.current = {
@@ -219,7 +252,7 @@ export function AnnotationCanvas({
 
   function beginMove(
     annotation: PageAnnotation,
-    event: ReactPointerEvent<SVGPathElement>,
+    event: ReactPointerEvent<Element>,
   ) {
     if (
       tool !== "select" ||
@@ -279,15 +312,15 @@ export function AnnotationCanvas({
     setDraft(stroke.current);
   }
 
-  async function save(item: PendingStroke) {
+  async function save(item: PendingAnnotation) {
     if (saving.current.has(item.id)) return;
     saving.current.add(item.id);
     setOperations((value) => value + 1);
     setPending((current) =>
-      current.map((pendingStroke) =>
-        pendingStroke.id === item.id
-          ? { ...pendingStroke, failed: false }
-          : pendingStroke,
+      current.map((pendingAnnotation) =>
+        pendingAnnotation.id === item.id
+          ? { ...pendingAnnotation, failed: false }
+          : pendingAnnotation,
       ),
     );
     try {
@@ -299,19 +332,21 @@ export function AnnotationCanvas({
         ]),
       );
       setPending((current) =>
-        current.filter((pendingStroke) => pendingStroke.id !== item.id),
+        current.filter((pendingAnnotation) => pendingAnnotation.id !== item.id),
       );
       onCommit?.({ target, before: null, after: created });
     } catch (reason) {
       setPending((current) =>
-        current.map((pendingStroke) =>
-          pendingStroke.id === item.id
-            ? { ...pendingStroke, failed: true }
-            : pendingStroke,
+        current.map((pendingAnnotation) =>
+          pendingAnnotation.id === item.id
+            ? { ...pendingAnnotation, failed: true }
+            : pendingAnnotation,
         ),
       );
       setError(
-        reason instanceof Error ? reason.message : "Ink could not be saved.",
+        reason instanceof Error
+          ? reason.message
+          : "The annotation could not be saved.",
       );
     } finally {
       saving.current.delete(item.id);
@@ -329,8 +364,7 @@ export function AnnotationCanvas({
       const updated = await updateTargetAnnotation(
         target,
         annotation.id,
-        points,
-        annotation.revision,
+        { points, revision: annotation.revision },
       );
       setAnnotations((current) =>
         sorted(
@@ -350,6 +384,61 @@ export function AnnotationCanvas({
         reason instanceof Error
           ? reason.message
           : "The annotation could not be moved.",
+      );
+    } finally {
+      setOperations((value) => Math.max(0, value - 1));
+    }
+  }
+
+  async function commitText(draftToSave: TextDraft) {
+    const text = draftToSave.text.trim();
+    setTextDraft(null);
+    if (!text) return;
+
+    if (!draftToSave.annotation) {
+      const pendingText: PendingAnnotation = {
+        id: crypto.randomUUID(),
+        kind: "text",
+        points: draftToSave.points,
+        color: draftToSave.color,
+        width: 0.002,
+        opacity: 1,
+        text,
+        fontSize: draftToSave.fontSize,
+      };
+      setPending((items) => [...items, pendingText]);
+      setError(null);
+      void save(pendingText);
+      return;
+    }
+
+    const before = draftToSave.annotation;
+    if (
+      before.text_content === text &&
+      before.color === draftToSave.color &&
+      before.font_size === draftToSave.fontSize
+    ) {
+      return;
+    }
+    setOperations((value) => value + 1);
+    setError(null);
+    try {
+      const updated = await updateTargetAnnotation(target, before.id, {
+        points: before.points,
+        revision: before.revision,
+        text,
+        fontSize: draftToSave.fontSize,
+        color: draftToSave.color,
+      });
+      setAnnotations((current) =>
+        sorted(current.map((item) => (item.id === updated.id ? updated : item))),
+      );
+      onCommit?.({ target, before, after: updated });
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "The text annotation could not be saved.",
       );
     } finally {
       setOperations((value) => Math.max(0, value - 1));
@@ -427,7 +516,7 @@ export function AnnotationCanvas({
 
   async function erase(
     annotation: PageAnnotation,
-    event: ReactPointerEvent<SVGPathElement>,
+    event: ReactPointerEvent<Element>,
   ) {
     if (tool !== "eraser" || disabled || erasing.current.has(annotation.id)) {
       return;
@@ -470,6 +559,11 @@ export function AnnotationCanvas({
         Math.max(selected.width * 1.5, 0.006),
       )
     : null;
+  const textDraftBounds = textDraft
+    ? getAnnotationBounds(textDraft.points)
+    : null;
+  const textEditorFontSize =
+    textDraft ? Math.max(12, textDraft.fontSize * pageHeight) : 16;
 
   return (
     <>
@@ -489,6 +583,7 @@ export function AnnotationCanvas({
         onLostPointerCapture={cancel}
       >
         {renderedAnnotations.map((annotation) => {
+          if (annotation.kind === "text") return null;
           const path = pointsToSvgPath(annotation.points);
           return (
             <g key={annotation.id}>
@@ -521,17 +616,20 @@ export function AnnotationCanvas({
             height={selectionBounds.height}
           />
         ) : null}
-        {pending.map((item) => (
-          <path
-            className={styles.stroke}
-            key={item.id}
-            d={pointsToSvgPath(item.points)}
-            stroke={item.color}
-            strokeWidth={item.width}
-            opacity={item.opacity}
-            pointerEvents="none"
-          />
-        ))}
+        {pending.map((item) => {
+          if (item.kind === "text") return null;
+          return (
+            <path
+              className={styles.stroke}
+              key={item.id}
+              d={pointsToSvgPath(item.points)}
+              stroke={item.color}
+              strokeWidth={item.width}
+              opacity={item.opacity}
+              pointerEvents="none"
+            />
+          );
+        })}
         {draft && draft.points.length > 1 ? (
           <path
             className={styles.draft}
@@ -542,11 +640,117 @@ export function AnnotationCanvas({
           />
         ) : null}
       </svg>
+      {renderedAnnotations.map((annotation) => {
+        if (annotation.kind !== "text") return null;
+        const bounds = getAnnotationBounds(annotation.points);
+        return (
+          <div
+            key={annotation.id}
+            className={styles.textAnnotation}
+            style={{
+              left: `${bounds.x * 100}%`,
+              top: `${bounds.y * 100}%`,
+              width: `${bounds.width * 100}%`,
+              height: `${bounds.height * 100}%`,
+              color: annotation.color,
+              fontSize: `${Math.max(
+                12,
+                (annotation.font_size ?? defaultTextFontSize) * pageHeight,
+              )}px`,
+              opacity: annotation.opacity,
+              pointerEvents:
+                tool === "select" || tool === "eraser" ? "auto" : "none",
+            }}
+            onPointerDown={(event) => {
+              if (tool === "eraser") void erase(annotation, event);
+              else beginMove(annotation, event);
+            }}
+            onDoubleClick={(event) => {
+              if (tool !== "select" || disabled || operations > 0) return;
+              event.preventDefault();
+              event.stopPropagation();
+              setTextDraft({
+                annotation,
+                points: annotation.points,
+                text: annotation.text_content ?? "",
+                color: annotation.color,
+                fontSize: annotation.font_size ?? defaultTextFontSize,
+              });
+            }}
+          >
+            {annotation.text_content}
+          </div>
+        );
+      })}
+      {pending.map((item) => {
+        if (item.kind !== "text") return null;
+        const bounds = getAnnotationBounds(item.points);
+        return (
+          <div
+            key={item.id}
+            className={styles.textAnnotation}
+            style={{
+              left: `${bounds.x * 100}%`,
+              top: `${bounds.y * 100}%`,
+              width: `${bounds.width * 100}%`,
+              height: `${bounds.height * 100}%`,
+              color: item.color,
+              fontSize: `${Math.max(
+                12,
+                (item.fontSize ?? defaultTextFontSize) * pageHeight,
+              )}px`,
+              opacity: item.opacity,
+              pointerEvents: "none",
+            }}
+          >
+            {item.text}
+          </div>
+        );
+      })}
+      {textDraft && textDraftBounds ? (
+        <textarea
+          ref={textEditorRef}
+          className={styles.textEditor}
+          autoFocus
+          maxLength={2000}
+          aria-label="Text annotation"
+          placeholder="Type here"
+          value={textDraft.text}
+          style={{
+            left: `${textDraftBounds.x * 100}%`,
+            top: `${textDraftBounds.y * 100}%`,
+            width: `${textDraftBounds.width * 100}%`,
+            height: `${textDraftBounds.height * 100}%`,
+            color: textDraft.color,
+            fontSize: `${textEditorFontSize}px`,
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onChange={(event) =>
+            setTextDraft((current) =>
+              current ? { ...current, text: event.target.value } : current,
+            )
+          }
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              setTextDraft(null);
+            } else if (
+              event.key === "Enter" &&
+              (event.ctrlKey || event.metaKey)
+            ) {
+              event.preventDefault();
+              event.currentTarget.blur();
+            }
+          }}
+          onBlur={() => void commitText(textDraft)}
+        />
+      ) : null}
       {error || failed.length ? (
         <div className={styles.error}>
           <span role="alert">
             {failed.length
-              ? "Unsaved ink is kept on this page. Retry before leaving."
+              ? "The unsaved annotation is kept on this page. Retry before leaving."
               : error}
           </span>
           {failed.length ? (

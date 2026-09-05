@@ -6,7 +6,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { HighlighterIcon, PenIcon } from "@/components/ui/icons";
+import { HighlighterIcon, PenIcon, TextIcon } from "@/components/ui/icons";
 import {
   selectDrawingColor,
   type DrawingStyle,
@@ -45,6 +45,11 @@ const widths: Record<
     { label: "Thin", value: 0.018, sample: 3 },
     { label: "Medium", value: 0.03, sample: 6 },
     { label: "Thick", value: 0.045, sample: 9 },
+  ],
+  text: [
+    { label: "Small", value: 0.018, sample: 14 },
+    { label: "Medium", value: 0.025, sample: 18 },
+    { label: "Large", value: 0.035, sample: 22 },
   ],
 };
 
@@ -109,25 +114,52 @@ export function AnnotationSettingsDock({
       >
         <div
           className={styles.toolMarker}
-          title={tool === "ink" ? "Pen" : "Highlighter"}
+          title={
+            tool === "ink" ? "Pen" : tool === "highlight" ? "Highlighter" : "Text"
+          }
         >
-          {tool === "ink" ? <PenIcon /> : <HighlighterIcon />}
+          {tool === "ink" ? (
+            <PenIcon />
+          ) : tool === "highlight" ? (
+            <HighlighterIcon />
+          ) : (
+            <TextIcon />
+          )}
         </div>
         <div className={styles.divider} />
-        <div className={styles.widths} role="group" aria-label="Stroke thickness">
+        <div
+          className={styles.widths}
+          role="group"
+          aria-label={tool === "text" ? "Text size" : "Stroke thickness"}
+        >
           {widths[tool].map((option) => (
             <button
               type="button"
               key={option.value}
-              aria-label={`Use ${option.label.toLowerCase()} ${tool === "ink" ? "pen" : "highlighter"} thickness`}
-              title={`${option.label} thickness`}
+              aria-label={
+                tool === "text"
+                  ? `Use ${option.label.toLowerCase()} text`
+                  : `Use ${option.label.toLowerCase()} ${tool === "ink" ? "pen" : "highlighter"} thickness`
+              }
+              title={`${option.label} ${tool === "text" ? "text" : "thickness"}`}
               aria-pressed={style.width === option.value}
               onClick={() => onChange({ ...style, width: option.value })}
             >
-              <span
-                className={styles.widthSample}
-                style={{ "--sample-width": `${option.sample}px` } as CSSProperties}
-              />
+              {tool === "text" ? (
+                <span
+                  className={styles.textSizeSample}
+                  style={{ fontSize: `${option.sample}px` }}
+                >
+                  A
+                </span>
+              ) : (
+                <span
+                  className={styles.widthSample}
+                  style={
+                    { "--sample-width": `${option.sample}px` } as CSSProperties
+                  }
+                />
+              )}
             </button>
           ))}
         </div>
@@ -186,7 +218,13 @@ export function AnnotationSettingsDock({
           role="dialog"
           aria-label={`${tool} color palette`}
         >
-          <h2>{tool === "ink" ? "Pen color" : "Highlighter color"}</h2>
+          <h2>
+            {tool === "ink"
+              ? "Pen color"
+              : tool === "highlight"
+                ? "Highlighter color"
+                : "Text color"}
+          </h2>
           <div className={styles.paletteGrid}>
             {palette.map((color) => (
               <button

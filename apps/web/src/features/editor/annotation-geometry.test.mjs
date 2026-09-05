@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   getNormalizedPoint,
   getAnnotationBounds,
+  createTextBoxPoints,
   pointsToSvgPath,
   shouldAppendPoint,
   translateAnnotationPoints,
@@ -73,4 +74,15 @@ test("moving a stroke preserves its shape and keeps it on the page", () => {
       { x: 1, y: 0.2 },
     ],
   );
+});
+
+test("text boxes keep their full editing area inside the page", () => {
+  const edgeBox = createTextBoxPoints({ x: 0.9, y: 0.95 });
+  assert.ok(Math.abs(edgeBox[0].x - 0.68) < Number.EPSILON);
+  assert.equal(edgeBox[0].y, 0.88);
+  assert.deepEqual(edgeBox[1], { x: 1, y: 1 });
+  assert.deepEqual(createTextBoxPoints({ x: 0.2, y: 0.3 }), [
+    { x: 0.2, y: 0.3 },
+    { x: 0.52, y: 0.42 },
+  ]);
 });

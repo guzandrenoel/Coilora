@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const annotationKindSchema = z.enum(['ink', 'highlight']);
+export const annotationKindSchema = z.enum(['ink', 'highlight', 'text']);
 
 const normalizedCoordinateSchema = z.number().finite().min(0).max(1);
 
@@ -24,8 +24,34 @@ export const createAnnotationSchema = z
       .regex(/^#[0-9a-f]{6}$/i, 'Choose a valid annotation color.'),
     width: z.number().finite().min(0.0005).max(0.1),
     opacity: z.number().finite().min(0).max(1).default(1),
+    text: z.string().trim().min(1).max(2000).optional(),
+    fontSize: z.number().finite().min(0.01).max(0.12).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((input, context) => {
+    if (input.kind === 'text') {
+      if (!input.text) {
+        context.addIssue({
+          code: 'custom',
+          path: ['text'],
+          message: 'Type some text for this annotation.',
+        });
+      }
+      if (input.fontSize === undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['fontSize'],
+          message: 'Choose a text size.',
+        });
+      }
+    } else if (input.text !== undefined || input.fontSize !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['kind'],
+        message: 'Text settings require a text annotation.',
+      });
+    }
+  });
 
 export const updateAnnotationSchema = z
   .object({
@@ -34,6 +60,12 @@ export const updateAnnotationSchema = z
       .min(2, 'A stroke requires at least two points.')
       .max(4096, 'A stroke contains too many points.'),
     revision: z.number().int().min(1),
+    text: z.string().trim().min(1).max(2000).optional(),
+    fontSize: z.number().finite().min(0.01).max(0.12).optional(),
+    color: z
+      .string()
+      .regex(/^#[0-9a-f]{6}$/i, 'Choose a valid annotation color.')
+      .optional(),
   })
   .strict();
 

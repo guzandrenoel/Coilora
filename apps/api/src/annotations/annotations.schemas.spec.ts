@@ -22,6 +22,35 @@ describe('annotation schemas', () => {
     expect(createAnnotationSchema.parse(stroke)).toEqual(stroke);
   });
 
+  it('accepts text annotations and trims their content', () => {
+    expect(
+      createAnnotationSchema.parse({
+        ...stroke,
+        kind: 'text',
+        text: '  Important detail  ',
+        fontSize: 0.025,
+      }),
+    ).toEqual({
+      ...stroke,
+      kind: 'text',
+      text: 'Important detail',
+      fontSize: 0.025,
+    });
+  });
+
+  it('requires text-only settings for text annotations', () => {
+    expect(
+      createAnnotationSchema.safeParse({ ...stroke, kind: 'text' }).success,
+    ).toBe(false);
+    expect(
+      createAnnotationSchema.safeParse({
+        ...stroke,
+        text: 'Not a stroke setting',
+        fontSize: 0.025,
+      }).success,
+    ).toBe(false);
+  });
+
   it('accepts a stable UUID for save retries and rejects malformed IDs', () => {
     const id = '00000000-0000-4000-8000-000000000010';
     expect(createAnnotationSchema.parse({ ...stroke, id })).toEqual({
@@ -59,6 +88,24 @@ describe('annotation schemas', () => {
     expect(
       updateAnnotationSchema.parse({ points: stroke.points, revision: 4 }),
     ).toEqual({ points: stroke.points, revision: 4 });
+  });
+
+  it('accepts a revision-checked text edit', () => {
+    expect(
+      updateAnnotationSchema.parse({
+        points: stroke.points,
+        revision: 4,
+        text: '  Revised note  ',
+        fontSize: 0.03,
+        color: '#173f5f',
+      }),
+    ).toEqual({
+      points: stroke.points,
+      revision: 4,
+      text: 'Revised note',
+      fontSize: 0.03,
+      color: '#173f5f',
+    });
   });
 
   it.each([

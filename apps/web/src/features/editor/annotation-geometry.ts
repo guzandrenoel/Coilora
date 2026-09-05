@@ -63,6 +63,19 @@ export function getAnnotationBounds(points: AnnotationPoint[], padding = 0) {
   };
 }
 
+export function createTextBoxPoints(
+  anchor: AnnotationPoint,
+  width = 0.32,
+  height = 0.12,
+): [AnnotationPoint, AnnotationPoint] {
+  const x = Math.min(anchor.x, 1 - width);
+  const y = Math.min(anchor.y, 1 - height);
+  return [
+    { x, y },
+    { x: x + width, y: y + height },
+  ];
+}
+
 export function translateAnnotationPoints(
   points: AnnotationPoint[],
   deltaX: number,

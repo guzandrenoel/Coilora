@@ -82,7 +82,7 @@ export type NotebookPage = {
   updated_at: string;
 };
 
-export const annotationKinds = ["ink", "highlight"] as const;
+export const annotationKinds = ["ink", "highlight", "text"] as const;
 
 export type AnnotationKind = (typeof annotationKinds)[number];
 
@@ -101,6 +101,8 @@ export type PageAnnotation = {
   color: string;
   width: number;
   opacity: number;
+  text_content: string | null;
+  font_size: number | null;
   z_index: number;
   revision: number;
   created_at: string;
@@ -114,9 +116,14 @@ export type CreateAnnotationInput = {
   color: string;
   width: number;
   opacity: number;
+  text?: string;
+  fontSize?: number;
 };
 
 export type UpdateAnnotationInput = {
   points: AnnotationPoint[];
   revision: number;
+  text?: string;
+  fontSize?: number;
+  color?: string;
 };

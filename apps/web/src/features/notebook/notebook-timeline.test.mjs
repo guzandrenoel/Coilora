@@ -7,7 +7,10 @@ import {
   timelineWidth,
   visibleRows,
   anchoredScroll,
+  clampNotebookZoom,
+  scaleNotebookZoom,
   selectionAfterNoteDeletion,
+  rememberExpandedDocument,
 } from "./notebook-timeline.ts";
 
 const note = (id, position, extra = {}) => ({
@@ -198,6 +201,26 @@ test("empty notebooks and numeric zoom have safe geometry", () => {
   );
   assert.equal(row.width, 1190);
   assert.equal(row.paperHeight, 1684);
+});
+
+test("interactive zoom remains within safe mobile and desktop limits", () => {
+  assert.equal(clampNotebookZoom(0.1), 0.25);
+  assert.equal(clampNotebookZoom(5), 4);
+  assert.equal(scaleNotebookZoom(1, 1.15), 1.15);
+  assert.equal(scaleNotebookZoom(0.25, 0.5), 0.25);
+  assert.equal(scaleNotebookZoom(4, 2), 4);
+});
+
+test("an automatically opened PDF stays open after scrolling to another page", () => {
+  const initial = {};
+  const opened = rememberExpandedDocument(initial, "document-a");
+  assert.deepEqual(opened, { "document-a": true });
+  assert.strictEqual(rememberExpandedDocument(opened), opened);
+  assert.strictEqual(rememberExpandedDocument(opened, "document-a"), opened);
+  assert.deepEqual(
+    rememberExpandedDocument({ "document-a": false }, "document-a"),
+    { "document-a": false },
+  );
 });
 
 test("document headings do not cause horizontal overflow in fit modes", () => {

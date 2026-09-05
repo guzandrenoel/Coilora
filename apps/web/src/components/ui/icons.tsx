@@ -123,6 +123,24 @@ export function RedoIcon(props: IconProps) {
   );
 }
 
+export function ZoomOutIcon(props: IconProps) {
+  return (
+    <IconFrame {...props}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m15.5 15.5 4.5 4.5M7.5 10.5h6" />
+    </IconFrame>
+  );
+}
+
+export function ZoomInIcon(props: IconProps) {
+  return (
+    <IconFrame {...props}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m15.5 15.5 4.5 4.5M7.5 10.5h6M10.5 7.5v6" />
+    </IconFrame>
+  );
+}
+
 export function HighlighterIcon(props: IconProps) {
   return (
     <IconFrame {...props}>
@@ -138,6 +156,15 @@ export function EraserIcon(props: IconProps) {
     <IconFrame {...props}>
       <path d="m7 19-4-4L14.5 3.5a2.1 2.1 0 0 1 3 0l3 3a2.1 2.1 0 0 1 0 3L11 19H7Z" />
       <path d="m11 7 6 6M7 19h13" />
+    </IconFrame>
+  );
+}
+
+export function TextIcon(props: IconProps) {
+  return (
+    <IconFrame {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M7 9V7h10v2M12 7v10M9.5 17h5" />
     </IconFrame>
   );
 }

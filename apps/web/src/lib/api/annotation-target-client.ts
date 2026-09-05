@@ -10,7 +10,11 @@ import {
   deleteDocumentPageAnnotation,
   updateDocumentPageAnnotation,
 } from "./document-annotations-client";
-import type { CreateAnnotationInput, PageAnnotation } from "./types";
+import type {
+  CreateAnnotationInput,
+  PageAnnotation,
+  UpdateAnnotationInput,
+} from "./types";
 
 export type AnnotationTarget =
   | {
@@ -42,6 +46,12 @@ export function annotationCreateInput(
     color: annotation.color,
     width: annotation.width,
     opacity: annotation.opacity,
+    ...(annotation.kind === "text"
+      ? {
+          text: annotation.text_content ?? "",
+          fontSize: annotation.font_size ?? 0.025,
+        }
+      : {}),
   };
 }
 
@@ -72,10 +82,8 @@ export async function deleteTargetAnnotation(
 export function updateTargetAnnotation(
   target: AnnotationTarget,
   annotationId: string,
-  points: PageAnnotation["points"],
-  revision: number,
+  input: UpdateAnnotationInput,
 ) {
-  const input = { points, revision };
   return target.kind === "notebook-page"
     ? updatePageAnnotation(
         target.notebookId,
