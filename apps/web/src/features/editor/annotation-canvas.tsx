@@ -1,38 +1,52 @@
 "use client";
+
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { getPageAnnotations } from "@/lib/api/annotations-client";
 import {
-  createPageAnnotation,
-  deletePageAnnotation,
-  getPageAnnotations,
-} from "@/lib/api/annotations-client";
-import {
-  createDocumentPageAnnotation,
-  deleteDocumentPageAnnotation,
-  getDocumentPageAnnotations,
-} from "@/lib/api/document-annotations-client";
+  createTargetAnnotation,
+  deleteTargetAnnotation,
+  updateTargetAnnotation,
+  type AnnotationHistoryEntry,
+  type AnnotationTarget,
+} from "@/lib/api/annotation-target-client";
+import { getDocumentPageAnnotations } from "@/lib/api/document-annotations-client";
 import type {
   AnnotationKind,
   CreateAnnotationInput,
   PageAnnotation,
 } from "@/lib/api/types";
 import {
+  getAnnotationBounds,
   getNormalizedPoint,
   pointsToSvgPath,
   shouldAppendPoint,
+  translateAnnotationPoints,
 } from "./annotation-geometry";
 import styles from "./annotation-canvas.module.css";
 
-export type EditorTool = AnnotationKind | "eraser" | "pan";
-type PendingStroke = CreateAnnotationInput & { id: string; failed?: boolean };
+export type EditorTool = AnnotationKind | "eraser" | "select";
+
+type PendingStroke = CreateAnnotationInput & {
+  id: string;
+  failed?: boolean;
+};
+
+type MoveGesture = {
+  annotation: PageAnnotation;
+  start: { x: number; y: number };
+};
+
 const settings = {
   ink: { width: 0.004, opacity: 1 },
   highlight: { width: 0.03, opacity: 0.35 },
 };
+
 const sorted = (items: PageAnnotation[]) =>
   [...items].sort((a, b) => a.z_index - b.z_index);
 
@@ -41,31 +55,66 @@ export function AnnotationCanvas({
   pageId,
   documentId,
   documentPageNumber,
+  targetKey,
   tool,
   color,
+  disabled = false,
+  refreshVersion = 0,
   onBusyChange,
+  onCommit,
 }: {
   notebookId?: string;
   pageId?: string;
   documentId?: string;
   documentPageNumber?: number;
+  targetKey: string;
   tool: EditorTool;
   color: string;
+  disabled?: boolean;
+  refreshVersion?: number;
   onBusyChange?: (busy: boolean) => void;
+  onCommit?: (entry: AnnotationHistoryEntry) => void;
 }) {
+  const target = useMemo<AnnotationTarget>(
+    () =>
+      documentId && documentPageNumber
+        ? {
+            kind: "document-page",
+            key: targetKey,
+            documentId,
+            pageNumber: documentPageNumber,
+          }
+        : {
+            kind: "notebook-page",
+            key: targetKey,
+            notebookId: notebookId ?? "",
+            pageId: pageId ?? "",
+          },
+    [documentId, documentPageNumber, notebookId, pageId, targetKey],
+  );
   const [annotations, setAnnotations] = useState<PageAnnotation[]>([]);
   const [draft, setDraft] = useState<PendingStroke | null>(null);
   const [pending, setPending] = useState<PendingStroke[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [moveDraft, setMoveDraft] = useState<PageAnnotation | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadFailed, setLoadFailed] = useState(false);
   const [operations, setOperations] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const activePointer = useRef<number | null>(null);
   const stroke = useRef<PendingStroke | null>(null);
+  const moveGesture = useRef<MoveGesture | null>(null);
+  const moveDraftRef = useRef<PageAnnotation | null>(null);
   const saving = useRef(new Set<string>());
   const erasing = useRef(new Set<string>());
-  const busy = draft !== null || pending.length > 0 || operations > 0;
+  const busy =
+    draft !== null ||
+    moveDraft !== null ||
+    pending.length > 0 ||
+    operations > 0;
+
   useEffect(() => {
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
@@ -95,7 +144,15 @@ export function AnnotationCanvas({
           loaded.push(...result.items);
           cursor = result.nextPage;
         }
-        if (!cancelled) setAnnotations(sorted(loaded));
+        if (!cancelled) {
+          const next = sorted(loaded);
+          setAnnotations(next);
+          setSelectedId((current) =>
+            next.some((annotation) => annotation.id === current)
+              ? current
+              : null,
+          );
+        }
       } catch (reason) {
         if (!cancelled) {
           setLoadFailed(true);
@@ -113,78 +170,128 @@ export function AnnotationCanvas({
     return () => {
       cancelled = true;
     };
-  }, [notebookId, pageId, documentId, documentPageNumber, loadAttempt]);
+  }, [
+    notebookId,
+    pageId,
+    documentId,
+    documentPageNumber,
+    loadAttempt,
+    refreshVersion,
+  ]);
 
-  function point(event: ReactPointerEvent<SVGSVGElement>) {
+  function point(clientX: number, clientY: number) {
+    const rectangle = svgRef.current?.getBoundingClientRect();
     return getNormalizedPoint(
-      event.clientX,
-      event.clientY,
-      event.currentTarget.getBoundingClientRect(),
+      clientX,
+      clientY,
+      rectangle ?? { left: 0, top: 0, width: 0, height: 0 },
     );
   }
+
   function begin(event: ReactPointerEvent<SVGSVGElement>) {
+    if (tool === "select") {
+      if (event.target === event.currentTarget) setSelectedId(null);
+      return;
+    }
     if (
-      tool === "pan" ||
       tool === "eraser" ||
+      disabled ||
       loading ||
       loadFailed ||
+      operations > 0 ||
       event.button !== 0 ||
       activePointer.current !== null
-    )
+    ) {
       return;
+    }
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     activePointer.current = event.pointerId;
     stroke.current = {
       id: crypto.randomUUID(),
       kind: tool,
-      points: [point(event)],
+      points: [point(event.clientX, event.clientY)],
       color,
       ...settings[tool],
     };
     setDraft(stroke.current);
   }
-  function move(event: ReactPointerEvent<SVGSVGElement>) {
-    if (event.pointerId !== activePointer.current || !stroke.current) return;
+
+  function beginMove(
+    annotation: PageAnnotation,
+    event: ReactPointerEvent<SVGPathElement>,
+  ) {
+    if (
+      tool !== "select" ||
+      disabled ||
+      loading ||
+      loadFailed ||
+      operations > 0 ||
+      event.button !== 0 ||
+      activePointer.current !== null
+    ) {
+      return;
+    }
     event.preventDefault();
-    const next = point(event);
+    event.stopPropagation();
+    svgRef.current?.setPointerCapture(event.pointerId);
+    activePointer.current = event.pointerId;
+    moveGesture.current = {
+      annotation,
+      start: point(event.clientX, event.clientY),
+    };
+    setSelectedId(annotation.id);
+    moveDraftRef.current = annotation;
+    setMoveDraft(annotation);
+  }
+
+  function move(event: ReactPointerEvent<SVGSVGElement>) {
+    if (event.pointerId !== activePointer.current) return;
+    if (moveGesture.current) {
+      event.preventDefault();
+      const current = point(event.clientX, event.clientY);
+      const gesture = moveGesture.current;
+      const moved = {
+        ...gesture.annotation,
+        points: translateAnnotationPoints(
+          gesture.annotation.points,
+          current.x - gesture.start.x,
+          current.y - gesture.start.y,
+        ),
+      };
+      moveDraftRef.current = moved;
+      setMoveDraft(moved);
+      return;
+    }
+    if (!stroke.current) return;
+    event.preventDefault();
+    const next = point(event.clientX, event.clientY);
     if (
       stroke.current.points.length >= 4096 ||
       !shouldAppendPoint(stroke.current.points, next)
-    )
+    ) {
       return;
+    }
     stroke.current = {
       ...stroke.current,
       points: [...stroke.current.points, next],
     };
     setDraft(stroke.current);
   }
+
   async function save(item: PendingStroke) {
     if (saving.current.has(item.id)) return;
     saving.current.add(item.id);
     setOperations((value) => value + 1);
     setPending((current) =>
-      current.map((stroke) =>
-        stroke.id === item.id ? { ...stroke, failed: false } : stroke,
+      current.map((pendingStroke) =>
+        pendingStroke.id === item.id
+          ? { ...pendingStroke, failed: false }
+          : pendingStroke,
       ),
     );
     try {
-      const input: CreateAnnotationInput = {
-        id: item.id,
-        kind: item.kind,
-        points: item.points,
-        color: item.color,
-        width: item.width,
-        opacity: item.opacity,
-      };
-      const created =
-        documentId && documentPageNumber
-          ? await createDocumentPageAnnotation(
-              documentId,
-              documentPageNumber,
-              input,
-            )
-          : await createPageAnnotation(notebookId ?? "", pageId ?? "", input);
+      const created = await createTargetAnnotation(target, item);
       setAnnotations((current) =>
         sorted([
           ...current.filter((annotation) => annotation.id !== created.id),
@@ -192,12 +299,15 @@ export function AnnotationCanvas({
         ]),
       );
       setPending((current) =>
-        current.filter((stroke) => stroke.id !== item.id),
+        current.filter((pendingStroke) => pendingStroke.id !== item.id),
       );
+      onCommit?.({ target, before: null, after: created });
     } catch (reason) {
       setPending((current) =>
-        current.map((stroke) =>
-          stroke.id === item.id ? { ...stroke, failed: true } : stroke,
+        current.map((pendingStroke) =>
+          pendingStroke.id === item.id
+            ? { ...pendingStroke, failed: true }
+            : pendingStroke,
         ),
       );
       setError(
@@ -208,28 +318,102 @@ export function AnnotationCanvas({
       setOperations((value) => Math.max(0, value - 1));
     }
   }
+
+  async function persistMove(
+    annotation: PageAnnotation,
+    points: PageAnnotation["points"],
+  ) {
+    setOperations((value) => value + 1);
+    setError(null);
+    try {
+      const updated = await updateTargetAnnotation(
+        target,
+        annotation.id,
+        points,
+        annotation.revision,
+      );
+      setAnnotations((current) =>
+        sorted(
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        ),
+      );
+      onCommit?.({ target, before: annotation, after: updated });
+    } catch (reason) {
+      setAnnotations((current) =>
+        sorted(
+          current.map((item) =>
+            item.id === annotation.id ? annotation : item,
+          ),
+        ),
+      );
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "The annotation could not be moved.",
+      );
+    } finally {
+      setOperations((value) => Math.max(0, value - 1));
+    }
+  }
+
   function finish(event: ReactPointerEvent<SVGSVGElement>) {
-    if (event.pointerId !== activePointer.current || !stroke.current) return;
+    if (event.pointerId !== activePointer.current) return;
     event.preventDefault();
-    const next = point(event);
+
+    if (moveGesture.current) {
+      const gesture = moveGesture.current;
+      const moved = moveDraftRef.current;
+      activePointer.current = null;
+      moveGesture.current = null;
+      moveDraftRef.current = null;
+      setMoveDraft(null);
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      if (!moved) return;
+      const changed = moved.points.some(
+        (item, index) =>
+          item.x !== gesture.annotation.points[index]?.x ||
+          item.y !== gesture.annotation.points[index]?.y,
+      );
+      if (!changed) return;
+      setAnnotations((current) =>
+        current.map((item) => (item.id === moved.id ? moved : item)),
+      );
+      void persistMove(gesture.annotation, moved.points);
+      return;
+    }
+
+    if (!stroke.current) return;
+    const next = point(event.clientX, event.clientY);
     const current = stroke.current;
     if (
       current.points.length < 4096 &&
       shouldAppendPoint(current.points, next, 0.0001)
-    )
+    ) {
       current.points = [...current.points, next];
+    }
     activePointer.current = null;
     stroke.current = null;
     setDraft(null);
-    if (event.currentTarget.hasPointerCapture(event.pointerId))
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     if (current.points.length < 2) return;
     setPending((items) => [...items, current]);
     setError(null);
     void save(current);
   }
+
   function cancel(event: ReactPointerEvent<SVGSVGElement>) {
     if (event.pointerId !== activePointer.current) return;
+    if (moveGesture.current) {
+      activePointer.current = null;
+      moveGesture.current = null;
+      moveDraftRef.current = null;
+      setMoveDraft(null);
+      return;
+    }
     // Keep collected ink if the device interrupts a pointer gesture.
     const current = stroke.current;
     activePointer.current = null;
@@ -240,11 +424,14 @@ export function AnnotationCanvas({
       void save(current);
     }
   }
+
   async function erase(
     annotation: PageAnnotation,
     event: ReactPointerEvent<SVGPathElement>,
   ) {
-    if (tool !== "eraser" || erasing.current.has(annotation.id)) return;
+    if (tool !== "eraser" || disabled || erasing.current.has(annotation.id)) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     erasing.current.add(annotation.id);
@@ -254,18 +441,9 @@ export function AnnotationCanvas({
     setOperations((value) => value + 1);
     setError(null);
     try {
-      if (documentId && documentPageNumber)
-        await deleteDocumentPageAnnotation(
-          documentId,
-          documentPageNumber,
-          annotation.id,
-        );
-      else
-        await deletePageAnnotation(
-          notebookId ?? "",
-          pageId ?? "",
-          annotation.id,
-        );
+      await deleteTargetAnnotation(target, annotation.id);
+      setSelectedId((current) => (current === annotation.id ? null : current));
+      onCommit?.({ target, before: annotation, after: null });
     } catch (reason) {
       setAnnotations((items) => sorted([...items, annotation]));
       setError(
@@ -278,10 +456,25 @@ export function AnnotationCanvas({
       setOperations((value) => Math.max(0, value - 1));
     }
   }
+
   const failed = pending.filter((item) => item.failed);
+  const renderedAnnotations = annotations.map((annotation) =>
+    moveDraft?.id === annotation.id ? moveDraft : annotation,
+  );
+  const selected = renderedAnnotations.find(
+    (annotation) => annotation.id === selectedId,
+  );
+  const selectionBounds = selected
+    ? getAnnotationBounds(
+        selected.points,
+        Math.max(selected.width * 1.5, 0.006),
+      )
+    : null;
+
   return (
     <>
       <svg
+        ref={svgRef}
         className={styles.layer}
         data-tool={tool}
         viewBox="0 0 1 1"
@@ -295,18 +488,39 @@ export function AnnotationCanvas({
         onPointerCancel={cancel}
         onLostPointerCapture={cancel}
       >
-        {annotations.map((annotation) => (
-          <path
-            className={styles.stroke}
-            key={annotation.id}
-            d={pointsToSvgPath(annotation.points)}
-            stroke={annotation.color}
-            strokeWidth={annotation.width}
-            opacity={annotation.opacity}
-            pointerEvents={tool === "eraser" ? "stroke" : "none"}
-            onPointerDown={(event) => void erase(annotation, event)}
+        {renderedAnnotations.map((annotation) => {
+          const path = pointsToSvgPath(annotation.points);
+          return (
+            <g key={annotation.id}>
+              <path
+                className={styles.stroke}
+                d={path}
+                stroke={annotation.color}
+                strokeWidth={annotation.width}
+                opacity={annotation.opacity}
+                pointerEvents={tool === "eraser" ? "stroke" : "none"}
+                onPointerDown={(event) => void erase(annotation, event)}
+              />
+              {tool === "select" ? (
+                <path
+                  className={styles.hitArea}
+                  d={path}
+                  strokeWidth={Math.max(annotation.width, 0.025)}
+                  onPointerDown={(event) => beginMove(annotation, event)}
+                />
+              ) : null}
+            </g>
+          );
+        })}
+        {tool === "select" && selectionBounds ? (
+          <rect
+            className={styles.selection}
+            x={selectionBounds.x}
+            y={selectionBounds.y}
+            width={selectionBounds.width}
+            height={selectionBounds.height}
           />
-        ))}
+        ) : null}
         {pending.map((item) => (
           <path
             className={styles.stroke}
@@ -328,11 +542,6 @@ export function AnnotationCanvas({
           />
         ) : null}
       </svg>
-      {loading || operations > 0 ? (
-        <p className={styles.status} role="status">
-          {loading ? "Loading annotations..." : "Saving..."}
-        </p>
-      ) : null}
       {error || failed.length ? (
         <div className={styles.error}>
           <span role="alert">

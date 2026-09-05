@@ -4,6 +4,7 @@ import {
   AnnotationCanvas,
   type EditorTool,
 } from "@/features/editor/annotation-canvas";
+import type { AnnotationHistoryEntry } from "@/lib/api/annotation-target-client";
 import { PdfPageCanvas } from "./pdf-page-canvas";
 import type { NotebookPdfPool } from "./notebook-pdf-pool";
 import type { PageSize, TimelineRow } from "./notebook-timeline";
@@ -18,6 +19,9 @@ export function NotebookPageSurface({
   visible,
   onSize,
   onBusy,
+  annotationRefreshVersion,
+  editorDisabled,
+  onAnnotationCommit,
 }: {
   row: TimelineRow;
   notebookId: string;
@@ -27,6 +31,9 @@ export function NotebookPageSurface({
   visible: boolean;
   onSize: (key: string, size: PageSize) => void;
   onBusy: (key: string, busy: boolean) => void;
+  annotationRefreshVersion: number;
+  editorDisabled: boolean;
+  onAnnotationCommit: (entry: AnnotationHistoryEntry) => void;
 }) {
   const entry = row.entry;
   const [pdfReady, setPdfReady] = useState(false);
@@ -74,6 +81,7 @@ export function NotebookPageSurface({
         ) : null}
         {entry.kind === "note" || pdfReady ? (
           <AnnotationCanvas
+            targetKey={entry.key}
             notebookId={entry.kind === "note" ? notebookId : undefined}
             pageId={entry.kind === "note" ? entry.page.id : undefined}
             documentId={entry.kind === "pdf" ? entry.document.id : undefined}
@@ -82,7 +90,10 @@ export function NotebookPageSurface({
             }
             tool={tool}
             color={color}
+            disabled={editorDisabled}
+            refreshVersion={annotationRefreshVersion}
             onBusyChange={reportBusy}
+            onCommit={onAnnotationCommit}
           />
         ) : null}
       </div>

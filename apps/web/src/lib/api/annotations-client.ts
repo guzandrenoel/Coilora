@@ -7,6 +7,7 @@ import {
   type AnnotationPoint,
   type CreateAnnotationInput,
   type PageAnnotation,
+  type UpdateAnnotationInput,
 } from "./types";
 
 const uuidPattern =
@@ -14,24 +15,17 @@ const uuidPattern =
 
 const colorPattern = /^#[0-9a-f]{6}$/i;
 
-function isRecord(
-  value: unknown,
-): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isAnnotationKind(
-  value: unknown,
-): value is AnnotationKind {
+function isAnnotationKind(value: unknown): value is AnnotationKind {
   return (
-    typeof value === "string" &&
-    annotationKinds.some((kind) => kind === value)
+    typeof value === "string" && annotationKinds.some((kind) => kind === value)
   );
 }
 
-function isAnnotationPoint(
-  value: unknown,
-): value is AnnotationPoint {
+function isAnnotationPoint(value: unknown): value is AnnotationPoint {
   return (
     isRecord(value) &&
     typeof value.x === "number" &&
@@ -84,9 +78,7 @@ function isPageAnnotation(
   );
 }
 
-function isCreateInput(
-  value: CreateAnnotationInput,
-): boolean {
+function isCreateInput(value: CreateAnnotationInput): boolean {
   return (
     (value.id === undefined || uuidPattern.test(value.id)) &&
     isAnnotationKind(value.kind) &&
@@ -119,15 +111,11 @@ export async function getPageAnnotations(
     page < 0 ||
     page > 10000
   ) {
-    throw new Error(
-      "Select a valid notebook page and annotation page.",
-    );
+    throw new Error("Select a valid notebook page and annotation page.");
   }
 
   const body = await apiRequest(
-    `/v1/notebooks/${encodeURIComponent(
-      notebookId,
-    )}/pages/${encodeURIComponent(
+    `/v1/notebooks/${encodeURIComponent(notebookId)}/pages/${encodeURIComponent(
       pageId,
     )}/annotations?page=${page}`,
   );
@@ -136,15 +124,10 @@ export async function getPageAnnotations(
     !isRecord(body) ||
     !Array.isArray(body.items) ||
     body.items.length > 200 ||
-    !body.items.every((item) =>
-      isPageAnnotation(item, pageId),
-    ) ||
-    (body.nextPage !== null &&
-      body.nextPage !== page + 1)
+    !body.items.every((item) => isPageAnnotation(item, pageId)) ||
+    (body.nextPage !== null && body.nextPage !== page + 1)
   ) {
-    throw new Error(
-      "The API returned an unexpected annotation response.",
-    );
+    throw new Error("The API returned an unexpected annotation response.");
   }
 
   return {
@@ -167,9 +150,7 @@ export async function createPageAnnotation(
   }
 
   const body = await apiRequest(
-    `/v1/notebooks/${encodeURIComponent(
-      notebookId,
-    )}/pages/${encodeURIComponent(
+    `/v1/notebooks/${encodeURIComponent(notebookId)}/pages/${encodeURIComponent(
       pageId,
     )}/annotations`,
     {
@@ -179,9 +160,7 @@ export async function createPageAnnotation(
   );
 
   if (!isPageAnnotation(body, pageId)) {
-    throw new Error(
-      "The API returned an unexpected annotation response.",
-    );
+    throw new Error("The API returned an unexpected annotation response.");
   }
 
   return body;
@@ -201,9 +180,7 @@ export async function deletePageAnnotation(
   }
 
   const body = await apiRequest(
-    `/v1/notebooks/${encodeURIComponent(
-      notebookId,
-    )}/pages/${encodeURIComponent(
+    `/v1/notebooks/${encodeURIComponent(notebookId)}/pages/${encodeURIComponent(
       pageId,
     )}/annotations/${encodeURIComponent(annotationId)}`,
     {
@@ -211,18 +188,49 @@ export async function deletePageAnnotation(
     },
   );
 
-  if (
-    !isRecord(body) ||
-    body.id !== annotationId ||
-    body.deleted !== true
-  ) {
-    throw new Error(
-      "The API returned an unexpected deletion response.",
-    );
+  if (!isRecord(body) || body.id !== annotationId || body.deleted !== true) {
+    throw new Error("The API returned an unexpected deletion response.");
   }
 
   return {
     id: body.id,
     deleted: true,
   };
+}
+
+export async function updatePageAnnotation(
+  notebookId: string,
+  pageId: string,
+  annotationId: string,
+  input: UpdateAnnotationInput,
+): Promise<PageAnnotation> {
+  if (
+    !uuidPattern.test(notebookId) ||
+    !uuidPattern.test(pageId) ||
+    !uuidPattern.test(annotationId) ||
+    !Number.isSafeInteger(input.revision) ||
+    input.revision < 1 ||
+    !Array.isArray(input.points) ||
+    input.points.length < 2 ||
+    input.points.length > 4096 ||
+    !input.points.every(isAnnotationPoint)
+  ) {
+    throw new Error("Choose a valid annotation position.");
+  }
+
+  const body = await apiRequest(
+    `/v1/notebooks/${encodeURIComponent(notebookId)}/pages/${encodeURIComponent(
+      pageId,
+    )}/annotations/${encodeURIComponent(annotationId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  );
+
+  if (!isPageAnnotation(body, pageId) || body.id !== annotationId) {
+    throw new Error("The API returned an unexpected annotation update.");
+  }
+
+  return body;
 }

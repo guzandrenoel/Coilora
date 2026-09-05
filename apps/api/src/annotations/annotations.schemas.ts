@@ -27,6 +27,16 @@ export const createAnnotationSchema = z
   })
   .strict();
 
+export const updateAnnotationSchema = z
+  .object({
+    points: z
+      .array(annotationPointSchema)
+      .min(2, 'A stroke requires at least two points.')
+      .max(4096, 'A stroke contains too many points.'),
+    revision: z.number().int().min(1),
+  })
+  .strict();
+
 export const annotationListQuerySchema = z
   .object({
     page: z.coerce.number().int().min(0).max(10000).default(0),
@@ -42,3 +52,4 @@ export const documentPageNumberSchema = z.coerce
   .max(5000);
 
 export type CreateAnnotationInput = z.infer<typeof createAnnotationSchema>;
+export type UpdateAnnotationInput = z.infer<typeof updateAnnotationSchema>;

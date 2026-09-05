@@ -21,12 +21,8 @@ export function getNormalizedPoint(
   }
 
   return {
-    x: clamp(
-      (clientX - rectangle.left) / rectangle.width,
-    ),
-    y: clamp(
-      (clientY - rectangle.top) / rectangle.height,
-    ),
+    x: clamp((clientX - rectangle.left) / rectangle.width),
+    y: clamp((clientY - rectangle.top) / rectangle.height),
   };
 }
 
@@ -40,20 +36,50 @@ export function shouldAppendPoint(
   if (!previous) return true;
 
   return (
-    Math.hypot(
-      nextPoint.x - previous.x,
-      nextPoint.y - previous.y,
-    ) >= minimumDistance
+    Math.hypot(nextPoint.x - previous.x, nextPoint.y - previous.y) >=
+    minimumDistance
   );
 }
 
-export function pointsToSvgPath(
-  points: AnnotationPoint[],
-) {
+export function pointsToSvgPath(points: AnnotationPoint[]) {
   return points
-    .map(
-      (point, index) =>
-        `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`,
-    )
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
     .join(" ");
+}
+
+export function getAnnotationBounds(points: AnnotationPoint[], padding = 0) {
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const left = clamp(Math.min(...xs) - padding);
+  const top = clamp(Math.min(...ys) - padding);
+  const right = clamp(Math.max(...xs) + padding);
+  const bottom = clamp(Math.max(...ys) + padding);
+
+  return {
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top,
+  };
+}
+
+export function translateAnnotationPoints(
+  points: AnnotationPoint[],
+  deltaX: number,
+  deltaY: number,
+) {
+  const bounds = getAnnotationBounds(points);
+  const translatedX = Math.min(
+    1 - bounds.x - bounds.width,
+    Math.max(-bounds.x, deltaX),
+  );
+  const translatedY = Math.min(
+    1 - bounds.y - bounds.height,
+    Math.max(-bounds.y, deltaY),
+  );
+
+  return points.map((point) => ({
+    x: point.x + translatedX,
+    y: point.y + translatedY,
+  }));
 }

@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,9 +9,27 @@ import {
   useRef,
   useState,
 } from "react";
-import { BookmarkIcon, HandIcon } from "@/components/ui/icons";
+import {
+  HomeIcon,
+  RedoIcon,
+  SelectIcon,
+  UndoIcon,
+} from "@/components/ui/icons";
 import { PagePanelToggle } from "@/features/editor/page-panel-toggle";
 import type { EditorTool } from "@/features/editor/annotation-canvas";
+import {
+  completeHistoryStep,
+  emptyAnnotationHistory,
+  historyEntry,
+  recordAnnotationHistory,
+} from "@/features/editor/annotation-history";
+import {
+  annotationCreateInput,
+  createTargetAnnotation,
+  deleteTargetAnnotation,
+  updateTargetAnnotation,
+  type AnnotationHistoryEntry,
+} from "@/lib/api/annotation-target-client";
 import {
   getNotebookPages,
   updateNotebookPage,
@@ -70,8 +87,17 @@ export function NotebookViewer({
   const [attempt, setAttempt] = useState(0);
   const [pool, setPool] = useState<NotebookPdfPool | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [tool, setTool] = useState<EditorTool>("pan");
+  const [tool, setTool] = useState<EditorTool>("select");
   const [color, setColor] = useState(colors[0]);
+  const [annotationHistory, setAnnotationHistory] = useState(
+    emptyAnnotationHistory,
+  );
+  const [historyBusy, setHistoryBusy] = useState(false);
+  const [annotationRefreshVersions, setAnnotationRefreshVersions] = useState<
+    Record<string, number>
+  >({});
+  const [thumbnailAnnotationVersions, setThumbnailAnnotationVersions] =
+    useState<Record<string, number>>({});
   const [zoom, setZoom] = useState<NotebookZoom>("page");
   const [sizes, setSizes] = useState<Record<string, PageSize>>({});
   const [viewport, setViewport] = useState({ width: 900, height: 800 });
@@ -91,6 +117,9 @@ export function NotebookViewer({
   const [jumpVersion, setJumpVersion] = useState(0);
   const bookmarkLoads = useRef(new Map<string, Promise<void>>());
   const alive = useRef(true);
+  const annotationHistoryRef = useRef(emptyAnnotationHistory);
+  const historyBusyRef = useRef(false);
+  const annotationRevisions = useRef(new Map<string, number>());
 
   useEffect(() => {
     alive.current = true;
@@ -256,6 +285,91 @@ export function NotebookViewer({
       return next;
     });
   }, []);
+  const recordHistory = useCallback((entry: AnnotationHistoryEntry) => {
+    if (entry.after) {
+      annotationRevisions.current.set(entry.after.id, entry.after.revision);
+    } else if (entry.before) {
+      annotationRevisions.current.delete(entry.before.id);
+    }
+    setAnnotationHistory((current) => {
+      const next = recordAnnotationHistory(current, entry);
+      annotationHistoryRef.current = next;
+      return next;
+    });
+    setThumbnailAnnotationVersions((versions) => ({
+      ...versions,
+      [entry.target.key]: (versions[entry.target.key] ?? 0) + 1,
+    }));
+  }, []);
+
+  async function stepHistory(direction: "undo" | "redo") {
+    if (historyBusyRef.current || pinned.size) return;
+    const currentHistory = annotationHistoryRef.current;
+    const entry = historyEntry(currentHistory, direction);
+    if (!entry) return;
+
+    const desired = direction === "undo" ? entry.before : entry.after;
+    const current = direction === "undo" ? entry.after : entry.before;
+    let replayed = entry;
+    historyBusyRef.current = true;
+    setHistoryBusy(true);
+    setError(null);
+    try {
+      if (!desired) {
+        if (!current) throw new Error("This history entry is unavailable.");
+        await deleteTargetAnnotation(entry.target, current.id);
+        annotationRevisions.current.delete(current.id);
+      } else if (!current) {
+        const created = await createTargetAnnotation(
+          entry.target,
+          annotationCreateInput(desired),
+        );
+        replayed =
+          direction === "undo"
+            ? { ...entry, before: created }
+            : { ...entry, after: created };
+        annotationRevisions.current.set(created.id, created.revision);
+      } else {
+        const updated = await updateTargetAnnotation(
+          entry.target,
+          current.id,
+          desired.points,
+          annotationRevisions.current.get(current.id) ?? current.revision,
+        );
+        replayed =
+          direction === "undo"
+            ? { ...entry, before: updated }
+            : { ...entry, after: updated };
+        annotationRevisions.current.set(updated.id, updated.revision);
+      }
+
+      const next = completeHistoryStep(currentHistory, direction, replayed);
+      annotationHistoryRef.current = next;
+      setAnnotationHistory(next);
+      setAnnotationRefreshVersions((versions) => ({
+        ...versions,
+        [entry.target.key]: (versions[entry.target.key] ?? 0) + 1,
+      }));
+      setThumbnailAnnotationVersions((versions) => ({
+        ...versions,
+        [entry.target.key]: (versions[entry.target.key] ?? 0) + 1,
+      }));
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : `The annotation could not be ${direction === "undo" ? "undone" : "redone"}.`,
+      );
+    } finally {
+      historyBusyRef.current = false;
+      setHistoryBusy(false);
+    }
+  }
+
+  const canUndo =
+    annotationHistory.past.length > 0 && !historyBusy && !pinned.size;
+  const canRedo =
+    annotationHistory.future.length > 0 && !historyBusy && !pinned.size;
   function jump(key: string) {
     pendingJump.current = key;
     setJumpVersion((value) => value + 1);
@@ -426,6 +540,32 @@ export function NotebookViewer({
     <main
       className={styles.viewer}
       onKeyDown={(event) => {
+        const target = event.target;
+        const isTyping =
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          (target instanceof HTMLElement && target.isContentEditable);
+        const key = event.key.toLowerCase();
+        const modifier = event.ctrlKey || event.metaKey;
+        const direction =
+          modifier && key === "z"
+            ? event.shiftKey
+              ? "redo"
+              : "undo"
+            : modifier && key === "y"
+              ? "redo"
+              : null;
+        if (
+          direction &&
+          !event.altKey &&
+          !isTyping &&
+          (direction === "undo" ? canUndo : canRedo)
+        ) {
+          event.preventDefault();
+          void stepHistory(direction);
+          return;
+        }
         if (
           event.key === "Escape" &&
           sidebarOpen &&
@@ -435,133 +575,120 @@ export function NotebookViewer({
       }}
     >
       <header className={styles.header}>
-        <PagePanelToggle
-          ref={toggleRef}
-          open={sidebarOpen}
-          onToggle={() => setSidebarOpen((value) => !value)}
-          panelId="notebook-contents"
-        />
-        <Link
-          className={styles.brand}
-          href={notebookHref}
-          aria-label="Back to notebook"
-          onClick={(event) => {
-            if (pinned.size) {
-              event.preventDefault();
-              setError(
-                "Some ink is still saving or needs a retry. Return to the unsaved page before leaving.",
-              );
-            }
-          }}
-        >
-          <Image
-            src="/brand/coilora-mark.png"
-            alt=""
-            width={40}
-            height={40}
-            priority
-          />
-          <span>Coilora</span>
-        </Link>
-        <div className={styles.heading}>
-          <h1>{title}</h1>
-          <span>
-            {active?.kind === "note"
-              ? active.page.title
-              : active?.kind === "pdf"
-                ? `${active.document.title} · ${active.pageNumber} / ${active.document.page_count ?? "…"}`
-                : "Notebook contents"}
-          </span>
-        </div>
-        <Link
-          className={styles.back}
-          href={notebookHref}
-          onClick={(event) => {
-            if (pinned.size) {
-              event.preventDefault();
-              setError(
-                "Some ink is still saving or needs a retry. Return to the unsaved page before leaving.",
-              );
-            }
-          }}
-        >
-          ← Back to notebook
-        </Link>
-      </header>
-      <nav className={styles.toolbar} aria-label="Notebook tools">
-        <div className={styles.tools} role="group" aria-label="Drawing tool">
-          {(["pan", "ink", "highlight", "eraser"] as const).map((option) => (
-            <button
-              type="button"
-              key={option}
-              className={option === "pan" ? styles.handTool : undefined}
-              aria-label={option === "pan" ? "Scroll mode" : undefined}
-              title={option === "pan" ? "Scroll without drawing" : undefined}
-              aria-pressed={tool === option}
-              onClick={() => setTool(option)}
-            >
-              {
-                {
-                  pan: <HandIcon />,
-                  ink: "Pen",
-                  highlight: "Highlighter",
-                  eraser: "Eraser",
-                }[option]
+        <div className={styles.headerStart}>
+          <Link
+            className={styles.home}
+            href={notebookHref}
+            aria-label="Notebook home"
+            title="Notebook home"
+            onClick={(event) => {
+              if (pinned.size) {
+                event.preventDefault();
+                setError(
+                  "Some ink is still saving or needs a retry. Return to the unsaved page before leaving.",
+                );
               }
-            </button>
-          ))}
-        </div>
-        <div className={styles.colors} role="group" aria-label="Ink color">
-          {colors.map((value) => (
-            <button
-              type="button"
-              key={value}
-              style={{ backgroundColor: value }}
-              aria-label={`Use ${value} ink`}
-              aria-pressed={color === value}
-              onClick={() => setColor(value)}
-            />
-          ))}
-        </div>
-        <button
-          type="button"
-          disabled={
-            !active ||
-            bookmarkBusy.has(active.key) ||
-            (active.kind === "pdf" && !pdfBookmarks[active.document.id])
-          }
-          aria-pressed={active ? isBookmarked(active) : false}
-          onClick={() => {
-            if (active) void toggleBookmark(active);
-          }}
-        >
-          <BookmarkIcon /> Bookmark
-        </button>
-        <button type="button" onClick={addNote} disabled={!loaded}>
-          + Add note
-        </button>
-        <label className={styles.zoom}>
-          Zoom{" "}
-          <select
-            value={zoom}
-            onChange={(event) =>
-              setZoom(
-                event.target.value === "page" || event.target.value === "width"
-                  ? event.target.value
-                  : Number(event.target.value),
-              )
-            }
+            }}
           >
-            <option value="page">Fit page</option>
-            <option value="width">Fit width</option>
-            {[0.5, 0.75, 1, 1.25, 1.5, 2].map((value) => (
-              <option key={value} value={value}>
-                {value * 100}%
-              </option>
+            <HomeIcon />
+          </Link>
+          <div className={styles.heading}>
+            <h1>{title}</h1>
+            <span>
+              {active?.kind === "note"
+                ? active.page.title
+                : active?.kind === "pdf"
+                  ? `${active.document.title} · ${active.pageNumber} / ${active.document.page_count ?? "…"}`
+                  : "Notebook contents"}
+            </span>
+          </div>
+          <PagePanelToggle
+            ref={toggleRef}
+            open={sidebarOpen}
+            onToggle={() => setSidebarOpen((value) => !value)}
+            panelId="notebook-contents"
+          />
+        </div>
+        <nav className={styles.editingControls} aria-label="Notebook tools">
+          <div className={styles.tools} role="group" aria-label="Editing tool">
+            {(["select", "ink", "highlight", "eraser"] as const).map(
+              (option) => (
+                <button
+                  type="button"
+                  key={option}
+                  className={option === "select" ? styles.iconTool : undefined}
+                  aria-label={
+                    {
+                      select: "Select and move annotations",
+                      ink: "Pen",
+                      highlight: "Highlighter",
+                      eraser: "Eraser",
+                    }[option]
+                  }
+                  title={
+                    {
+                      select: "Select and move annotations",
+                      ink: "Draw with pen",
+                      highlight: "Highlight",
+                      eraser: "Erase annotations",
+                    }[option]
+                  }
+                  aria-pressed={tool === option}
+                  onClick={() => setTool(option)}
+                >
+                  {
+                    {
+                      select: <SelectIcon />,
+                      ink: "Pen",
+                      highlight: "Highlighter",
+                      eraser: "Eraser",
+                    }[option]
+                  }
+                </button>
+              ),
+            )}
+          </div>
+          <div className={styles.colors} role="group" aria-label="Ink color">
+            {colors.map((value) => (
+              <button
+                type="button"
+                key={value}
+                style={{ backgroundColor: value }}
+                aria-label={`Use ${value} ink`}
+                aria-pressed={color === value}
+                onClick={() => setColor(value)}
+              />
             ))}
-          </select>
-        </label>
-      </nav>
+          </div>
+        </nav>
+        <div className={styles.pageControls}>
+          <button type="button" onClick={addNote} disabled={!loaded}>
+            + Add note
+          </button>
+          <label className={styles.zoom}>
+            Zoom{" "}
+            <select
+              value={zoom}
+              onChange={(event) =>
+                setZoom(
+                  event.target.value === "page" ||
+                    event.target.value === "width"
+                    ? event.target.value
+                    : Number(event.target.value),
+                )
+              }
+            >
+              <option value="page">Fit page</option>
+              <option value="width">Fit width</option>
+              {[0.5, 0.75, 1, 1.25, 1.5, 2].map((value) => (
+                <option key={value} value={value}>
+                  {value * 100}%
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </header>
       {error ? (
         <div className={styles.error} role="alert">
           {error}{" "}
@@ -576,15 +703,7 @@ export function NotebookViewer({
           </button>
         </div>
       ) : null}
-      {pinned.size ? (
-        <div className={styles.saveNotice}>
-          Ink on {pinned.size} page(s) is active, saving, or needs a retry.{" "}
-          <button type="button" onClick={() => jump([...pinned][0])}>
-            Return to page
-          </button>
-        </div>
-      ) : null}
-      <div className={styles.workspace}>
+      <div className={styles.workspace} data-sidebar-open={sidebarOpen}>
         {sidebarOpen ? (
           <button
             type="button"
@@ -596,6 +715,7 @@ export function NotebookViewer({
         ) : null}
         {pool ? (
           <NotebookSidebar
+            notebookId={notebookId}
             open={sidebarOpen}
             entries={entries}
             activeKey={active?.key}
@@ -609,8 +729,33 @@ export function NotebookViewer({
             onDelete={setDeleteTarget}
             busyPages={pinned}
             onAdd={() => setDialog({ kind: "add" })}
+            annotationVersions={thumbnailAnnotationVersions}
           />
         ) : null}
+        <div
+          className={styles.historyControls}
+          role="group"
+          aria-label="Annotation history"
+        >
+          <button
+            type="button"
+            aria-label="Undo annotation change"
+            title="Undo annotation change (Ctrl+Z)"
+            disabled={!canUndo}
+            onClick={() => void stepHistory("undo")}
+          >
+            <UndoIcon />
+          </button>
+          <button
+            type="button"
+            aria-label="Redo annotation change"
+            title="Redo annotation change (Ctrl+Shift+Z or Ctrl+Y)"
+            disabled={!canRedo}
+            onClick={() => void stepHistory("redo")}
+          >
+            <RedoIcon />
+          </button>
+        </div>
         <div
           ref={viewportRef}
           className={styles.viewport}
@@ -660,6 +805,11 @@ export function NotebookViewer({
                   }
                   onSize={onSize}
                   onBusy={onBusy}
+                  annotationRefreshVersion={
+                    annotationRefreshVersions[row.entry.key] ?? 0
+                  }
+                  editorDisabled={historyBusy}
+                  onAnnotationCommit={recordHistory}
                 />
               ) : null,
             )}

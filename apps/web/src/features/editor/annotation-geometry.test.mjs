@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   getNormalizedPoint,
+  getAnnotationBounds,
   pointsToSvgPath,
   shouldAppendPoint,
+  translateAnnotationPoints,
 } from "./annotation-geometry.ts";
 
 test("pointer coordinates are normalized and clamped to the page", () => {
@@ -39,5 +41,36 @@ test("normalized points create an SVG path", () => {
       { x: 0.5, y: 1 },
     ]),
     "M 0 0 L 0.5 1",
+  );
+});
+
+test("annotation bounds include optional selection padding", () => {
+  const bounds = getAnnotationBounds(
+    [
+      { x: 0.2, y: 0.3 },
+      { x: 0.6, y: 0.8 },
+    ],
+    0.05,
+  );
+  assert.ok(Math.abs(bounds.x - 0.15) < Number.EPSILON);
+  assert.ok(Math.abs(bounds.y - 0.25) < Number.EPSILON);
+  assert.ok(Math.abs(bounds.width - 0.5) < Number.EPSILON);
+  assert.ok(Math.abs(bounds.height - 0.6) < Number.EPSILON);
+});
+
+test("moving a stroke preserves its shape and keeps it on the page", () => {
+  assert.deepEqual(
+    translateAnnotationPoints(
+      [
+        { x: 0.7, y: 0.2 },
+        { x: 0.9, y: 0.4 },
+      ],
+      0.5,
+      -0.5,
+    ),
+    [
+      { x: 0.7999999999999999, y: 0 },
+      { x: 1, y: 0.2 },
+    ],
   );
 });

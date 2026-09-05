@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createAnnotationSchema,
   documentPageNumberSchema,
+  updateAnnotationSchema,
 } from './annotations.schemas.js';
 
 describe('annotation schemas', () => {
@@ -52,6 +53,21 @@ describe('annotation schemas', () => {
         points: [{ x: 0.5, y: 0.5 }],
       }).success,
     ).toBe(false);
+  });
+
+  it('accepts a revision-checked annotation move', () => {
+    expect(
+      updateAnnotationSchema.parse({ points: stroke.points, revision: 4 }),
+    ).toEqual({ points: stroke.points, revision: 4 });
+  });
+
+  it.each([
+    { points: stroke.points, revision: 0 },
+    { points: stroke.points, revision: 1.5 },
+    { points: [{ x: 0.5, y: 0.5 }], revision: 1 },
+    { points: stroke.points, revision: 1, ownerId: 'other' },
+  ])('rejects an invalid annotation move: %j', (input) => {
+    expect(updateAnnotationSchema.safeParse(input).success).toBe(false);
   });
 
   it('accepts only supported PDF page numbers', () => {

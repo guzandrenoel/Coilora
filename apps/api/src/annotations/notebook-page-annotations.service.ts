@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -7,7 +8,10 @@ import {
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { UserDatabaseClientFactory } from '../database/user-database-client.factory.js';
 import { NotebookPagesService } from '../notebooks/notebook-pages.service.js';
-import type { CreateAnnotationInput } from './annotations.schemas.js';
+import type {
+  CreateAnnotationInput,
+  UpdateAnnotationInput,
+} from './annotations.schemas.js';
 
 const annotationSelection = [
   'id',
@@ -147,6 +151,52 @@ export class NotebookPageAnnotationsService {
       id: data.id,
       deleted: true as const,
     };
+  }
+
+  async update(
+    user: AuthenticatedUser,
+    notebookId: string,
+    pageId: string,
+    annotationId: string,
+    input: UpdateAnnotationInput,
+  ) {
+    const client = await this.getPageClient(user, notebookId, pageId);
+    const { data, error } = await client
+      .from('annotations')
+      .update({ points: input.points, revision: input.revision + 1 })
+      .eq('id', annotationId)
+      .eq('owner_id', user.id)
+      .eq('notebook_page_id', pageId)
+      .is('document_id', null)
+      .eq('revision', input.revision)
+      .select(annotationSelection)
+      .maybeSingle();
+
+    if (error) {
+      throw new ServiceUnavailableException(
+        'The annotation could not be moved.',
+      );
+    }
+    if (data) return data;
+
+    const { data: existing, error: lookupError } = await client
+      .from('annotations')
+      .select('id')
+      .eq('id', annotationId)
+      .eq('owner_id', user.id)
+      .eq('notebook_page_id', pageId)
+      .is('document_id', null)
+      .maybeSingle();
+
+    if (lookupError) {
+      throw new ServiceUnavailableException(
+        'The annotation move could not be checked.',
+      );
+    }
+    if (!existing) throw new NotFoundException('The annotation was not found.');
+    throw new ConflictException(
+      'The annotation changed before it could be moved. Try again.',
+    );
   }
 
   private async getPageClient(

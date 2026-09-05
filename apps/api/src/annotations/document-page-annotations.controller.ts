@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -21,6 +22,7 @@ import {
   annotationListQuerySchema,
   createAnnotationSchema,
   documentPageNumberSchema,
+  updateAnnotationSchema,
 } from './annotations.schemas.js';
 import { DocumentPageAnnotationsService } from './document-page-annotations.service.js';
 
@@ -86,6 +88,23 @@ export class DocumentPageAnnotationsController {
       parseWithSchema(documentIdSchema, documentId),
       parseWithSchema(documentPageNumberSchema, pageNumber),
       parseWithSchema(annotationIdSchema, annotationId),
+    );
+  }
+
+  @Patch('pages/:pageNumber/annotations/:annotationId')
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('documentId') documentId: string,
+    @Param('pageNumber') pageNumber: string,
+    @Param('annotationId') annotationId: string,
+    @Body() body: unknown,
+  ) {
+    return this.annotations.update(
+      user,
+      parseWithSchema(documentIdSchema, documentId),
+      parseWithSchema(documentPageNumberSchema, pageNumber),
+      parseWithSchema(annotationIdSchema, annotationId),
+      parseWithSchema(updateAnnotationSchema, body),
     );
   }
 

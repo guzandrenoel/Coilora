@@ -15,6 +15,11 @@
   cursor: cell;
 }
 
+.layer[data-tool="select"] {
+  cursor: default;
+  touch-action: pan-x pan-y;
+}
+
 .stroke {
   fill: none;
   stroke-linecap: round;
@@ -26,26 +31,32 @@
   pointer-events: stroke;
 }
 
+.hitArea {
+  fill: none;
+  stroke: transparent;
+  pointer-events: stroke;
+  cursor: grab;
+  touch-action: none;
+}
+
+.hitArea:active {
+  cursor: grabbing;
+}
+
+.selection {
+  fill: rgb(89 126 247 / 8%);
+  stroke: var(--blue);
+  stroke-width: 0.0025;
+  stroke-dasharray: 0.009 0.006;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
 .draft {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: none;
-}
-
-.status {
-  position: absolute;
-  right: 0.75rem;
-  bottom: 0.75rem;
-  z-index: 3;
-  margin: 0;
-  padding: 0.45rem 0.65rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 92%);
-  color: var(--muted);
-  font-size: 0.7rem;
-  box-shadow: var(--shadow-sm);
 }
 
 .error {
@@ -74,9 +85,4 @@
   color: inherit;
   font-weight: 750;
   cursor: pointer;
-}
-
-.layer[data-tool="pan"] {
-  touch-action: pan-x pan-y;
-  cursor: grab;
 }

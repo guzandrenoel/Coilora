@@ -96,6 +96,33 @@ export function HandIcon(props: IconProps) {
   );
 }
 
+export function SelectIcon(props: IconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="m5 3 12 9-6 1.5L9 20 5 3Z" />
+      <path d="m13 14 4 5" />
+    </IconFrame>
+  );
+}
+
+export function UndoIcon(props: IconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="M9 7 4 12l5 5" />
+      <path d="M5 12h8a6 6 0 0 1 6 6" />
+    </IconFrame>
+  );
+}
+
+export function RedoIcon(props: IconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="m15 7 5 5-5 5" />
+      <path d="M19 12h-8a6 6 0 0 0-6 6" />
+    </IconFrame>
+  );
+}
+
 export function HighlighterIcon(props: IconProps) {
   return (
     <IconFrame {...props}>

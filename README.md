@@ -39,11 +39,12 @@ The project is in active development. Authentication, notebook organization, pri
 
 - One continuous reading area for standalone notes, PDF pages, and notes inserted between PDF pages.
 - Opening a note or PDF keeps the rest of its notebook accessible.
-- Shared thumbnail sidebar with collapsible document groups.
-- A far-left panel icon opens and closes the sidebar.
+- Shared thumbnail sidebar with annotation previews and collapsible document groups.
+- A notebook-home icon and adjacent page-panel control anchor the viewer toolbar.
+- An icon-only bookmark filter at the right of the page-panel controls shows bookmarked pages and files.
 - Previous/next navigation and direct jumps from page previews.
 - Fit-page, fit-width, and fixed zoom controls.
-- A back button returns to the containing notebook.
+- The notebook-home button returns to the containing notebook.
 - Responsive sidebar behavior for desktop and smaller screens.
 
 Standalone notes appear first in their saved order, followed by documents in import order. Notes attached to a PDF appear at their saved source-page positions.
@@ -59,9 +60,11 @@ Collapsing a document group hides its sidebar thumbnails, not its pages in the c
 - Authenticated delete/restore requests with owner checks. Deleted pages are excluded from normal page lists and cannot be edited through the API.
 - Notes can be placed before the first PDF page or after a selected PDF page.
 - Freehand pen, highlighter, and eraser tools for note pages and PDFs.
+- Select and drag saved strokes while keeping them within page boundaries.
+- Undo and redo the latest 100 annotation creates, moves, and erases from the current viewer session, including standard keyboard shortcuts.
 - Selectable ink colors.
-- A compact hand icon enables scroll mode without drawing.
-- Accessible control labels, selected states, and a scroll-mode tooltip.
+- The select tool is the neutral default, scrolling on empty page space and moving saved strokes when dragged.
+- Accessible control labels, selected states, and tooltips.
 - Original PDFs remain unchanged; annotations are stored separately.
 
 Completed strokes remain visible while saving. Active, pending, and failed strokes stay mounted when their pages scroll out of view.
@@ -155,7 +158,6 @@ The following features are not yet implemented.
 
 ### Editing and document processing
 
-- Undo and redo for durable annotation edits.
 - Page reordering and a Trash/Restore interface.
 - Typed page notes and text-selection highlights.
 - PDF search and citation navigation.

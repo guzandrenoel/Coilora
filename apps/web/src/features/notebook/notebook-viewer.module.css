@@ -7,36 +7,59 @@
   color: var(--ink);
 }
 .header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  flex: none;
+  gap: 0.75rem;
+  min-height: 60px;
+  padding: 0.45rem 0.75rem;
+  overflow-x: auto;
+  border-bottom: 1px solid rgb(255 255 255 / 15%);
+  background: var(--navy);
+  color: white;
+}
+.headerStart {
+  grid-column: 1;
   display: flex;
   align-items: center;
-  flex: none;
-  gap: 1rem;
-  padding: 0.55rem 1rem;
-  border-bottom: 1px solid var(--line);
-  background: white;
+  min-width: 0;
+  gap: 0.45rem;
 }
-.brand {
-  display: inline-flex;
+.home {
+  display: inline-grid;
+  place-items: center;
   flex: none;
-  align-items: center;
-  gap: 0.3rem;
-  color: var(--navy-deep);
-  font-weight: 800;
-  font-size: 1.1rem;
-}
-.brand img {
   width: 40px;
   height: 40px;
-  /* Account for transparent padding in the mark without shrinking it. */
-  margin-inline: -8px;
+  border-radius: 0.6rem;
+  color: white;
+}
+.home:hover {
+  background: rgb(255 255 255 / 12%);
+}
+.home svg {
+  width: 21px;
+  height: 21px;
+}
+.headerStart > button {
+  color: white;
+}
+.headerStart > button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 12%);
+}
+.headerStart > button[aria-expanded="true"] {
+  background: white;
+  color: var(--navy);
 }
 .heading {
-  flex: 1;
-  min-width: 0;
+  min-width: 88px;
+  max-width: 230px;
 }
 .heading h1 {
   margin: 0;
-  font-size: 1rem;
+  color: white;
+  font-size: 0.92rem;
 }
 .heading h1,
 .heading span {
@@ -46,30 +69,11 @@
   white-space: nowrap;
 }
 .heading span {
-  margin-top: 0.15rem;
-  color: var(--muted);
-  font-size: 0.72rem;
+  margin-top: 0.1rem;
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.68rem;
 }
-.back {
-  flex: none;
-  font-size: 0.8rem;
-  color: var(--navy);
-  padding: 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 0.6rem;
-  font-weight: 700;
-}
-.toolbar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.5rem 1rem;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--line);
-  background: white;
-}
-.toolbar button,
+.header button,
 .footer button,
 .formActions button,
 .form select,
@@ -85,13 +89,34 @@
   font-size: 0.75rem;
   cursor: pointer;
 }
-.toolbar > button {
+.header button {
+  border-color: rgb(255 255 255 / 28%);
+  background: transparent;
+  color: white;
+}
+.editingControls {
+  grid-column: 2;
   display: inline-flex;
+  justify-self: center;
+  flex: none;
+  align-items: center;
+  gap: 0.7rem;
+}
+.pageControls > button {
+  display: inline-flex;
+  justify-content: center;
   align-items: center;
   gap: 0.4rem;
   flex: none;
 }
-.toolbar svg {
+.pageControls {
+  grid-column: 3;
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 0.7rem;
+}
+.header svg {
   width: 18px;
   height: 18px;
 }
@@ -100,7 +125,7 @@
   flex: none;
   gap: 0.2rem;
 }
-.tools .handTool {
+.tools .iconTool {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -114,8 +139,49 @@ button.primary {
   background: var(--navy);
   color: white;
 }
-.toolbar > button[aria-pressed="true"] > svg {
+.header .tools button[aria-pressed="true"] {
+  border-color: white;
+  background: white;
+  color: var(--navy);
+}
+.pageControls > button[aria-pressed="true"] > svg {
   fill: #bc644f;
+}
+.historyControls {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 6;
+  display: flex;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: var(--shadow-sm);
+  transition: left 160ms ease;
+}
+.workspace[data-sidebar-open="true"] .historyControls {
+  left: calc(288px + 0.75rem);
+}
+.historyControls button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--navy);
+  cursor: pointer;
+}
+.historyControls button:hover:not(:disabled) {
+  background: var(--mint-soft);
+}
+.historyControls svg {
+  width: 18px;
+  height: 18px;
 }
 .colors {
   display: flex;
@@ -139,9 +205,9 @@ button.primary {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  margin-left: auto;
   font-size: 0.75rem;
   white-space: nowrap;
+  color: rgb(255 255 255 / 82%);
 }
 .workspace {
   display: flex;
@@ -325,7 +391,7 @@ button.primary {
 }
 .filters {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 44px;
   gap: 0.2rem;
   margin: 0 0.7rem 0.5rem;
   padding: 0.2rem;
@@ -334,6 +400,8 @@ button.primary {
   border-radius: 0.6rem;
 }
 .filters button {
+  display: inline-grid;
+  place-items: center;
   border: 0;
   border-radius: 0.4rem;
   min-height: 36px;
@@ -342,6 +410,13 @@ button.primary {
   font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
+}
+.filters svg {
+  width: 19px;
+  height: 19px;
+}
+.filters button[aria-pressed="true"] svg {
+  fill: currentColor;
 }
 .sidebarScroll {
   flex: 1;
@@ -424,6 +499,21 @@ button.primary {
 .ribbon svg {
   width: 20px;
   height: 20px;
+}
+.thumbnailAnnotations {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.thumbnailAnnotations path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .thumbnailRibbon[aria-pressed="true"],
 .ribbon[aria-pressed="true"] {
@@ -514,26 +604,14 @@ button.primary {
   font-size: 0.8rem;
   color: var(--muted);
 }
-.error,
-.saveNotice {
+.error {
   padding: 0.45rem 1rem;
   flex: none;
   background: #fff0eb;
   color: #943e34;
   font-size: 0.75rem;
 }
-.saveNotice {
-  position: absolute;
-  bottom: 45px;
-  right: 1rem;
-  max-width: 85vw;
-  z-index: 10;
-  background: #fff8dc;
-  color: #725a25;
-  border-radius: 0.5rem;
-}
-.error button,
-.saveNotice button {
+.error button {
   margin-left: 0.5rem;
   border: 0;
   border-radius: 0.3rem;
@@ -611,18 +689,20 @@ button.primary {
   opacity: 0.5;
   cursor: not-allowed;
 }
-@media (max-width: 760px) {
-  .brand span {
-    display: none;
+@media (max-width: 1100px) {
+  .header {
+    display: flex;
   }
+  .headerStart,
+  .editingControls,
+  .pageControls {
+    flex: none;
+  }
+}
+@media (max-width: 760px) {
   .header {
     gap: 0.5rem;
     padding: 0.5rem;
-  }
-  .brand img {
-    width: 32px;
-    height: 32px;
-    margin-inline: -6px;
   }
   .heading h1 {
     font-size: 0.8rem;
@@ -630,15 +710,12 @@ button.primary {
   .heading span {
     font-size: 0.65rem;
   }
-  .back {
-    font-size: 0.65rem;
-    max-width: 92px;
-    text-align: center;
-    padding: 0.5rem;
-  }
-  .toolbar {
-    padding-inline: 0.5rem;
+  .editingControls,
+  .pageControls {
     gap: 0.45rem;
+  }
+  .workspace[data-sidebar-open="true"] .historyControls {
+    left: 0.75rem;
   }
   .sidebar {
     position: absolute;

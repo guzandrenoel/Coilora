@@ -7,7 +7,10 @@ import {
 
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { UserDatabaseClientFactory } from '../database/user-database-client.factory.js';
-import type { CreateAnnotationInput } from './annotations.schemas.js';
+import type {
+  CreateAnnotationInput,
+  UpdateAnnotationInput,
+} from './annotations.schemas.js';
 
 const annotationSelection = [
   'id',
@@ -147,6 +150,58 @@ export class DocumentPageAnnotationsService {
     }
     if (!data) throw new NotFoundException('The annotation was not found.');
     return { id: data.id, deleted: true as const };
+  }
+
+  async update(
+    user: AuthenticatedUser,
+    documentId: string,
+    documentPageNumber: number,
+    annotationId: string,
+    input: UpdateAnnotationInput,
+  ) {
+    const { client } = await this.getDocument(
+      user,
+      documentId,
+      documentPageNumber,
+    );
+    const { data, error } = await client
+      .from('annotations')
+      .update({ points: input.points, revision: input.revision + 1 })
+      .eq('id', annotationId)
+      .eq('owner_id', user.id)
+      .eq('document_id', documentId)
+      .eq('document_page_number', documentPageNumber)
+      .is('notebook_page_id', null)
+      .eq('revision', input.revision)
+      .select(annotationSelection)
+      .maybeSingle();
+
+    if (error) {
+      throw new ServiceUnavailableException(
+        'The PDF annotation could not be moved.',
+      );
+    }
+    if (data) return data;
+
+    const { data: existing, error: lookupError } = await client
+      .from('annotations')
+      .select('id')
+      .eq('id', annotationId)
+      .eq('owner_id', user.id)
+      .eq('document_id', documentId)
+      .eq('document_page_number', documentPageNumber)
+      .is('notebook_page_id', null)
+      .maybeSingle();
+
+    if (lookupError) {
+      throw new ServiceUnavailableException(
+        'The PDF annotation move could not be checked.',
+      );
+    }
+    if (!existing) throw new NotFoundException('The annotation was not found.');
+    throw new ConflictException(
+      'The annotation changed before it could be moved. Try again.',
+    );
   }
 
   async listBookmarks(user: AuthenticatedUser, documentId: string) {

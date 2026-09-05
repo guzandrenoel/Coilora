@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BookmarkIcon } from "@/components/ui/icons";
-import type { NotebookPage } from "@/lib/api/types";
+import { pointsToSvgPath } from "@/features/editor/annotation-geometry";
+import { getPageAnnotations } from "@/lib/api/annotations-client";
+import { getDocumentPageAnnotations } from "@/lib/api/document-annotations-client";
+import type { NotebookPage, PageAnnotation } from "@/lib/api/types";
 import type { NotebookPdfPool } from "./notebook-pdf-pool";
 import type { TimelineEntry } from "./notebook-timeline";
 import { PdfPageCanvas } from "./pdf-page-canvas";
@@ -9,6 +12,7 @@ import { NotebookPageMenu } from "./notebook-page-menu";
 import styles from "./notebook-viewer.module.css";
 
 type Props = {
+  notebookId: string;
   open: boolean;
   entries: TimelineEntry[];
   activeKey?: string;
@@ -22,7 +26,10 @@ type Props = {
   onDelete: (page: NotebookPage) => void;
   busyPages: Set<string>;
   onAdd: () => void;
+  annotationVersions: Record<string, number>;
 };
+
+type PageEntry = Exclude<TimelineEntry, { kind: "document" }>;
 export function NotebookSidebar(props: Props) {
   const { entries, activeKey, pdfBookmarks, onEnsureBookmarks } = props;
   const [filter, setFilter] = useState<"all" | "bookmarks">("all");
@@ -107,9 +114,11 @@ export function NotebookSidebar(props: Props) {
         <button
           type="button"
           aria-pressed={filter === "bookmarks"}
+          aria-label="Show bookmarked pages and files"
+          title="Show bookmarked pages and files"
           onClick={() => void showBookmarks()}
         >
-          Bookmarks
+          <BookmarkIcon />
         </button>
       </div>
       <div className={styles.sidebarScroll}>
@@ -226,6 +235,8 @@ function ThumbnailGrid({
   onRename,
   onDelete,
   busyPages,
+  notebookId,
+  annotationVersions,
 }: Props & {
   items: TimelineEntry[];
   marked: (entry: TimelineEntry) => boolean;
@@ -295,6 +306,11 @@ function ThumbnailGrid({
                   {entry.kind === "pdf" ? (
                     <VisibleThumbnail pool={pool} entry={entry} />
                   ) : null}
+                  <ThumbnailAnnotations
+                    notebookId={notebookId}
+                    entry={entry}
+                    refreshVersion={annotationVersions[entry.key] ?? 0}
+                  />
                 </span>
               </button>
               <button
@@ -334,6 +350,78 @@ function ThumbnailGrid({
         })}
       </div>
     </div>
+  );
+}
+
+function ThumbnailAnnotations({
+  notebookId,
+  entry,
+  refreshVersion,
+}: {
+  notebookId: string;
+  entry: PageEntry;
+  refreshVersion: number;
+}) {
+  const [annotations, setAnnotations] = useState<PageAnnotation[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const loaded: PageAnnotation[] = [];
+      let cursor: number | null = 0;
+
+      try {
+        while (cursor !== null && !cancelled) {
+          const result: {
+            items: PageAnnotation[];
+            nextPage: number | null;
+          } =
+            entry.kind === "note"
+              ? await getPageAnnotations(notebookId, entry.page.id, cursor)
+              : await getDocumentPageAnnotations(
+                  entry.document.id,
+                  entry.pageNumber,
+                  cursor,
+                );
+          loaded.push(...result.items);
+          cursor = result.nextPage;
+        }
+        if (!cancelled) {
+          setAnnotations(
+            loaded.sort((left, right) => left.z_index - right.z_index),
+          );
+        }
+      } catch {
+        if (!cancelled) setAnnotations([]);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [entry, notebookId, refreshVersion]);
+
+  if (!annotations.length) return null;
+
+  return (
+    <svg
+      className={styles.thumbnailAnnotations}
+      viewBox="0 0 1 1"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      {annotations.map((annotation) => (
+        <path
+          key={annotation.id}
+          d={pointsToSvgPath(annotation.points)}
+          stroke={annotation.color}
+          strokeWidth={annotation.width}
+          opacity={annotation.opacity}
+        />
+      ))}
+    </svg>
   );
 }
 

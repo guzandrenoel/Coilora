@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -22,6 +23,7 @@ import {
   annotationIdSchema,
   annotationListQuerySchema,
   createAnnotationSchema,
+  updateAnnotationSchema,
 } from './annotations.schemas.js';
 import { NotebookPageAnnotationsService } from './notebook-page-annotations.service.js';
 
@@ -75,6 +77,23 @@ export class NotebookPageAnnotationsController {
       parseWithSchema(notebookIdSchema, notebookId),
       parseWithSchema(notebookPageIdSchema, pageId),
       parseWithSchema(annotationIdSchema, annotationId),
+    );
+  }
+
+  @Patch(':annotationId')
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Param('pageId') pageId: string,
+    @Param('annotationId') annotationId: string,
+    @Body() body: unknown,
+  ) {
+    return this.annotations.update(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(notebookPageIdSchema, pageId),
+      parseWithSchema(annotationIdSchema, annotationId),
+      parseWithSchema(updateAnnotationSchema, body),
     );
   }
 }
