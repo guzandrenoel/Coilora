@@ -15,6 +15,8 @@ export function NotebookPageSurface({
   notebookId,
   pool,
   tool,
+  eraserMode,
+  eraserRadius,
   color,
   strokeWidth,
   opacity,
@@ -29,6 +31,8 @@ export function NotebookPageSurface({
   notebookId: string;
   pool: NotebookPdfPool;
   tool: EditorTool;
+  eraserMode: "partial" | "stroke";
+  eraserRadius: number;
   color: string;
   strokeWidth: number;
   opacity: number;
@@ -94,6 +98,8 @@ export function NotebookPageSurface({
               entry.kind === "pdf" ? entry.pageNumber : undefined
             }
             tool={tool}
+            eraserMode={eraserMode}
+            eraserRadius={eraserRadius}
             color={color}
             strokeWidth={strokeWidth}
             opacity={opacity}

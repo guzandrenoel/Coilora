@@ -31,6 +31,7 @@ export type AnnotationTarget =
     };
 
 export type AnnotationHistoryEntry = {
+  changes?: AnnotationHistoryEntry[];
   target: AnnotationTarget;
   before: PageAnnotation | null;
   after: PageAnnotation | null;

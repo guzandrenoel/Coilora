@@ -11,8 +11,8 @@
   user-select: none;
 }
 
-.layer[data-tool="eraser"] {
-  cursor: cell;
+.layer[data-tool="eraser"][data-eraser-mode="partial"] {
+  cursor: none;
 }
 
 .layer[data-tool="select"] {
@@ -36,9 +36,8 @@
   stroke-linejoin: round;
 }
 
-.layer[data-tool="eraser"] .stroke {
-  cursor: pointer;
-  pointer-events: stroke;
+.layer[data-tool="eraser"][data-eraser-mode="partial"] .stroke {
+  pointer-events: none;
 }
 
 .hitArea {

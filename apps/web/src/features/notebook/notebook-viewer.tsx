@@ -18,6 +18,8 @@ import {
   ZoomOutIcon,
 } from "@/components/ui/icons";
 import { AnnotationSettingsDock } from "@/features/editor/annotation-settings-dock";
+import { EraserSettings } from "@/features/editor/eraser-settings";
+import { replayAnnotationHistory } from "@/features/editor/annotation-history-replay";
 import {
   annotationPreferencesStorageKey,
   defaultAnnotationToolPreferences,
@@ -103,7 +105,7 @@ function AnnotationToolArtwork({ tool }: { tool: EditorTool }) {
 
   return (
     <svg
-      className={`${styles.toolArtwork} ${styles.textToolArtwork}`}
+      className={styles.textToolArtwork}
       viewBox="0 0 28 28"
       aria-hidden="true"
     >
@@ -142,8 +144,11 @@ export function NotebookViewer({
   const [pool, setPool] = useState<NotebookPdfPool | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tool, setTool] = useState<EditorTool>("select");
+  const [eraserMode, setEraserMode] = useState<"partial" | "stroke">("partial");
+  const [eraserRadius, setEraserRadius] = useState(12);
   const [toolPreferences, setToolPreferences] = useState(() => {
-    if (typeof window === "undefined") return defaultAnnotationToolPreferences();
+    if (typeof window === "undefined")
+      return defaultAnnotationToolPreferences();
     try {
       return parseAnnotationToolPreferences(
         window.localStorage.getItem(annotationPreferencesStorageKey),
@@ -324,11 +329,8 @@ export function NotebookViewer({
     const previousScrollTop = element.scrollTop;
     const zoomAnchor = pendingZoomAnchor.current;
     let top = zoomAnchor
-      ? anchoredScroll(
-          oldRows,
-          rows,
-          previousScrollTop + zoomAnchor.y,
-        ) - zoomAnchor.y
+      ? anchoredScroll(oldRows, rows, previousScrollTop + zoomAnchor.y) -
+        zoomAnchor.y
       : anchoredScroll(oldRows, rows, previousScrollTop);
     if (pendingJump.current) {
       const target = rows.find((row) => row.entry.key === pendingJump.current);
@@ -350,8 +352,7 @@ export function NotebookViewer({
         oldRow.entry.kind !== "document" &&
         nextRow.entry.kind !== "document"
       ) {
-        const oldPaperLeft =
-          (previousTimelineWidth.current - oldRow.width) / 2;
+        const oldPaperLeft = (previousTimelineWidth.current - oldRow.width) / 2;
         const nextPaperLeft = (totalWidth - nextRow.width) / 2;
         const paperRatio =
           (element.scrollLeft + zoomAnchor.x - oldPaperLeft) / oldRow.width;
@@ -518,10 +519,12 @@ export function NotebookViewer({
     });
   }, []);
   const recordHistory = useCallback((entry: AnnotationHistoryEntry) => {
-    if (entry.after) {
-      annotationRevisions.current.set(entry.after.id, entry.after.revision);
-    } else if (entry.before) {
-      annotationRevisions.current.delete(entry.before.id);
+    for (const change of entry.changes ?? [entry]) {
+      if (change.after) {
+        annotationRevisions.current.set(change.after.id, change.after.revision);
+      } else if (change.before) {
+        annotationRevisions.current.delete(change.before.id);
+      }
     }
     setAnnotationHistory((current) => {
       const next = recordAnnotationHistory(current, entry);
@@ -534,79 +537,104 @@ export function NotebookViewer({
     }));
   }, []);
 
-  const stepHistory = useCallback(async (direction: "undo" | "redo") => {
-    if (historyBusyRef.current || pinned.size) return;
-    const currentHistory = annotationHistoryRef.current;
-    const entry = historyEntry(currentHistory, direction);
-    if (!entry) return;
+  const stepHistory = useCallback(
+    async (direction: "undo" | "redo") => {
+      if (historyBusyRef.current || pinned.size) return;
+      const currentHistory = annotationHistoryRef.current;
+      const entry = historyEntry(currentHistory, direction);
+      if (!entry) return;
 
-    const desired = direction === "undo" ? entry.before : entry.after;
-    const current = direction === "undo" ? entry.after : entry.before;
-    let replayed = entry;
-    historyBusyRef.current = true;
-    setHistoryBusy(true);
-    setError(null);
-    try {
-      if (!desired) {
-        if (!current) throw new Error("This history entry is unavailable.");
-        await deleteTargetAnnotation(entry.target, current.id);
-        annotationRevisions.current.delete(current.id);
-      } else if (!current) {
-        const created = await createTargetAnnotation(
-          entry.target,
-          annotationCreateInput(desired),
-        );
-        replayed =
-          direction === "undo"
-            ? { ...entry, before: created }
-            : { ...entry, after: created };
-        annotationRevisions.current.set(created.id, created.revision);
-      } else {
-        const updated = await updateTargetAnnotation(
-          entry.target,
-          current.id,
-          {
-            points: desired.points,
-            revision:
-              annotationRevisions.current.get(current.id) ?? current.revision,
-            ...(desired.kind === "text"
-              ? {
-                  text: desired.text_content ?? "",
-                  fontSize: desired.font_size ?? 0.025,
-                  color: desired.color,
-                }
-              : {}),
+      let replayed = entry;
+      historyBusyRef.current = true;
+      setHistoryBusy(true);
+      setError(null);
+      try {
+        replayed = await replayAnnotationHistory(
+          entry,
+          direction,
+          async (entry, direction) => {
+            const desired = direction === "undo" ? entry.before : entry.after;
+            const current = direction === "undo" ? entry.after : entry.before;
+            replayed = entry;
+            if (!desired) {
+              if (!current)
+                throw new Error("This history entry is unavailable.");
+              await deleteTargetAnnotation(entry.target, current.id);
+              annotationRevisions.current.delete(current.id);
+            } else if (!current) {
+              const created = await createTargetAnnotation(
+                entry.target,
+                annotationCreateInput(desired),
+              );
+              replayed =
+                direction === "undo"
+                  ? { ...entry, before: created }
+                  : { ...entry, after: created };
+              annotationRevisions.current.set(created.id, created.revision);
+            } else {
+              const updated = await updateTargetAnnotation(
+                entry.target,
+                current.id,
+                {
+                  points: desired.points,
+                  revision:
+                    annotationRevisions.current.get(current.id) ??
+                    current.revision,
+                  ...(desired.kind === "text"
+                    ? {
+                        text: desired.text_content ?? "",
+                        fontSize: desired.font_size ?? 0.025,
+                        color: desired.color,
+                      }
+                    : {}),
+                },
+              );
+              replayed =
+                direction === "undo"
+                  ? { ...entry, before: updated }
+                  : { ...entry, after: updated };
+              annotationRevisions.current.set(updated.id, updated.revision);
+            }
+
+            return replayed;
           },
         );
-        replayed =
-          direction === "undo"
-            ? { ...entry, before: updated }
-            : { ...entry, after: updated };
-        annotationRevisions.current.set(updated.id, updated.revision);
+        const next = completeHistoryStep(currentHistory, direction, replayed);
+        annotationHistoryRef.current = next;
+        setAnnotationHistory(next);
+        setAnnotationRefreshVersions((versions) => ({
+          ...versions,
+          [entry.target.key]: (versions[entry.target.key] ?? 0) + 1,
+        }));
+        setThumbnailAnnotationVersions((versions) => ({
+          ...versions,
+          [entry.target.key]: (versions[entry.target.key] ?? 0) + 1,
+        }));
+      } catch (reason) {
+        if (reason instanceof AggregateError) {
+          annotationHistoryRef.current = emptyAnnotationHistory;
+          setAnnotationHistory(emptyAnnotationHistory);
+          setAnnotationRefreshVersions((versions) => ({
+            ...versions,
+            [entry.target.key]: (versions[entry.target.key] ?? 0) + 1,
+          }));
+          setThumbnailAnnotationVersions((versions) => ({
+            ...versions,
+            [entry.target.key]: (versions[entry.target.key] ?? 0) + 1,
+          }));
+        }
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : `The annotation could not be ${direction === "undo" ? "undone" : "redone"}.`,
+        );
+      } finally {
+        historyBusyRef.current = false;
+        setHistoryBusy(false);
       }
-
-      const next = completeHistoryStep(currentHistory, direction, replayed);
-      annotationHistoryRef.current = next;
-      setAnnotationHistory(next);
-      setAnnotationRefreshVersions((versions) => ({
-        ...versions,
-        [entry.target.key]: (versions[entry.target.key] ?? 0) + 1,
-      }));
-      setThumbnailAnnotationVersions((versions) => ({
-        ...versions,
-        [entry.target.key]: (versions[entry.target.key] ?? 0) + 1,
-      }));
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : `The annotation could not be ${direction === "undo" ? "undone" : "redone"}.`,
-      );
-    } finally {
-      historyBusyRef.current = false;
-      setHistoryBusy(false);
-    }
-  }, [pinned.size]);
+    },
+    [pinned.size],
+  );
 
   const canUndo =
     annotationHistory.past.length > 0 && !historyBusy && !pinned.size;
@@ -803,10 +831,7 @@ export function NotebookViewer({
     <main
       className={styles.viewer}
       onKeyDown={(event) => {
-        if (
-          event.key === "Escape" &&
-          zoomMenuRef.current?.open
-        ) {
+        if (event.key === "Escape" && zoomMenuRef.current?.open) {
           zoomMenuRef.current.open = false;
           return;
         }
@@ -856,40 +881,45 @@ export function NotebookViewer({
         <nav className={styles.editingControls} aria-label="Notebook tools">
           <div className={styles.tools} role="group" aria-label="Editing tool">
             {(
-              ["select", "ink", "pencil", "highlight", "eraser", "text"] as const
-            ).map(
-              (option) => (
-                <button
-                  type="button"
-                  key={option}
-                  className={styles.iconTool}
-                  aria-label={
-                    {
-                      select: "Select and move annotations",
-                      ink: "Pen",
-                      pencil: "Pencil",
-                      highlight: "Highlighter",
-                      eraser: "Eraser",
-                      text: "Text",
-                    }[option]
-                  }
-                  title={
-                    {
-                      select: "Select and move annotations",
-                      ink: "Draw with pen",
-                      pencil: "Draw with pencil",
-                      highlight: "Highlight",
-                      eraser: "Erase annotations",
-                      text: "Type text",
-                    }[option]
-                  }
-                  aria-pressed={tool === option}
-                  onClick={() => setTool(option)}
-                >
-                  <AnnotationToolArtwork tool={option} />
-                </button>
-              ),
-            )}
+              [
+                "select",
+                "ink",
+                "pencil",
+                "highlight",
+                "eraser",
+                "text",
+              ] as const
+            ).map((option) => (
+              <button
+                type="button"
+                key={option}
+                className={styles.iconTool}
+                aria-label={
+                  {
+                    select: "Select and move annotations",
+                    ink: "Pen",
+                    pencil: "Pencil",
+                    highlight: "Highlighter",
+                    eraser: "Eraser",
+                    text: "Text",
+                  }[option]
+                }
+                title={
+                  {
+                    select: "Select and move annotations",
+                    ink: "Draw with pen",
+                    pencil: "Draw with pencil",
+                    highlight: "Highlight",
+                    eraser: "Erase annotations",
+                    text: "Type text",
+                  }[option]
+                }
+                aria-pressed={tool === option}
+                onClick={() => setTool(option)}
+              >
+                <AnnotationToolArtwork tool={option} />
+              </button>
+            ))}
           </div>
         </nav>
       </header>
@@ -938,6 +968,15 @@ export function NotebookViewer({
             busyPages={pinned}
             onAdd={() => setDialog({ kind: "add" })}
             annotationVersions={thumbnailAnnotationVersions}
+          />
+        ) : null}
+        {tool === "eraser" ? (
+          <EraserSettings
+            mode={eraserMode}
+            radius={eraserRadius}
+            sidebarOpen={sidebarOpen}
+            onMode={setEraserMode}
+            onRadius={setEraserRadius}
           />
         ) : null}
         {drawingTool ? (
@@ -1017,6 +1056,8 @@ export function NotebookViewer({
                   tool={tool}
                   color={activeDrawingStyle.color}
                   strokeWidth={activeDrawingStyle.width}
+                  eraserMode={eraserMode}
+                  eraserRadius={eraserRadius}
                   opacity={activeDrawingStyle.opacity}
                   visible={
                     row.top + row.height >= scrollTop - 400 &&
