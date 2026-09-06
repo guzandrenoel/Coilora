@@ -1,0 +1,103 @@
+.trigger.trigger {
+  display: inline-flex;
+  gap: 7px;
+  width: auto;
+  min-width: 108px;
+  padding: 0 9px;
+  font-size: 14px;
+}
+.trigger svg {
+  width: 23px;
+  height: 23px;
+}
+.chevron {
+  width: 6px;
+  height: 6px;
+  margin-left: 2px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+.sizes button[aria-pressed="true"] {
+  background: transparent;
+}
+.sizeSample {
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+.sizes button[aria-pressed="true"] .sizeSample {
+  border: 3px solid var(--blue);
+}
+.sizes button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  padding: 20px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--navy);
+  box-shadow: 0 12px 32px rgb(18 61 86 / 18%);
+}
+.popover::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 54px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+.popover h2 {
+  margin: 0 0 22px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+.types {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.types button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-height: 110px;
+  padding: 16px 4px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.types button:hover,
+.types button[aria-pressed="true"] {
+  background: #e7ecea;
+}
+.types svg {
+  width: 26px;
+  height: 26px;
+}
+.types button[data-mode="stroke"] svg {
+  fill: #bbd9dd;
+}
+.popover p {
+  min-height: 36px;
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #62777e;
+}

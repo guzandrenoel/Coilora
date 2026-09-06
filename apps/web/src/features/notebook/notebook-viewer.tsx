@@ -18,7 +18,10 @@ import {
   ZoomOutIcon,
 } from "@/components/ui/icons";
 import { AnnotationSettingsDock } from "@/features/editor/annotation-settings-dock";
-import { EraserSettings } from "@/features/editor/eraser-settings";
+import {
+  EraserSettings,
+  type EraserMode,
+} from "@/features/editor/eraser-settings";
 import { replayAnnotationHistory } from "@/features/editor/annotation-history-replay";
 import {
   annotationPreferencesStorageKey,
@@ -144,7 +147,7 @@ export function NotebookViewer({
   const [pool, setPool] = useState<NotebookPdfPool | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [tool, setTool] = useState<EditorTool>("select");
-  const [eraserMode, setEraserMode] = useState<"partial" | "stroke">("partial");
+  const [eraserMode, setEraserMode] = useState<EraserMode>("partial");
   const [eraserRadius, setEraserRadius] = useState(12);
   const [toolPreferences, setToolPreferences] = useState(() => {
     if (typeof window === "undefined")

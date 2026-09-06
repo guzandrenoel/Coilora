@@ -1,5 +1,42 @@
 import type { AnnotationPoint } from "@/lib/api/types";
 
+const boundsCache = new WeakMap<
+  AnnotationPoint[],
+  { left: number; right: number; top: number; bottom: number }
+>();
+
+export function strokeIntersectsEraser(
+  points: AnnotationPoint[],
+  start: AnnotationPoint,
+  end: AnnotationPoint,
+  radius: number,
+  width: number,
+  height: number,
+) {
+  let bounds = boundsCache.get(points);
+  if (!bounds) {
+    bounds = {
+      left: Infinity,
+      right: -Infinity,
+      top: Infinity,
+      bottom: -Infinity,
+    };
+    for (const point of points) {
+      bounds.left = Math.min(bounds.left, point.x);
+      bounds.right = Math.max(bounds.right, point.x);
+      bounds.top = Math.min(bounds.top, point.y);
+      bounds.bottom = Math.max(bounds.bottom, point.y);
+    }
+    boundsCache.set(points, bounds);
+  }
+  return (
+    bounds.right >= Math.min(start.x, end.x) - radius / width &&
+    bounds.left <= Math.max(start.x, end.x) + radius / width &&
+    bounds.bottom >= Math.min(start.y, end.y) - radius / height &&
+    bounds.top <= Math.max(start.y, end.y) + radius / height
+  );
+}
+
 // Clip line segments against a circular eraser in page pixels, including sparse strokes.
 export function eraseAtPoint(
   points: AnnotationPoint[],
@@ -8,6 +45,8 @@ export function eraseAtPoint(
   width: number,
   height: number,
 ): AnnotationPoint[][] {
+  if (!strokeIntersectsEraser(points, center, center, radius, width, height))
+    return [points];
   const pieces: AnnotationPoint[][] = [];
   let piece: AnnotationPoint[] = [];
   const flush = () => {

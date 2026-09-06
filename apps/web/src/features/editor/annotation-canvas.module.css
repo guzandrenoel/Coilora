@@ -11,7 +11,7 @@
   user-select: none;
 }
 
-.layer[data-tool="eraser"][data-eraser-mode="partial"] {
+.layer[data-tool="eraser"]:not([data-eraser-mode="stroke"]) {
   cursor: none;
 }
 
@@ -36,7 +36,7 @@
   stroke-linejoin: round;
 }
 
-.layer[data-tool="eraser"][data-eraser-mode="partial"] .stroke {
+.layer[data-tool="eraser"]:not([data-eraser-mode="stroke"]) .stroke {
   pointer-events: none;
 }
 

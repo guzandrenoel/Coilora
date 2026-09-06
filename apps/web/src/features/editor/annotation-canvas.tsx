@@ -31,7 +31,8 @@ import {
   translateAnnotationPoints,
 } from "./annotation-geometry";
 import styles from "./annotation-canvas.module.css";
-import { eraseAtPoint } from "./annotation-eraser";
+import { eraseAtPoint, strokeIntersectsEraser } from "./annotation-eraser";
+import type { EraserMode } from "./eraser-settings";
 import { annotationCreateInput } from "@/lib/api/annotation-target-client";
 
 export type EditorTool = AnnotationKind | "eraser" | "select";
@@ -57,6 +58,15 @@ type MoveGesture = {
 const sorted = (items: PageAnnotation[]) =>
   [...items].sort((a, b) => a.z_index - b.z_index);
 const defaultTextFontSize = 0.025;
+const strokePathCache = new WeakMap<PageAnnotation["points"], string>();
+function cachedStrokePath(points: PageAnnotation["points"]) {
+  let path = strokePathCache.get(points);
+  if (path === undefined) {
+    path = pointsToSvgPath(points);
+    strokePathCache.set(points, path);
+  }
+  return path;
+}
 
 export function AnnotationCanvas({
   notebookId,
@@ -83,7 +93,7 @@ export function AnnotationCanvas({
   targetKey: string;
   pageHeight: number;
   tool: EditorTool;
-  eraserMode?: "partial" | "stroke";
+  eraserMode?: EraserMode;
   eraserRadius?: number;
   color: string;
   strokeWidth: number;
@@ -129,6 +139,14 @@ export function AnnotationCanvas({
   const moveDraftRef = useRef<PageAnnotation | null>(null);
   const saving = useRef(new Set<string>());
   const erasing = useRef(new Set<string>());
+  const wipeFrame = useRef<number | null>(null);
+  const wipeQueue = useRef<{ x: number; y: number }[]>([]);
+  useEffect(
+    () => () => {
+      if (wipeFrame.current !== null) cancelAnimationFrame(wipeFrame.current);
+    },
+    [],
+  );
   const wipe = useRef<{
     before: PageAnnotation[];
     current: PageAnnotation[];
@@ -317,7 +335,7 @@ export function AnnotationCanvas({
   }
 
   function move(event: ReactPointerEvent<SVGSVGElement>) {
-    if (tool === "eraser" && eraserMode === "partial") {
+    if (tool === "eraser" && eraserMode !== "stroke") {
       const rect = event.currentTarget.getBoundingClientRect();
       const next = point(event.clientX, event.clientY);
       setEraserCursor({
@@ -327,7 +345,10 @@ export function AnnotationCanvas({
       });
       if (event.pointerId === activePointer.current && wipe.current) {
         event.preventDefault();
-        wipeTo(next);
+        wipeQueue.current.push(next);
+        if (wipeFrame.current === null) {
+          wipeFrame.current = requestAnimationFrame(() => flushWipe());
+        }
         return;
       }
     }
@@ -502,6 +523,7 @@ export function AnnotationCanvas({
     if (event.pointerId !== activePointer.current) return;
     event.preventDefault();
     if (wipe.current) {
+      flushWipe();
       wipeTo(point(event.clientX, event.clientY));
       const gesture = wipe.current;
       wipe.current = null;
@@ -561,6 +583,7 @@ export function AnnotationCanvas({
   function cancel(event: ReactPointerEvent<SVGSVGElement>) {
     if (event.pointerId !== activePointer.current) return;
     if (wipe.current) {
+      flushWipe();
       const gesture = wipe.current;
       wipe.current = null;
       activePointer.current = null;
@@ -586,7 +609,16 @@ export function AnnotationCanvas({
     }
   }
 
-  function wipeTo(next: { x: number; y: number }) {
+  function flushWipe() {
+    if (wipeFrame.current !== null) cancelAnimationFrame(wipeFrame.current);
+    wipeFrame.current = null;
+    const points = wipeQueue.current;
+    wipeQueue.current = [];
+    for (const next of points) wipeTo(next, false);
+    if (wipe.current) setAnnotations(wipe.current.current);
+  }
+
+  function wipeTo(next: { x: number; y: number }, publish = true) {
     const gesture = wipe.current;
     if (!gesture) return;
     const start = gesture.last;
@@ -595,13 +627,34 @@ export function AnnotationCanvas({
       (next.y - start.y) * gesture.height,
     );
     const steps = Math.max(1, Math.ceil(distance / (eraserRadius / 3)));
+    const candidates = new Set(
+      gesture.current
+        .filter(
+          (item) =>
+            item.kind !== "text" &&
+            strokeIntersectsEraser(
+              item.points,
+              start,
+              next,
+              eraserRadius +
+                (item.width * Math.max(gesture.width, gesture.height)) / 2,
+              gesture.width,
+              gesture.height,
+            ),
+        )
+        .map((item) => item.id),
+    );
+    if (candidates.size === 0) {
+      gesture.last = next;
+      return;
+    }
     for (let step = 1; step <= steps; step++) {
       const center = {
         x: start.x + ((next.x - start.x) * step) / steps,
         y: start.y + ((next.y - start.y) * step) / steps,
       };
       gesture.current = gesture.current.flatMap((item) => {
-        if (item.kind === "text") return [item];
+        if (!candidates.has(item.id)) return [item];
         const parts = eraseAtPoint(
           item.points,
           center,
@@ -610,6 +663,7 @@ export function AnnotationCanvas({
           gesture.width,
           gesture.height,
         );
+        if (parts.length === 1 && parts[0] === item.points) return [item];
         if (
           parts.length === 1 &&
           parts[0].length === item.points.length &&
@@ -618,15 +672,15 @@ export function AnnotationCanvas({
           )
         )
           return [item];
-        return parts.map((points, index) => ({
-          ...item,
-          id: index === 0 ? item.id : crypto.randomUUID(),
-          points,
-        }));
+        return parts.map((points, index) => {
+          const id = index === 0 ? item.id : crypto.randomUUID();
+          candidates.add(id);
+          return { ...item, id, points };
+        });
       });
     }
     gesture.last = next;
-    setAnnotations(gesture.current);
+    if (publish) setAnnotations(gesture.current);
   }
 
   async function persistWipe(
@@ -635,31 +689,56 @@ export function AnnotationCanvas({
   ) {
     setOperations((value) => value + 1);
     const changes: AnnotationHistoryEntry[] = [];
-    let saved = [...before];
+    const saved = new Map(before.map((item) => [item.id, item]));
+    const originals = new Map(saved);
+    const remaining = new Set(after.map((item) => item.id));
+    const runBatch = async (
+      items: PageAnnotation[],
+      saveItem: (item: PageAnnotation) => Promise<void>,
+    ) => {
+      for (let offset = 0; offset < items.length; offset += 4) {
+        const results = await Promise.allSettled(
+          items.slice(offset, offset + 4).map(saveItem),
+        );
+        const failure = results.find((result) => result.status === "rejected");
+        if (failure?.status === "rejected") throw failure.reason;
+      }
+    };
     try {
       // Save fragments first so a failed request cannot discard the remaining ink.
-      const originals = new Set(before.map((item) => item.id));
-      const toSave = [...after].sort(
-        (a, b) => Number(originals.has(a.id)) - Number(originals.has(b.id)),
+      await runBatch(
+        after.filter((item) => !originals.has(item.id)),
+        async (item) => {
+          const result = await createTargetAnnotation(
+            target,
+            annotationCreateInput(item),
+          );
+          saved.set(result.id, result);
+          changes.push({ target, before: null, after: result });
+        },
       );
-      for (const item of toSave) {
-        const original = before.find((entry) => entry.id === item.id);
-        if (original === item) continue;
-        const result = original
-          ? await updateTargetAnnotation(target, item.id, {
-              points: item.points,
-              revision: original.revision,
-            })
-          : await createTargetAnnotation(target, annotationCreateInput(item));
-        saved = [...saved.filter((entry) => entry.id !== result.id), result];
-        changes.push({ target, before: original ?? null, after: result });
-      }
-      for (const item of before) {
-        if (after.some((entry) => entry.id === item.id)) continue;
-        await deleteTargetAnnotation(target, item.id);
-        saved = saved.filter((entry) => entry.id !== item.id);
-        changes.push({ target, before: item, after: null });
-      }
+      await runBatch(
+        after.filter(
+          (item) => originals.has(item.id) && originals.get(item.id) !== item,
+        ),
+        async (item) => {
+          const original = originals.get(item.id)!;
+          const result = await updateTargetAnnotation(target, item.id, {
+            points: item.points,
+            revision: original.revision,
+          });
+          saved.set(result.id, result);
+          changes.push({ target, before: original, after: result });
+        },
+      );
+      await runBatch(
+        before.filter((item) => !remaining.has(item.id)),
+        async (item) => {
+          await deleteTargetAnnotation(target, item.id);
+          saved.delete(item.id);
+          changes.push({ target, before: item, after: null });
+        },
+      );
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -667,7 +746,7 @@ export function AnnotationCanvas({
           : "Erasing could not be completed. Undo to restore the stroke, then try again.",
       );
     } finally {
-      setAnnotations(sorted(saved));
+      setAnnotations(sorted([...saved.values()]));
       if (changes.length)
         onCommit?.({ target, before: null, after: null, changes });
       setOperations((value) => Math.max(0, value - 1));
@@ -755,7 +834,7 @@ export function AnnotationCanvas({
       >
         {renderedAnnotations.map((annotation) => {
           if (annotation.kind === "text") return null;
-          const path = pointsToSvgPath(annotation.points);
+          const path = cachedStrokePath(annotation.points);
           return (
             <g key={annotation.id}>
               <path
@@ -804,7 +883,7 @@ export function AnnotationCanvas({
         ) : null}
         {pending.map((item) => {
           if (item.kind === "text") return null;
-          const path = pointsToSvgPath(item.points);
+          const path = cachedStrokePath(item.points);
           return (
             <g key={item.id}>
               <path
@@ -851,7 +930,7 @@ export function AnnotationCanvas({
             ) : null}
           </g>
         ) : null}
-        {tool === "eraser" && eraserMode === "partial" && eraserCursor ? (
+        {tool === "eraser" && eraserMode !== "stroke" && eraserCursor ? (
           <ellipse
             cx={eraserCursor.x}
             cy={eraserCursor.y}

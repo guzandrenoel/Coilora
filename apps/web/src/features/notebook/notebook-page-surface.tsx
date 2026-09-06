@@ -5,6 +5,7 @@ import {
   type EditorTool,
 } from "@/features/editor/annotation-canvas";
 import type { AnnotationHistoryEntry } from "@/lib/api/annotation-target-client";
+import type { EraserMode } from "@/features/editor/eraser-settings";
 import { PdfPageCanvas } from "./pdf-page-canvas";
 import type { NotebookPdfPool } from "./notebook-pdf-pool";
 import type { PageSize, TimelineRow } from "./notebook-timeline";
@@ -31,7 +32,7 @@ export function NotebookPageSurface({
   notebookId: string;
   pool: NotebookPdfPool;
   tool: EditorTool;
-  eraserMode: "partial" | "stroke";
+  eraserMode: EraserMode;
   eraserRadius: number;
   color: string;
   strokeWidth: number;

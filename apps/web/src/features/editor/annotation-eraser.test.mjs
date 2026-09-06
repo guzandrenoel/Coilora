@@ -1,6 +1,46 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { eraseAtPoint } from "./annotation-eraser.ts";
+import { eraseAtPoint, strokeIntersectsEraser } from "./annotation-eraser.ts";
+
+test("untouched strokes retain the original points for rendering reuse", () => {
+  const points = [
+    { x: 0, y: 0 },
+    { x: 0.1, y: 0.1 },
+  ];
+  assert.equal(
+    eraseAtPoint(points, { x: 0.8, y: 0.8 }, 10, 1000, 1000)[0],
+    points,
+  );
+});
+
+test("swept bounds include strokes crossed by a fast drag", () => {
+  const points = [
+    { x: 0.5, y: 0 },
+    { x: 0.5, y: 1 },
+  ];
+  assert.equal(
+    strokeIntersectsEraser(
+      points,
+      { x: 0.1, y: 0.5 },
+      { x: 0.9, y: 0.5 },
+      10,
+      1000,
+      1000,
+    ),
+    true,
+  );
+  assert.equal(
+    strokeIntersectsEraser(
+      points,
+      { x: 0.1, y: 0.5 },
+      { x: 0.2, y: 0.5 },
+      10,
+      1000,
+      1000,
+    ),
+    false,
+  );
+});
 
 const stroke = [
   { x: 0, y: 0.5 },
