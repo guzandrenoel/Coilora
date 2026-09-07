@@ -1,4 +1,5 @@
 "use client";
+import { PencilStroke } from "@/features/editor/pencil-stroke";
 
 import {
   useEffect,
@@ -842,7 +843,7 @@ export function AnnotationCanvas({
                 d={path}
                 stroke={annotation.color}
                 strokeWidth={annotation.width}
-                opacity={annotation.opacity}
+                opacity={annotation.kind === "pencil" ? 0 : annotation.opacity}
                 pointerEvents={
                   tool === "eraser" && eraserMode === "stroke"
                     ? "stroke"
@@ -851,14 +852,11 @@ export function AnnotationCanvas({
                 onPointerDown={(event) => void erase(annotation, event)}
               />
               {annotation.kind === "pencil" ? (
-                <path
-                  className={styles.pencilGrain}
-                  d={path}
-                  stroke={annotation.color}
-                  strokeWidth={annotation.width * 0.62}
-                  strokeDasharray={`${annotation.width * 1.5} ${annotation.width * 0.85}`}
-                  opacity={Math.min(1, annotation.opacity + 0.12)}
-                  pointerEvents="none"
+                <PencilStroke
+                  points={annotation.points}
+                  width={annotation.width}
+                  color={annotation.color}
+                  opacity={annotation.opacity}
                 />
               ) : null}
               {tool === "select" ? (
@@ -891,18 +889,15 @@ export function AnnotationCanvas({
                 d={path}
                 stroke={item.color}
                 strokeWidth={item.width}
-                opacity={item.opacity}
+                opacity={item.kind === "pencil" ? 0 : item.opacity}
                 pointerEvents="none"
               />
               {item.kind === "pencil" ? (
-                <path
-                  className={styles.pencilGrain}
-                  d={path}
-                  stroke={item.color}
-                  strokeWidth={item.width * 0.62}
-                  strokeDasharray={`${item.width * 1.5} ${item.width * 0.85}`}
-                  opacity={Math.min(1, item.opacity + 0.12)}
-                  pointerEvents="none"
+                <PencilStroke
+                  points={item.points}
+                  width={item.width}
+                  color={item.color}
+                  opacity={item.opacity}
                 />
               ) : null}
             </g>
@@ -915,17 +910,14 @@ export function AnnotationCanvas({
               d={pointsToSvgPath(draft.points)}
               stroke={draft.color}
               strokeWidth={draft.width}
-              opacity={draft.opacity}
+              opacity={draft.kind === "pencil" ? 0 : draft.opacity}
             />
             {draft.kind === "pencil" ? (
-              <path
-                className={styles.pencilGrain}
-                d={pointsToSvgPath(draft.points)}
-                stroke={draft.color}
-                strokeWidth={draft.width * 0.62}
-                strokeDasharray={`${draft.width * 1.5} ${draft.width * 0.85}`}
-                opacity={Math.min(1, draft.opacity + 0.12)}
-                pointerEvents="none"
+              <PencilStroke
+                points={draft.points}
+                width={draft.width}
+                color={draft.color}
+                opacity={draft.opacity}
               />
             ) : null}
           </g>

@@ -1,4 +1,5 @@
 "use client";
+import { PencilStroke } from "@/features/editor/pencil-stroke";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BookmarkIcon } from "@/components/ui/icons";
 import {
@@ -457,15 +458,14 @@ function ThumbnailAnnotations({
               d={path}
               stroke={annotation.color}
               strokeWidth={annotation.width}
-              opacity={annotation.opacity}
+              opacity={annotation.kind === "pencil" ? 0 : annotation.opacity}
             />
             {annotation.kind === "pencil" ? (
-              <path
-                d={path}
-                stroke={annotation.color}
-                strokeWidth={annotation.width * 0.62}
-                strokeDasharray={`${annotation.width * 1.5} ${annotation.width * 0.85}`}
-                opacity={Math.min(1, annotation.opacity + 0.12)}
+              <PencilStroke
+                points={annotation.points}
+                width={annotation.width}
+                color={annotation.color}
+                opacity={annotation.opacity}
               />
             ) : null}
           </g>

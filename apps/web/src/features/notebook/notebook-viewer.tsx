@@ -818,7 +818,6 @@ export function NotebookViewer({
     tool === "pencil"
       ? {
           ...drawingStyle,
-          width: Math.min(drawingStyle.width, 0.0032),
           opacity: Math.min(drawingStyle.opacity, 0.78),
         }
       : drawingStyle;

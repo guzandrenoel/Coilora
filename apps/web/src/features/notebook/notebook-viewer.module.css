@@ -113,10 +113,10 @@
   height: 58px;
   padding: 0 0.35rem;
   overflow: hidden;
-  border: 1px solid rgb(18 61 86 / 12%);
+  border: 1px solid white;
   border-radius: 999px;
-  background: #fefefe;
-  box-shadow: 0 3px 10px rgb(4 25 39 / 14%);
+  background: white;
+  box-shadow: none;
 }
 .tools .iconTool {
   position: relative;
