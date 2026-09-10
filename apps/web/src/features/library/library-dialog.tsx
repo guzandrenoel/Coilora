@@ -15,12 +15,16 @@ export function LibraryDialog({
   onClose,
   children,
   fallbackFocusRef,
+  className,
+  headerActions,
 }: {
   title: string;
   busy: boolean;
   onClose: () => void;
   children: ReactNode;
   fallbackFocusRef?: RefObject<HTMLElement | null>;
+  className?: string;
+  headerActions?: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -49,7 +53,7 @@ export function LibraryDialog({
   return (
     <dialog
       ref={ref}
-      className={styles.dialog}
+      className={[styles.dialog, className].filter(Boolean).join(" ")}
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -58,6 +62,7 @@ export function LibraryDialog({
     >
       <header className={styles.dialogHeader}>
         <h2 id={titleId}>{title}</h2>
+        {headerActions}
         <button
           type="button"
           aria-label="Close dialog"

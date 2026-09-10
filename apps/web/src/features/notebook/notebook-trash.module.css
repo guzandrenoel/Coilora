@@ -1,0 +1,185 @@
+.dialog.dialog {
+  width: min(1040px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  padding: 1.75rem;
+}
+.dialog > header {
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.dialog > header h2 {
+  margin-right: auto;
+  font-size: 1.65rem;
+}
+.dialog > header .emptyButton {
+  width: auto;
+  height: auto;
+  min-height: 36px;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: white;
+  color: #a5453b;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+.contents {
+  min-height: 300px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+.tableScroll {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8rem;
+}
+.table th {
+  padding: 0.7rem 0.6rem;
+  color: var(--ink-soft);
+  font-weight: 550;
+  border-bottom: 1px solid var(--line);
+}
+.table td {
+  padding: 1rem 0.6rem;
+  border-bottom: 1px solid #edf1ef;
+  vertical-align: middle;
+}
+.table tr[data-selected] {
+  background: var(--sky-soft);
+}
+.table .checkbox {
+  width: 28px;
+  padding-left: 0;
+}
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--navy);
+  cursor: pointer;
+}
+.page {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 160px;
+}
+.page svg {
+  flex-shrink: 0;
+}
+.page strong {
+  display: block;
+  font-weight: 550;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.page small {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.date {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rowActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.rowActions button,
+.selection button {
+  min-height: 36px;
+  padding: 0.35rem 0.65rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--navy);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.rowActions button:last-child,
+.selection button:last-child {
+  color: #a5453b;
+}
+.rowActions button:hover,
+.selection button:hover {
+  background: var(--surface);
+}
+.selection {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+}
+.selection span {
+  margin-right: auto;
+  color: var(--muted);
+}
+.empty {
+  padding: 4rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+.empty strong {
+  color: var(--ink-soft);
+  font-weight: 550;
+}
+.empty p {
+  font-size: 0.8rem;
+}
+.dialog button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.dialog button:focus-visible,
+.checkbox input:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .dialog.dialog {
+    padding: 1rem;
+  }
+  .dialog > header {
+    gap: 0.5rem;
+  }
+  .dialog > header h2 {
+    font-size: 1.3rem;
+  }
+  .rowActions {
+    flex-direction: column;
+    gap: 0;
+  }
+  .page {
+    min-width: 130px;
+    gap: 0.5rem;
+  }
+}

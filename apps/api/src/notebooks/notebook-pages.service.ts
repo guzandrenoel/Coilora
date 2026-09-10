@@ -293,6 +293,48 @@ export class NotebookPagesService {
     return this.get(user, notebookId, pageId);
   }
 
+  async listTrash(user: AuthenticatedUser, notebookId: string, page: number) {
+    const client = await this.getNotebookClient(user, notebookId);
+    const { data, error } = await client
+      .from('notebook_pages')
+      .select(notebookPageSelection)
+      .eq('owner_id', user.id)
+      .eq('notebook_id', notebookId)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .order('id')
+      .range(page * pageSize, page * pageSize + pageSize);
+    if (error || !data)
+      throw new ServiceUnavailableException('Trash could not be loaded.');
+    return {
+      items: data
+        .slice(0, pageSize)
+        .map((item) => ({ ...item, bookmarked: false })),
+      nextPage: data.length > pageSize ? page + 1 : null,
+    };
+  }
+
+  async permanentlyDelete(
+    user: AuthenticatedUser,
+    notebookId: string,
+    pageId: string,
+  ) {
+    const client = await this.getNotebookClient(user, notebookId);
+    const { error } = await client.rpc('permanently_delete_notebook_page', {
+      p_notebook_id: notebookId,
+      p_page_id: pageId,
+    });
+    if (error?.code === 'P0002')
+      throw new NotFoundException(
+        'The page is no longer in Trash. Reload Trash.',
+      );
+    if (error)
+      throw new ServiceUnavailableException(
+        'The page could not be permanently deleted. Please try again.',
+      );
+    return { id: pageId, notebook_id: notebookId, deleted: true };
+  }
+
   private async getBookmarkIds(
     client: ReturnType<UserDatabaseClientFactory['create']>,
     ownerId: string,

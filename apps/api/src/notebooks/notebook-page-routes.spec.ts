@@ -17,6 +17,7 @@ describe('notebook page deletion route inputs', () => {
   for (const [route, operation] of [
     ['deletePage', 'remove'],
     ['restorePage', 'restore'],
+    ['permanentlyDeletePage', 'permanentlyDelete'],
   ] as const) {
     it(`${route} forwards only the authenticated user and validated target`, async () => {
       const pages = { [operation]: vi.fn().mockResolvedValue({ id: pageId }) };

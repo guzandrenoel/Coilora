@@ -54,6 +54,7 @@ function isNotebookPage(value: unknown): value is NotebookPage {
 export async function getNotebookPages(
   notebookId: string,
   page = 0,
+  trash = false,
 ): Promise<{ items: NotebookPage[]; nextPage: number | null }> {
   if (
     !uuidPattern.test(notebookId) ||
@@ -65,7 +66,7 @@ export async function getNotebookPages(
   }
 
   const body = await apiRequest(
-    `/v1/notebooks/${encodeURIComponent(notebookId)}/pages?page=${page}`,
+    `/v1/notebooks/${encodeURIComponent(notebookId)}/${trash ? "trash" : "pages"}?page=${page}`,
   );
   if (
     !isRecord(body) ||
@@ -189,13 +190,14 @@ export async function updateNotebookPage(
 export async function deleteNotebookPage(
   notebookId: string,
   pageId: string,
+  permanent = false,
 ): Promise<void> {
   if (!uuidPattern.test(notebookId) || !uuidPattern.test(pageId)) {
     throw new Error("Select a valid notebook page.");
   }
 
   const body = await apiRequest(
-    `/v1/notebooks/${encodeURIComponent(notebookId)}/pages/${encodeURIComponent(pageId)}`,
+    `/v1/notebooks/${encodeURIComponent(notebookId)}/${permanent ? "trash" : "pages"}/${encodeURIComponent(pageId)}`,
     { method: "DELETE" },
   );
 

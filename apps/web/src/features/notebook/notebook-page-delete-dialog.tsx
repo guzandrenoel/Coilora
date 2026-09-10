@@ -13,6 +13,7 @@ export function NotebookPageDeleteDialog({
   onClose,
   onDeleted,
   fallbackFocusRef,
+  permanent = false,
 }: {
   notebookId: string;
   page: NotebookPage;
@@ -20,6 +21,7 @@ export function NotebookPageDeleteDialog({
   onClose: () => void;
   onDeleted: (page: NotebookPage) => void;
   fallbackFocusRef: RefObject<HTMLElement | null>;
+  permanent?: boolean;
 }) {
   const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -31,7 +33,7 @@ export function NotebookPageDeleteDialog({
     setBusy(true);
     setError(null);
     try {
-      await deleteNotebookPage(notebookId, page.id);
+      await deleteNotebookPage(notebookId, page.id, permanent);
       onDeleted(page);
       onClose();
     } catch (reason) {
@@ -47,7 +49,7 @@ export function NotebookPageDeleteDialog({
   }
   return (
     <LibraryDialog
-      title="Delete page?"
+      title={permanent ? "Permanently delete page?" : "Move page to Trash?"}
       busy={busy}
       onClose={onClose}
       fallbackFocusRef={fallbackFocusRef}
@@ -60,8 +62,9 @@ export function NotebookPageDeleteDialog({
           Remove <strong>{page.title}</strong> from this notebook?
         </p>
         <p>
-          The page, annotations, and bookmarks will be retained for restoration.
-          Imported documents will not be changed.
+          {permanent
+            ? "This permanently deletes the page, its annotations, and its bookmark. This cannot be undone."
+            : "You can restore this page, its annotations, and its bookmark from Trash. Imported documents will not be changed."}
         </p>
         {blocked ? <p role="status">{blocked}</p> : null}
         {error ? (
@@ -78,7 +81,11 @@ export function NotebookPageDeleteDialog({
             className={styles.deleteButton}
             disabled={busy || Boolean(blocked)}
           >
-            {busy ? "Deleting..." : "Delete page"}
+            {busy
+              ? "Deleting..."
+              : permanent
+                ? "Delete permanently"
+                : "Move to Trash"}
           </button>
         </div>
       </form>

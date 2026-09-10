@@ -970,6 +970,12 @@ export function NotebookViewer({
             busyPages={pinned}
             onAdd={() => setDialog({ kind: "add" })}
             annotationVersions={thumbnailAnnotationVersions}
+            onRestored={(page) =>
+              setPages((current) => [
+                ...current.filter((item) => item.id !== page.id),
+                page,
+              ])
+            }
           />
         ) : null}
         {tool === "eraser" ? (

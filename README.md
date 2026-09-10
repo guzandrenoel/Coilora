@@ -74,7 +74,9 @@ Failed saves retain the stroke and provide a retry action. Retries reuse a stabl
 
 Pending strokes are held in memory, not in an offline outbox. Keep the viewer open and retry failed saves before leaving. The app's back buttons block navigation while ink is pending, and closing or reloading the browser page requests an unsaved-work warning. Browser-history navigation is not an offline recovery mechanism.
 
-Deleting a note preserves its content, source position, annotations, and bookmarks. It does not remove an imported document or PDF page. The viewer blocks deletion while that page has active or unsaved ink, then selects a remaining page if necessary. Deleting the last page of an otherwise empty notebook returns to the notebook overview. Restoration currently has an API endpoint and client helper; a Trash/Restore interface is not implemented yet.
+Deleting a note moves it to notebook Trash, preserving its content, source position, annotations, and bookmarks. Trash is available from the notebook overview and reader sidebar, with Restore and a separately confirmed permanent-delete action. The viewer blocks deletion while a page has active or unsaved ink, then selects a remaining page if necessary. Deleting the last page returns to the notebook overview.
+
+Apply `20260910120000_manage_notebook_pages.sql` before using permanent deletion. Database regression coverage is in `supabase/tests/notebook_page_management.sql`.
 
 The `20260903110334_add_notebook_page_soft_delete.sql` migration adds the soft-delete column and database protections. In environments where it has not been applied, existing page reads and renaming remain compatible, while delete/restore return an explicit unavailable error without removing anything. Code commits and Git pushes do not apply database migrations. The API/web type snapshots include the soft-delete column.
 
@@ -159,7 +161,6 @@ The following features are not yet implemented.
 
 ### Editing and document processing
 
-- Page reordering and a Trash/Restore interface.
 - Typed page notes and text-selection highlights.
 - PDF search and citation navigation.
 - Document-content validation and background processing.

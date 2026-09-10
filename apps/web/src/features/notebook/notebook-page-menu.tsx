@@ -9,11 +9,13 @@ export function NotebookPageMenu({
   onRename,
   onDelete,
   deleteBlocked,
+  className,
 }: {
   page: NotebookPage;
   onRename?: (page: NotebookPage) => void;
   onDelete: (page: NotebookPage) => void;
   deleteBlocked?: string;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -42,7 +44,7 @@ export function NotebookPageMenu({
   return (
     <div
       ref={root}
-      className={styles.actions}
+      className={[styles.actions, className].filter(Boolean).join(" ")}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
@@ -122,7 +124,7 @@ export function NotebookPageMenu({
             title={deleteBlocked}
             onClick={() => select(onDelete)}
           >
-            Delete page
+            Move to Trash
           </button>
           {deleteBlocked ? (
             <p className={styles.hint}>{deleteBlocked}</p>

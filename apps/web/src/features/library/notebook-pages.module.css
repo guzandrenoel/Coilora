@@ -6,7 +6,12 @@
 }
 
 .header {
-  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .header h2 {
@@ -35,7 +40,41 @@
 }
 
 .pageCard {
+  position: relative;
   min-width: 0;
+}
+
+.pageCard > a {
+  display: block;
+  border-radius: 0.5rem;
+}
+
+.pageCard > a:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 4px;
+}
+
+.pageCard .pageActions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+.pageActions > button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 2px 6px rgb(28 56 47 / 5%);
+}
+
+.pageActions [role="menu"] {
+  top: calc(100% + 6px);
+  bottom: auto;
+  width: 160px;
 }
 
 .pageCard strong,
@@ -47,6 +86,9 @@
   margin-top: 0.65rem;
   color: var(--ink);
   font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .paper {
@@ -56,9 +98,9 @@
   aspect-ratio: 3 / 4;
   overflow: hidden;
   border: 1px solid #dce2df;
-  border-radius: 0.28rem;
+  border-radius: 0.5rem;
   background-color: #fffef9;
-  box-shadow: 0 8px 18px rgb(28 56 47 / 9%);
+  box-shadow: 0 3px 10px rgb(28 56 47 / 6%);
 }
 
 .paper[data-paper-style="dotted"] {

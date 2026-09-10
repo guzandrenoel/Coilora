@@ -69,6 +69,33 @@ export class NotebooksController {
     );
   }
 
+  @Get(':notebookId/trash')
+  listTrash(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Query() query: Record<string, unknown>,
+  ) {
+    return this.pages.listTrash(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(notebookPageListQuerySchema, query).page,
+    );
+  }
+
+  @Delete(':notebookId/trash/:pageId')
+  @HttpCode(200)
+  permanentlyDeletePage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('notebookId') notebookId: string,
+    @Param('pageId') pageId: string,
+  ) {
+    return this.pages.permanentlyDelete(
+      user,
+      parseWithSchema(notebookIdSchema, notebookId),
+      parseWithSchema(notebookPageIdSchema, pageId),
+    );
+  }
+
   @Get(':notebookId/pages/:pageId')
   getPage(
     @CurrentUser() user: AuthenticatedUser,

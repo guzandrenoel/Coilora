@@ -15,6 +15,8 @@ import {
 import { LibraryDialog } from "./library-dialog";
 import { NotebookPageMenu } from "@/features/notebook/notebook-page-menu";
 import { NotebookPageDeleteDialog } from "@/features/notebook/notebook-page-delete-dialog";
+import { NotebookTrash } from "@/features/notebook/notebook-trash";
+import { NotebookPageDialog } from "@/features/notebook/notebook-page-dialog";
 import workspaceStyles from "./library-workspace.module.css";
 import styles from "./notebook-pages.module.css";
 
@@ -42,6 +44,7 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<NotebookPage | null>(null);
+  const [renameTarget, setRenameTarget] = useState<NotebookPage | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,8 +147,19 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
           </h2>
           <p>Add blank paper for your own notes.</p>
         </div>
+        <NotebookTrash
+          notebookId={notebookId}
+          disabled={loading}
+          onRestored={(restored) => {
+            setPages((current) =>
+              [
+                ...current.filter((item) => item.id !== restored.id),
+                restored,
+              ].sort((a, b) => a.position - b.position),
+            );
+          }}
+        />
       </header>
-
       {loadError ? (
         <div className={styles.error}>
           <p role="alert">{loadError}</p>
@@ -178,17 +192,22 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
             return (
               <li className={styles.pageCard} key={notebookPage.id}>
                 <Link
+                  draggable={false}
                   href={`/library/notebooks/${encodeURIComponent(
                     notebookId,
                   )}/pages/${encodeURIComponent(notebookPage.id)}`}
-                  aria-label={`Open page ${pageNumber}, ${paperStyleName} paper`}
+                  aria-label={`Open page ${pageNumber}, ${notebookPage.title}, ${paperStyleName} paper`}
                 >
                   <PaperPreview paperStyle={notebookPage.paper_style} />
-                  <strong>{notebookPage.title}</strong>
+                  <strong title={notebookPage.title}>
+                    {notebookPage.title}
+                  </strong>
                   <span>{paperStyleName}</span>
                 </Link>
                 <NotebookPageMenu
+                  className={styles.pageActions}
                   page={notebookPage}
+                  onRename={setRenameTarget}
                   onDelete={setDeleteTarget}
                 />
               </li>
@@ -312,6 +331,18 @@ export function NotebookPages({ notebookId }: { notebookId: string }) {
             setLoading(true);
             setReloadVersion((value) => value + 1);
           }}
+        />
+      ) : null}
+      {renameTarget ? (
+        <NotebookPageDialog
+          notebookId={notebookId}
+          dialog={{ kind: "rename", page: renameTarget }}
+          onClose={() => setRenameTarget(null)}
+          onSaved={(saved) =>
+            setPages((current) =>
+              current.map((item) => (item.id === saved.id ? saved : item)),
+            )
+          }
         />
       ) : null}
     </section>

@@ -3,6 +3,35 @@
   width: max-content;
   margin-left: auto;
 }
+.trashTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--navy);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.trashTrigger:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--line-strong);
+}
+.trashTrigger:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+.trashTrigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .trigger {
   min-width: 32px;
   min-height: 28px;

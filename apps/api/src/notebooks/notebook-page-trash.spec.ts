@@ -74,6 +74,9 @@ function setup() {
       .mockResolvedValue({ data: [{ notebook_page_id: pageId }], error: null }),
   };
   const client = {
+    rpc: vi
+      .fn<(...args: unknown[]) => Promise<Result>>()
+      .mockResolvedValue({ data: null, error: null }),
     from: vi.fn((table: string) => {
       if (table === 'notebooks') return notebook;
       if (table === 'notebook_pages') return page;
@@ -95,6 +98,31 @@ function setup() {
 }
 
 describe('notebook page soft deletion', () => {
+  it('lists only trashed pages in the authenticated notebook', async () => {
+    const { service, page } = setup();
+    await expect(service.listTrash(user, notebookId, 2)).resolves.toMatchObject(
+      { items: [saved], nextPage: null },
+    );
+    expect(page.eq).toHaveBeenCalledWith('owner_id', user.id);
+    expect(page.eq).toHaveBeenCalledWith('notebook_id', notebookId);
+    expect(page.not).toHaveBeenCalledWith('deleted_at', 'is', null);
+    expect(page.range).toHaveBeenCalledWith(100, 150);
+  });
+  it('does not report permanent deletion when the database rejects an active page', async () => {
+    const { service, client } = setup();
+    client.rpc.mockResolvedValue({ data: null, error: { code: 'P0002' } });
+    await expect(
+      service.permanentlyDelete(user, notebookId, pageId),
+    ).rejects.toThrow(NotFoundException);
+  });
+  it('checks notebook access before invoking permanent deletion', async () => {
+    const { service, client, notebook } = setup();
+    notebook.maybeSingle.mockResolvedValue({ data: null, error: null });
+    await expect(
+      service.permanentlyDelete(user, notebookId, pageId),
+    ).rejects.toThrow(NotFoundException);
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
   it('updates only the timestamp of the active owner-scoped page', async () => {
     const { service, page, notebook, client, factory } = setup();
     const before = Date.now();

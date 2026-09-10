@@ -16,6 +16,7 @@ import {
 } from "./notebook-timeline";
 import { PdfPageCanvas } from "./pdf-page-canvas";
 import { NotebookPageMenu } from "./notebook-page-menu";
+import { NotebookTrash } from "./notebook-trash";
 import styles from "./notebook-viewer.module.css";
 
 type Props = {
@@ -34,6 +35,7 @@ type Props = {
   busyPages: Set<string>;
   onAdd: () => void;
   annotationVersions: Record<string, number>;
+  onRestored: (page: NotebookPage) => void;
 };
 
 type PageEntry = Exclude<TimelineEntry, { kind: "document" }>;
@@ -235,6 +237,10 @@ export function NotebookSidebar(props: Props) {
       <button type="button" className={styles.addPage} onClick={props.onAdd}>
         + Add notebook page
       </button>
+      <NotebookTrash
+        notebookId={props.notebookId}
+        onRestored={props.onRestored}
+      />
     </aside>
   );
 }
@@ -296,6 +302,7 @@ function ThumbnailGrid({
             entry.kind === "note"
               ? entry.page.title
               : `Page ${entry.pageNumber}`;
+          const blocked = busyPages.size > 0 || bookmarkBusy.size > 0;
           return (
             <div
               className={styles.thumbnailCard}
@@ -353,7 +360,7 @@ function ThumbnailGrid({
                     onRename={onRename}
                     onDelete={onDelete}
                     deleteBlocked={
-                      busyPages.has(entry.key) || bookmarkBusy.has(entry.key)
+                      blocked
                         ? "Finish saving this page before deleting it."
                         : undefined
                     }

@@ -20,11 +20,12 @@ Implemented:
 
 Next implementation slice:
 
-1. Add undo and redo for persisted annotation edits.
-2. Add page reordering and carefully guarded deletion flows.
-3. Add typed page notes and text-selection highlights.
-4. Add PDF search and citation navigation.
-5. Continue document processing, OCR, and retrieval work.
+1. Add page reordering.
+2. Add typed page notes and text-selection highlights.
+3. Add PDF search and citation navigation.
+4. Continue document processing, OCR, and retrieval work.
+
+Since the progress snapshot above, annotation undo/redo and shortcuts, and notebook Trash/Restore with confirmed permanent deletion have been implemented. Permanent deletion requires the page-management migration.
 
 Document processing, OCR, retrieval, cited assistance, study generation, and review scheduling remain later roadmap work.
 
@@ -268,17 +269,17 @@ This schedule is a planning target, not a guaranteed estimate. OCR complexity, P
 
 ## 13. Main risks
 
-| Risk | Mitigation |
-|---|---|
-| Building too much before validation | Ship the complete web vertical slice first |
-| Hallucinated answers | Strict-source retrieval, structured citations, and evaluation |
-| Cross-user data exposure | Server authorization, RLS, signed URLs, and negative tests |
-| Difficult scanned documents | OCR routing and representative test corpus |
-| Browser annotation complexity | Limit MVP to text/typed annotations and basic occlusion |
-| Self-hosted AI resource growth | Quotas, caching, smaller approved models, bounded concurrency, and asynchronous work |
-| Platform lock-in | Open APIs, standard PDFs, PostgreSQL, and neutral annotation coordinates |
-| Native rewrite waste | Reuse backend, contracts, source model, and study engine |
-| Sensitive medical uploads | Explicit prohibition, reporting, deletion, and later compliance review |
+| Risk                                | Mitigation                                                                           |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| Building too much before validation | Ship the complete web vertical slice first                                           |
+| Hallucinated answers                | Strict-source retrieval, structured citations, and evaluation                        |
+| Cross-user data exposure            | Server authorization, RLS, signed URLs, and negative tests                           |
+| Difficult scanned documents         | OCR routing and representative test corpus                                           |
+| Browser annotation complexity       | Limit MVP to text/typed annotations and basic occlusion                              |
+| Self-hosted AI resource growth      | Quotas, caching, smaller approved models, bounded concurrency, and asynchronous work |
+| Platform lock-in                    | Open APIs, standard PDFs, PostgreSQL, and neutral annotation coordinates             |
+| Native rewrite waste                | Reuse backend, contracts, source model, and study engine                             |
+| Sensitive medical uploads           | Explicit prohibition, reporting, deletion, and later compliance review               |
 
 ## 14. Definition of web MVP done
 
