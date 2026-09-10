@@ -20,10 +20,9 @@ Implemented:
 
 Next implementation slice:
 
-1. Add page reordering.
-2. Add typed page notes and text-selection highlights.
-3. Add PDF search and citation navigation.
-4. Continue document processing, OCR, and retrieval work.
+1. Add typed page notes and text-selection highlights.
+2. Add PDF search and citation navigation.
+3. Continue document processing, OCR, and retrieval work.
 
 Since the progress snapshot above, annotation undo/redo and shortcuts, and notebook Trash/Restore with confirmed permanent deletion have been implemented. Permanent deletion requires the page-management migration.
 

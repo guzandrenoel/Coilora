@@ -55,9 +55,11 @@ Collapsing a document group hides its sidebar thumbnails, not its pages in the c
 
 - Persistent named notebook pages.
 - Blank, dotted, ruled, grid, and Cornell paper styles.
-- Page creation and renaming from the viewer.
-- Confirmed soft deletion from the three-dot menus in the viewer and notebook overview (requires the page soft-delete migration).
-- Authenticated delete/restore requests with owner checks. Deleted pages are excluded from normal page lists and cannot be edited through the API.
+- Page creation and renaming from both the notebook overview and viewer.
+- Confirmed Move to Trash actions from the three-dot menus in both views (requires the page soft-delete migration).
+- A notebook Trash table with page selection, last-updated sorting, individual and selected-page restoration, individual and selected-page deletion, and Empty Trash.
+- Separately confirmed permanent deletion, limited to pages already in Trash.
+- Authenticated delete and restore requests with owner checks. Deleted pages are excluded from normal page lists and cannot be edited through the API.
 - Notes can be placed before the first PDF page or after a selected PDF page.
 - Freehand pen, highlighter, and eraser tools for note pages and PDFs.
 - Select and drag saved strokes while keeping them within page boundaries.
@@ -74,7 +76,7 @@ Failed saves retain the stroke and provide a retry action. Retries reuse a stabl
 
 Pending strokes are held in memory, not in an offline outbox. Keep the viewer open and retry failed saves before leaving. The app's back buttons block navigation while ink is pending, and closing or reloading the browser page requests an unsaved-work warning. Browser-history navigation is not an offline recovery mechanism.
 
-Deleting a note moves it to notebook Trash, preserving its content, source position, annotations, and bookmarks. Trash is available from the notebook overview and reader sidebar, with Restore and a separately confirmed permanent-delete action. The viewer blocks deletion while a page has active or unsaved ink, then selects a remaining page if necessary. Deleting the last page returns to the notebook overview.
+Deleting a note moves it to notebook Trash, preserving its content, source position, annotations, and bookmark. Trash is available from the notebook overview and reader sidebar. Pages can be restored individually or in a selected group. Permanent deletion is available for individual pages, selected pages, or the full Trash contents, and always requires confirmation. The viewer blocks deletion while a page has active or unsaved ink, then selects a remaining page if necessary. Deleting the last active page returns to the notebook overview.
 
 Apply `20260910120000_manage_notebook_pages.sql` before using permanent deletion. Database regression coverage is in `supabase/tests/notebook_page_management.sql`.
 
