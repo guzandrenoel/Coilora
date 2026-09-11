@@ -6,6 +6,7 @@ import {
   getAnnotationBounds,
   createTextBoxPoints,
   pointsToSvgPath,
+  resizeTextBoxPoints,
   shouldAppendPoint,
   translateAnnotationPoints,
 } from "./annotation-geometry.ts";
@@ -79,10 +80,26 @@ test("moving a stroke preserves its shape and keeps it on the page", () => {
 test("text boxes keep their full editing area inside the page", () => {
   const edgeBox = createTextBoxPoints({ x: 0.9, y: 0.95 });
   assert.ok(Math.abs(edgeBox[0].x - 0.68) < Number.EPSILON);
-  assert.equal(edgeBox[0].y, 0.88);
+  assert.equal(edgeBox[0].y, 0.94);
   assert.deepEqual(edgeBox[1], { x: 1, y: 1 });
   assert.deepEqual(createTextBoxPoints({ x: 0.2, y: 0.3 }), [
     { x: 0.2, y: 0.3 },
+    { x: 0.52, y: 0.36 },
+  ]);
+});
+
+test("text box resize handles keep a usable box inside the page", () => {
+  const points = [
+    { x: 0.2, y: 0.3 },
     { x: 0.52, y: 0.42 },
+  ];
+
+  assert.deepEqual(resizeTextBoxPoints(points, "right", 0.2, 0.1), [
+    { x: 0.2, y: 0.3 },
+    { x: 0.72, y: 0.52 },
+  ]);
+  assert.deepEqual(resizeTextBoxPoints(points, "left", 0.5, -1), [
+    { x: 0.44, y: 0.3 },
+    { x: 0.52, y: 0.35 },
   ]);
 });

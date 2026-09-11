@@ -82,9 +82,15 @@
   position: absolute;
   z-index: 3;
   box-sizing: border-box;
-  border: 2px solid var(--blue);
-  border-radius: 0.35rem;
-  box-shadow: 0 3px 12px rgb(18 61 86 / 16%);
+  border: 1.5px solid #1687ea;
+}
+
+.savedTextSelection {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  border: 1.5px solid #1687ea;
+  pointer-events: none;
 }
 
 .textEditor {
@@ -94,38 +100,286 @@
   height: 100%;
   resize: none;
   box-sizing: border-box;
-  padding: 0.35rem 0.45rem;
+  padding: 0.2rem 0.3rem;
   border: 0;
   border-radius: inherit;
   outline: 0;
-  background: rgb(255 255 255 / 94%);
+  background: transparent;
   font-family: Arial, sans-serif;
   line-height: 1.25;
+  overflow: hidden;
   touch-action: manipulation;
 }
 
 .textResizeHandle {
   position: absolute;
-  bottom: -7px;
+  top: 50%;
   z-index: 1;
-  width: 14px;
-  height: 14px;
+  width: 9px;
+  height: 26px;
   padding: 0;
-  border: 2px solid white;
-  border-radius: 50%;
-  background: var(--blue);
-  box-shadow: 0 1px 4px rgb(18 61 86 / 25%);
-  cursor: nwse-resize;
+  border: 0;
+  border-radius: 999px;
+  background: #1687ea;
+  box-shadow: 0 1px 4px rgb(18 61 86 / 20%);
+  cursor: ew-resize;
+  pointer-events: auto;
   touch-action: none;
+  transform: translateY(-50%);
 }
 
 .textResizeHandle[data-handle="left"] {
-  left: -7px;
-  cursor: nesw-resize;
+  left: -5px;
 }
 
 .textResizeHandle[data-handle="right"] {
-  right: -7px;
+  right: -5px;
+}
+
+.textContextToolbar {
+  position: absolute;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  width: max-content;
+  max-width: calc(100% - 16px);
+  min-height: 46px;
+  padding: 0.3rem 0.4rem;
+  overflow-x: auto;
+  border: 1px solid rgb(18 61 86 / 16%);
+  border-radius: 15px;
+  background: rgb(255 255 255 / 97%);
+  color: var(--navy);
+  box-shadow: 0 10px 26px rgb(18 61 86 / 20%);
+  scrollbar-width: none;
+  transform: translate(-50%, 10px);
+}
+
+.textContextToolbar[data-placement="above"] {
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.textContextToolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.textContextToolbar button {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--navy);
+  font: inherit;
+  cursor: pointer;
+}
+
+.textContextToolbar button:hover,
+.textContextToolbar button[aria-pressed="true"] {
+  background: #e7ecea;
+}
+
+.textContextToolbar button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.textContextToolbar button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.contextColor {
+  display: grid;
+  place-items: center;
+}
+
+.contextColor > span:first-child {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #aebdb9;
+}
+
+.contextFont select {
+  width: 92px;
+  height: 34px;
+  padding: 0 1.4rem 0 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: #eef2f1;
+  color: var(--ink);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.contextFont option {
+  background: white;
+  color: var(--ink);
+}
+
+.contextSize,
+.contextAlignment {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.contextSize {
+  border-radius: 8px;
+  background: #eef2f1;
+}
+
+.contextSize output {
+  min-width: 26px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.textContextToolbar .contextFormat {
+  font-family: Georgia, serif;
+  font-size: 1rem;
+}
+
+.contextAlignment {
+  padding-left: 0.2rem;
+  border-left: 1px solid var(--line);
+}
+
+.contextAlignment span {
+  display: block;
+  width: 17px;
+  overflow: hidden;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.contextAlignment span[data-align="left"] {
+  text-align: left;
+}
+
+.contextAlignment span[data-align="center"] {
+  text-align: center;
+}
+
+.contextAlignment span[data-align="right"] {
+  text-align: right;
+}
+
+.textContextToolbar .contextDelete {
+  margin-left: 0.2rem;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  color: #a84738;
+}
+
+.textContextPalette {
+  position: absolute;
+  left: 50%;
+  z-index: 6;
+  width: 292px;
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
+  padding: 1rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 16px;
+  background: #201e1f;
+  color: white;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 28%);
+  transform: translate(-50%, 66px);
+}
+
+.textContextPalette[data-placement="above"] {
+  transform: translate(-50%, calc(-100% - 66px));
+}
+
+.textContextPalette h2 {
+  margin: 0 0 0.8rem;
+  font-size: 0.9rem;
+}
+
+.contextPaletteGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  place-items: center;
+  gap: 0.8rem 0.65rem;
+}
+
+.contextSwatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #bac7c4;
+  cursor: pointer;
+}
+
+.contextSwatch[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px #201e1f,
+    0 0 0 4px #5f83ff;
+}
+
+.contextCustomColor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.contextCustomColor input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.contextColorWheel {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: conic-gradient(
+    #ff1f1f,
+    #fff36a,
+    #119c6b,
+    #1687ea,
+    #9c36a4,
+    #ff1f1f
+  );
+}
+
+.contextCustomColor:focus-within .contextColorWheel {
+  outline: 3px solid #5f83ff;
+  outline-offset: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .error {

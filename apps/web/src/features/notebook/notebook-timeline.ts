@@ -19,6 +19,7 @@ export const MAX_NOTEBOOK_ZOOM = 4;
 export const noteKey = (id: string) => `note:${id}`;
 export const documentKey = (id: string) => `document:${id}`;
 export const pdfKey = (id: string, page: number) => `pdf:${id}:${page}`;
+export const timelineHash = (key: string) => `#${encodeURIComponent(key)}`;
 
 export function rememberExpandedDocument(
   expanded: Record<string, boolean>,
@@ -32,10 +33,7 @@ export function clampNotebookZoom(value: number) {
   return Math.min(MAX_NOTEBOOK_ZOOM, Math.max(MIN_NOTEBOOK_ZOOM, value));
 }
 
-export function scaleNotebookZoom(
-  value: number,
-  factor: number,
-): number {
+export function scaleNotebookZoom(value: number, factor: number): number {
   return clampNotebookZoom(Math.round(value * factor * 1000) / 1000);
 }
 

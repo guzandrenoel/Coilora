@@ -7,6 +7,7 @@ import {
   type DrawingStyle,
   type DrawingTool,
 } from "./annotation-tool-settings";
+import { annotationPalette } from "./annotation-colors";
 import styles from "./annotation-settings-dock.module.css";
 import {
   defaultTextFormat,
@@ -14,24 +15,6 @@ import {
   textFontStack,
   type TextFormat,
 } from "./text-format";
-
-const palette = [
-  "#111111",
-  "#666666",
-  "#a3a3a3",
-  "#d4d4d4",
-  "#ffffff",
-  "#ff1f1f",
-  "#9c36a4",
-  "#ff5d62",
-  "#ff9aa2",
-  "#ff9e2c",
-  "#1687ea",
-  "#155a9c",
-  "#119c6b",
-  "#76c442",
-  "#fff36a",
-];
 
 const widths: Record<
   DrawingTool,
@@ -66,18 +49,14 @@ export function AnnotationSettingsDock({
   sidebarOpen,
   onChange,
   textFormat = defaultTextFormat,
-  textPinned = false,
   onTextFormatChange,
-  onTextPinnedChange,
 }: {
   tool: DrawingTool;
   style: DrawingStyle;
   sidebarOpen: boolean;
   onChange: (style: DrawingStyle) => void;
   textFormat?: TextFormat;
-  textPinned?: boolean;
   onTextFormatChange?: (format: TextFormat) => void;
-  onTextPinnedChange?: (pinned: boolean) => void;
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -220,7 +199,11 @@ export function AnnotationSettingsDock({
                 }
               >
                 {textFontFamilies.map((font) => (
-                  <option key={font} value={font}>
+                  <option
+                    key={font}
+                    value={font}
+                    style={{ fontFamily: textFontStack(font) }}
+                  >
                     {font[0].toUpperCase() + font.slice(1)}
                   </option>
                 ))}
@@ -278,18 +261,6 @@ export function AnnotationSettingsDock({
                 </button>
               ))}
             </div>
-            <div className={styles.divider} />
-            <button
-              type="button"
-              className={styles.pinButton}
-              aria-label={textPinned ? "Unpin text tool" : "Pin text tool"}
-              title={textPinned ? "Unpin text tool" : "Pin text tool"}
-              aria-pressed={textPinned}
-              onClick={() => onTextPinnedChange?.(!textPinned)}
-            >
-              <span aria-hidden="true">⌖</span>
-              <span>{textPinned ? "Pinned" : "Pin"}</span>
-            </button>
           </>
         ) : (
           <>
@@ -389,7 +360,7 @@ export function AnnotationSettingsDock({
                 : "Text color"}
           </h2>
           <div className={styles.paletteGrid}>
-            {palette.map((color) => (
+            {annotationPalette.map((color) => (
               <button
                 type="button"
                 key={color}

@@ -79,6 +79,7 @@ import {
   rowAtOffset,
   scaleNotebookZoom,
   selectionAfterNoteDeletion,
+  timelineHash,
   timelineWidth,
   visibleRows,
   type NotebookZoom,
@@ -156,7 +157,6 @@ export function NotebookViewer({
   const [tool, setTool] = useState<EditorTool>("select");
   const [eraserMode, setEraserMode] = useState<EraserMode>("partial");
   const [eraserRadius, setEraserRadius] = useState(12);
-  const [textPinned, setTextPinned] = useState(false);
   const [textFormat, setTextFormat] = useState(() => {
     if (typeof window === "undefined") return defaultTextFormat;
     try {
@@ -409,6 +409,21 @@ export function NotebookViewer({
   const active =
     rows[rowAtOffset(rows, scrollTop + Math.min(150, viewport.height / 4))]
       ?.entry;
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!loaded || !element || pendingJump.current) return;
+    const visibleEntry =
+      rows[
+        rowAtOffset(
+          rows,
+          element.scrollTop + Math.min(150, element.clientHeight / 4),
+        )
+      ]?.entry;
+    if (!visibleEntry) return;
+    const hash = timelineHash(visibleEntry.key);
+    if (window.location.hash === hash) return;
+    window.history.replaceState(window.history.state, "", hash);
+  }, [loaded, rows, scrollTop]);
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + rows[rows.length - 1].height + 16
     : 0;
@@ -696,11 +711,7 @@ export function NotebookViewer({
   function jump(key: string) {
     pendingJump.current = key;
     setJumpVersion((value) => value + 1);
-    window.history.replaceState(
-      window.history.state,
-      "",
-      `#${encodeURIComponent(key)}`,
-    );
+    window.history.replaceState(window.history.state, "", timelineHash(key));
     if (window.matchMedia("(max-width: 760px)").matches) setSidebarOpen(false);
   }
   const ensureBookmarks = useCallback((documentId: string) => {
@@ -1033,7 +1044,7 @@ export function NotebookViewer({
             onRadius={setEraserRadius}
           />
         ) : null}
-        {drawingTool ? (
+        {drawingTool && drawingTool !== "text" ? (
           <AnnotationSettingsDock
             key={drawingTool}
             tool={drawingTool}
@@ -1041,9 +1052,7 @@ export function NotebookViewer({
             sidebarOpen={sidebarOpen}
             onChange={updateDrawingStyle}
             textFormat={textFormat}
-            textPinned={textPinned}
             onTextFormatChange={setTextFormat}
-            onTextPinnedChange={setTextPinned}
           />
         ) : null}
         <div
@@ -1130,9 +1139,7 @@ export function NotebookViewer({
                   editorDisabled={historyBusy}
                   onAnnotationCommit={recordHistory}
                   onTextStyleSelect={selectTextStyle}
-                  onTextFinished={() => {
-                    if (!textPinned) setTool("select");
-                  }}
+                  onTextFinished={() => setTool("select")}
                 />
               ) : null,
             )}

@@ -121,13 +121,6 @@
 .alignment span[data-align="right"] {
   text-align: right;
 }
-.dock .pinButton {
-  display: inline-flex;
-  width: auto;
-  padding-inline: 0.55rem;
-  gap: 0.35rem;
-  font-size: 0.72rem;
-}
 .srOnly {
   position: absolute;
   width: 1px;

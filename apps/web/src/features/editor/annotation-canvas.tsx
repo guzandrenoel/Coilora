@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { getPageAnnotations } from "@/lib/api/annotations-client";
@@ -23,21 +24,25 @@ import type {
   AnnotationKind,
   CreateAnnotationInput,
   PageAnnotation,
+  UpdateAnnotationInput,
 } from "@/lib/api/types";
 import {
   createTextBoxPoints,
   getAnnotationBounds,
   getNormalizedPoint,
   pointsToSvgPath,
+  resizeTextBoxPoints,
   shouldAppendPoint,
   translateAnnotationPoints,
 } from "./annotation-geometry";
 import styles from "./annotation-canvas.module.css";
 import { eraseAtPoint, strokeIntersectsEraser } from "./annotation-eraser";
+import { annotationPalette } from "./annotation-colors";
 import type { EraserMode } from "./eraser-settings";
 import { annotationCreateInput } from "@/lib/api/annotation-target-client";
 import {
   defaultTextFormat,
+  textFontFamilies,
   textFontStack,
   type TextFormat,
 } from "./text-format";
@@ -73,10 +78,29 @@ type ResizeGesture = {
   bounds: ReturnType<typeof getAnnotationBounds>;
 };
 
+type SavedTextResizeGesture = ResizeGesture & {
+  annotation: PageAnnotation;
+};
+
 const sorted = (items: PageAnnotation[]) =>
   [...items].sort((a, b) => a.z_index - b.z_index);
 const defaultTextFontSize = 0.025;
 const strokePathCache = new WeakMap<PageAnnotation["points"], string>();
+
+function textDraftFromAnnotation(annotation: PageAnnotation): TextDraft {
+  return {
+    annotation,
+    points: annotation.points,
+    text: annotation.text_content ?? "",
+    color: annotation.color,
+    fontSize: annotation.font_size ?? defaultTextFontSize,
+    fontFamily: annotation.font_family ?? "modern",
+    fontWeight: annotation.font_weight === 700 ? 700 : 400,
+    fontStyle: annotation.font_style === "italic" ? "italic" : "normal",
+    textAlign: annotation.text_align ?? "left",
+  };
+}
+
 function cachedStrokePath(points: PageAnnotation["points"]) {
   let path = strokePathCache.get(points);
   if (path === undefined) {
@@ -159,17 +183,23 @@ export function AnnotationCanvas({
   const [loadFailed, setLoadFailed] = useState(false);
   const [operations, setOperations] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [textPaletteOpen, setTextPaletteOpen] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const textEditorFrameRef = useRef<HTMLDivElement>(null);
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
+  const textAnnotationRefs = useRef(new Map<string, HTMLDivElement>());
   const activePointer = useRef<number | null>(null);
   const stroke = useRef<PendingAnnotation | null>(null);
   const moveGesture = useRef<MoveGesture | null>(null);
   const resizeGesture = useRef<ResizeGesture | null>(null);
+  const savedTextResizeGesture = useRef<SavedTextResizeGesture | null>(null);
   const committedTextDraft = useRef<TextDraft | null>(null);
   const moveDraftRef = useRef<PageAnnotation | null>(null);
   const saving = useRef(new Set<string>());
   const erasing = useRef(new Set<string>());
+  const annotationUpdateQueues = useRef(
+    new Map<string, Promise<PageAnnotation>>(),
+  );
   const wipeFrame = useRef<number | null>(null);
   const wipeQueue = useRef<{ x: number; y: number }[]>([]);
   const textStyleRef = useRef({
@@ -177,9 +207,7 @@ export function AnnotationCanvas({
     fontSize: strokeWidth,
     fontFamily: textFormat.fontFamily,
     fontWeight: (textFormat.bold ? 700 : 400) as 400 | 700,
-    fontStyle: (textFormat.italic ? "italic" : "normal") as
-      | "normal"
-      | "italic",
+    fontStyle: (textFormat.italic ? "italic" : "normal") as "normal" | "italic",
     textAlign: textFormat.textAlign,
   });
   useEffect(
@@ -214,6 +242,28 @@ export function AnnotationCanvas({
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
 
+  useEffect(() => {
+    if (!textPaletteOpen) return;
+    function closePalette(event: PointerEvent) {
+      if (
+        event.target instanceof Element &&
+        event.target.closest('[data-text-context-controls="true"]')
+      ) {
+        return;
+      }
+      setTextPaletteOpen(false);
+    }
+    function closePaletteWithEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setTextPaletteOpen(false);
+    }
+    document.addEventListener("pointerdown", closePalette);
+    document.addEventListener("keydown", closePaletteWithEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closePalette);
+      document.removeEventListener("keydown", closePaletteWithEscape);
+    };
+  }, [textPaletteOpen]);
+
   useLayoutEffect(() => {
     textStyleRef.current = {
       color,
@@ -231,6 +281,59 @@ export function AnnotationCanvas({
     if (!editor) return;
     editor.focus();
   }, [textDraft]);
+
+  function fitTextPoints(
+    points: PageAnnotation["points"],
+    element: HTMLDivElement | HTMLTextAreaElement,
+  ) {
+    const page = svgRef.current?.getBoundingClientRect();
+    if (!page?.height) return points;
+    const bounds = getAnnotationBounds(points);
+    const previousHeight = element.style.height;
+    element.style.height =
+      element instanceof HTMLTextAreaElement ? "0px" : "auto";
+    const contentHeight = element.scrollHeight;
+    element.style.height = previousHeight;
+    const height = Math.min(
+      1 - bounds.y,
+      Math.max(0.05, (contentHeight + 4) / page.height),
+    );
+    return [
+      { x: bounds.x, y: bounds.y },
+      { x: bounds.x + bounds.width, y: bounds.y + height },
+    ];
+  }
+
+  useLayoutEffect(() => {
+    const editor = textEditorRef.current;
+    if (!textDraft || !editor) return;
+    const points = fitTextPoints(textDraft.points, editor);
+    if (
+      points[1].y === textDraft.points[1]?.y &&
+      points[1].x === textDraft.points[1]?.x
+    ) {
+      return;
+    }
+    setTextDraft((current) => (current ? { ...current, points } : current));
+  }, [textDraft]);
+
+  useLayoutEffect(() => {
+    if (moveDraft?.kind !== "text" || !savedTextResizeGesture.current) {
+      return;
+    }
+    const element = textAnnotationRefs.current.get(moveDraft.id);
+    if (!element) return;
+    const points = fitTextPoints(moveDraft.points, element);
+    if (
+      points[1].y === moveDraft.points[1]?.y &&
+      points[1].x === moveDraft.points[1]?.x
+    ) {
+      return;
+    }
+    const fitted = { ...moveDraft, points };
+    moveDraftRef.current = fitted;
+    setMoveDraft(fitted);
+  }, [moveDraft]);
 
   useEffect(() => {
     let cancelled = false;
@@ -303,7 +406,10 @@ export function AnnotationCanvas({
 
   function begin(event: ReactPointerEvent<SVGSVGElement>) {
     if (tool === "select") {
-      if (event.target === event.currentTarget) setSelectedId(null);
+      if (event.target === event.currentTarget) {
+        setSelectedId(null);
+        setTextPaletteOpen(false);
+      }
       return;
     }
     if (
@@ -385,6 +491,7 @@ export function AnnotationCanvas({
       annotation,
       start: point(event.clientX, event.clientY),
     };
+    setTextPaletteOpen(false);
     setSelectedId(annotation.id);
     moveDraftRef.current = annotation;
     setMoveDraft(annotation);
@@ -441,6 +548,71 @@ export function AnnotationCanvas({
     setDraft(stroke.current);
   }
 
+  async function getLatestAnnotation(annotationId: string) {
+    let cursor: number | null = 0;
+    while (cursor !== null) {
+      const result: { items: PageAnnotation[]; nextPage: number | null } =
+        documentId && documentPageNumber
+          ? await getDocumentPageAnnotations(
+              documentId,
+              documentPageNumber,
+              cursor,
+            )
+          : await getPageAnnotations(notebookId ?? "", pageId ?? "", cursor);
+      const annotation = result.items.find((item) => item.id === annotationId);
+      if (annotation) return annotation;
+      cursor = result.nextPage;
+    }
+    return null;
+  }
+
+  function queueAnnotationUpdate(
+    annotation: PageAnnotation,
+    input: Omit<UpdateAnnotationInput, "revision">,
+  ) {
+    const preceding = annotationUpdateQueues.current.get(annotation.id);
+    const request = (async () => {
+      let before = annotation;
+      if (preceding) {
+        try {
+          before = await preceding;
+        } catch {
+          // The latest server copy below handles a failed preceding update.
+        }
+      }
+      try {
+        const after = await updateTargetAnnotation(target, annotation.id, {
+          ...input,
+          revision: before.revision,
+        });
+        return { before, after };
+      } catch (reason) {
+        if (
+          !(reason instanceof Error) ||
+          !reason.message.includes("changed before it could be updated")
+        ) {
+          throw reason;
+        }
+        const latest = await getLatestAnnotation(annotation.id);
+        if (!latest) throw reason;
+        const after = await updateTargetAnnotation(target, annotation.id, {
+          ...input,
+          revision: latest.revision,
+        });
+        return { before: latest, after };
+      }
+    })();
+    const queued = request.then(({ after }) => after);
+    annotationUpdateQueues.current.set(annotation.id, queued);
+    const cleanUp = () => {
+      if (annotationUpdateQueues.current.get(annotation.id) === queued) {
+        annotationUpdateQueues.current.delete(annotation.id);
+      }
+    };
+    void queued.then(cleanUp, cleanUp);
+    return request;
+  }
+
   async function save(item: PendingAnnotation) {
     if (saving.current.has(item.id)) return;
     saving.current.add(item.id);
@@ -490,16 +662,18 @@ export function AnnotationCanvas({
     setOperations((value) => value + 1);
     setError(null);
     try {
-      const updated = await updateTargetAnnotation(target, annotation.id, {
-        points,
-        revision: annotation.revision,
-      });
+      const { before, after: updated } = await queueAnnotationUpdate(
+        annotation,
+        {
+          points,
+        },
+      );
       setAnnotations((current) =>
         sorted(
           current.map((item) => (item.id === updated.id ? updated : item)),
         ),
       );
-      onCommit?.({ target, before: annotation, after: updated });
+      onCommit?.({ target, before, after: updated });
     } catch (reason) {
       setAnnotations((current) =>
         sorted(
@@ -511,7 +685,7 @@ export function AnnotationCanvas({
       setError(
         reason instanceof Error
           ? reason.message
-          : "The annotation could not be moved.",
+          : "The annotation could not be updated.",
       );
     } finally {
       setOperations((value) => Math.max(0, value - 1));
@@ -523,6 +697,7 @@ export function AnnotationCanvas({
     committedTextDraft.current = draftToSave;
     draftToSave = { ...draftToSave, ...textStyleRef.current };
     const text = draftToSave.text.trim();
+    setTextPaletteOpen(false);
     setTextDraft(null);
     if (!text) {
       if (tool === "text") onTextFinished?.();
@@ -545,6 +720,7 @@ export function AnnotationCanvas({
         textAlign: draftToSave.textAlign,
       };
       setPending((items) => [...items, pendingText]);
+      setSelectedId(pendingText.id);
       setError(null);
       void save(pendingText);
       if (tool === "text") onTextFinished?.();
@@ -572,23 +748,23 @@ export function AnnotationCanvas({
     setOperations((value) => value + 1);
     setError(null);
     try {
-      const updated = await updateTargetAnnotation(target, before.id, {
-        points: draftToSave.points,
-        revision: before.revision,
-        text,
-        fontSize: draftToSave.fontSize,
-        color: draftToSave.color,
-        fontFamily: draftToSave.fontFamily,
-        fontWeight: draftToSave.fontWeight,
-        fontStyle: draftToSave.fontStyle,
-        textAlign: draftToSave.textAlign,
-      });
+      const { before: currentBefore, after: updated } =
+        await queueAnnotationUpdate(before, {
+          points: draftToSave.points,
+          text,
+          fontSize: draftToSave.fontSize,
+          color: draftToSave.color,
+          fontFamily: draftToSave.fontFamily,
+          fontWeight: draftToSave.fontWeight,
+          fontStyle: draftToSave.fontStyle,
+          textAlign: draftToSave.textAlign,
+        });
       setAnnotations((current) =>
         sorted(
           current.map((item) => (item.id === updated.id ? updated : item)),
         ),
       );
-      onCommit?.({ target, before, after: updated });
+      onCommit?.({ target, before: currentBefore, after: updated });
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -629,28 +805,50 @@ export function AnnotationCanvas({
   }, [textDraft]);
 
   function beginTextEdit(annotation: PageAnnotation) {
+    const draftToEdit = textDraftFromAnnotation(annotation);
     const format: TextFormat = {
-      fontFamily: annotation.font_family ?? "modern",
-      bold: annotation.font_weight === 700,
-      italic: annotation.font_style === "italic",
-      textAlign: annotation.text_align ?? "left",
+      fontFamily: draftToEdit.fontFamily,
+      bold: draftToEdit.fontWeight === 700,
+      italic: draftToEdit.fontStyle === "italic",
+      textAlign: draftToEdit.textAlign,
     };
     onTextStyleSelect?.({
-      color: annotation.color,
-      fontSize: annotation.font_size ?? defaultTextFontSize,
+      color: draftToEdit.color,
+      fontSize: draftToEdit.fontSize,
       format,
     });
     setSelectedId(annotation.id);
-    setTextDraft({
-      annotation,
-      points: annotation.points,
-      text: annotation.text_content ?? "",
-      color: annotation.color,
-      fontSize: annotation.font_size ?? defaultTextFontSize,
-      fontFamily: format.fontFamily,
-      fontWeight: format.bold ? 700 : 400,
-      fontStyle: format.italic ? "italic" : "normal",
-      textAlign: format.textAlign,
+    setTextDraft(draftToEdit);
+  }
+
+  function updateContextualTextStyle(
+    update: Partial<
+      Pick<
+        TextDraft,
+        | "color"
+        | "fontSize"
+        | "fontFamily"
+        | "fontWeight"
+        | "fontStyle"
+        | "textAlign"
+      >
+    >,
+  ) {
+    const current =
+      textDraft ??
+      (selected?.kind === "text" ? textDraftFromAnnotation(selected) : null);
+    if (!current) return;
+    const next = { ...current, ...update };
+    setTextDraft(next);
+    onTextStyleSelect?.({
+      color: next.color,
+      fontSize: next.fontSize,
+      format: {
+        fontFamily: next.fontFamily,
+        bold: next.fontWeight === 700,
+        italic: next.fontStyle === "italic",
+        textAlign: next.textAlign,
+      },
     });
   }
 
@@ -676,29 +874,22 @@ export function AnnotationCanvas({
     event.preventDefault();
     const current = point(event.clientX, event.clientY);
     const deltaX = current.x - gesture.start.x;
-    const deltaY = current.y - gesture.start.y;
-    const right = gesture.bounds.x + gesture.bounds.width;
-    const bottom = gesture.bounds.y + gesture.bounds.height;
-    const left =
-      gesture.handle === "left"
-        ? Math.max(0, Math.min(right - 0.08, gesture.bounds.x + deltaX))
-        : gesture.bounds.x;
-    const resizedRight =
-      gesture.handle === "right"
-        ? Math.min(1, Math.max(left + 0.08, right + deltaX))
-        : right;
-    const resizedBottom = Math.min(
-      1,
-      Math.max(gesture.bounds.y + 0.05, bottom + deltaY),
-    );
     setTextDraft((draftValue) =>
       draftValue
         ? {
             ...draftValue,
-            points: [
-              { x: left, y: gesture.bounds.y },
-              { x: resizedRight, y: resizedBottom },
-            ],
+            points: resizeTextBoxPoints(
+              [
+                { x: gesture.bounds.x, y: gesture.bounds.y },
+                {
+                  x: gesture.bounds.x + gesture.bounds.width,
+                  y: gesture.bounds.y + gesture.bounds.height,
+                },
+              ],
+              gesture.handle,
+              deltaX,
+              0,
+            ),
           }
         : draftValue,
     );
@@ -711,6 +902,78 @@ export function AnnotationCanvas({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     textEditorRef.current?.focus();
+  }
+
+  function beginSavedTextResize(
+    annotation: PageAnnotation,
+    handle: ResizeGesture["handle"],
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) {
+    if (
+      tool !== "select" ||
+      disabled ||
+      loading ||
+      loadFailed ||
+      operations > 0 ||
+      activePointer.current !== null ||
+      savedTextResizeGesture.current !== null ||
+      event.button !== 0
+    ) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    savedTextResizeGesture.current = {
+      annotation,
+      handle,
+      pointerId: event.pointerId,
+      start: point(event.clientX, event.clientY),
+      bounds: getAnnotationBounds(annotation.points),
+    };
+    moveDraftRef.current = annotation;
+    setMoveDraft(annotation);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function resizeSavedText(event: ReactPointerEvent<HTMLButtonElement>) {
+    const gesture = savedTextResizeGesture.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const current = point(event.clientX, event.clientY);
+    const resized = {
+      ...gesture.annotation,
+      points: resizeTextBoxPoints(
+        gesture.annotation.points,
+        gesture.handle,
+        current.x - gesture.start.x,
+        0,
+      ),
+    };
+    moveDraftRef.current = resized;
+    setMoveDraft(resized);
+  }
+
+  function finishSavedTextResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    const gesture = savedTextResizeGesture.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    const resized = moveDraftRef.current;
+    savedTextResizeGesture.current = null;
+    moveDraftRef.current = null;
+    setMoveDraft(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (!resized) return;
+    const changed = resized.points.some(
+      (item, index) =>
+        item.x !== gesture.annotation.points[index]?.x ||
+        item.y !== gesture.annotation.points[index]?.y,
+    );
+    if (!changed) return;
+    setAnnotations((items) =>
+      items.map((item) => (item.id === resized.id ? resized : item)),
+    );
+    void persistMove(gesture.annotation, resized.points);
   }
 
   function finish(event: ReactPointerEvent<SVGSVGElement>) {
@@ -917,12 +1180,12 @@ export function AnnotationCanvas({
         ),
         async (item) => {
           const original = originals.get(item.id)!;
-          const result = await updateTargetAnnotation(target, item.id, {
-            points: item.points,
-            revision: original.revision,
-          });
+          const { before: currentBefore, after: result } =
+            await queueAnnotationUpdate(original, {
+              points: item.points,
+            });
           saved.set(result.id, result);
-          changes.push({ target, before: original, after: result });
+          changes.push({ target, before: currentBefore, after: result });
         },
       );
       await runBatch(
@@ -964,6 +1227,13 @@ export function AnnotationCanvas({
     }
     event.preventDefault();
     event.stopPropagation();
+    await removeAnnotation(annotation, "The annotation could not be erased.");
+  }
+
+  async function removeAnnotation(
+    annotation: PageAnnotation,
+    failureMessage: string,
+  ) {
     erasing.current.add(annotation.id);
     setAnnotations((items) =>
       items.filter((item) => item.id !== annotation.id),
@@ -976,15 +1246,29 @@ export function AnnotationCanvas({
       onCommit?.({ target, before: annotation, after: null });
     } catch (reason) {
       setAnnotations((items) => sorted([...items, annotation]));
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "The annotation could not be erased.",
-      );
+      setError(reason instanceof Error ? reason.message : failureMessage);
     } finally {
       erasing.current.delete(annotation.id);
       setOperations((value) => Math.max(0, value - 1));
     }
+  }
+
+  function deleteContextualText(event: ReactMouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setTextPaletteOpen(false);
+    const annotation =
+      textDraft?.annotation ?? (selected?.kind === "text" ? selected : null);
+    if (disabled || loading || operations > 0 || !annotation) {
+      setTextDraft(null);
+      setSelectedId(null);
+      onTextFinished?.();
+      return;
+    }
+    if (erasing.current.has(annotation.id)) return;
+    setTextDraft(null);
+    void removeAnnotation(annotation, "The text box could not be deleted.");
+    onTextFinished?.();
   }
 
   const failed = pending.filter((item) => item.failed);
@@ -1000,12 +1284,24 @@ export function AnnotationCanvas({
         Math.max(selected.width * 1.5, 0.006),
       )
     : null;
+  const selectedTextBounds =
+    selected?.kind === "text" ? getAnnotationBounds(selected.points) : null;
   const textDraftBounds = textDraft
     ? getAnnotationBounds(textDraft.points)
     : null;
   const textEditorFontSize = textDraft
-    ? Math.max(12, strokeWidth * pageHeight)
+    ? Math.max(12, textDraft.fontSize * pageHeight)
     : 16;
+  const contextualText =
+    textDraft ??
+    (tool === "select" && selected?.kind === "text"
+      ? textDraftFromAnnotation(selected)
+      : null);
+  const contextualTextBounds = textDraftBounds ?? selectedTextBounds;
+  const textToolbarAbove =
+    contextualTextBounds !== null &&
+    contextualTextBounds !== undefined &&
+    contextualTextBounds.y + contextualTextBounds.height > 0.6;
 
   return (
     <>
@@ -1063,7 +1359,7 @@ export function AnnotationCanvas({
             </g>
           );
         })}
-        {tool === "select" && selectionBounds ? (
+        {tool === "select" && selectionBounds && selected?.kind !== "text" ? (
           <rect
             className={styles.selection}
             x={selectionBounds.x}
@@ -1130,11 +1426,21 @@ export function AnnotationCanvas({
         ) : null}
       </svg>
       {renderedAnnotations.map((annotation) => {
-        if (annotation.kind !== "text") return null;
+        if (
+          annotation.kind !== "text" ||
+          textDraft?.annotation?.id === annotation.id
+        ) {
+          return null;
+        }
         const bounds = getAnnotationBounds(annotation.points);
         return (
           <div
             key={annotation.id}
+            ref={(element) => {
+              if (element)
+                textAnnotationRefs.current.set(annotation.id, element);
+              else textAnnotationRefs.current.delete(annotation.id);
+            }}
             className={styles.textAnnotation}
             style={{
               left: `${bounds.x * 100}%`,
@@ -1177,6 +1483,40 @@ export function AnnotationCanvas({
           </div>
         );
       })}
+      {tool === "select" &&
+      selected?.kind === "text" &&
+      selectedTextBounds &&
+      !textDraft ? (
+        <div
+          className={styles.savedTextSelection}
+          style={{
+            left: `${selectedTextBounds.x * 100}%`,
+            top: `${selectedTextBounds.y * 100}%`,
+            width: `${selectedTextBounds.width * 100}%`,
+            height: `${selectedTextBounds.height * 100}%`,
+          }}
+          role="group"
+          aria-label="Selected text box"
+        >
+          {(["left", "right"] as const).map((handle) => (
+            <button
+              type="button"
+              key={handle}
+              className={styles.textResizeHandle}
+              data-handle={handle}
+              aria-label={`Resize text box from ${handle}`}
+              title="Resize text box"
+              disabled={operations > 0}
+              onPointerDown={(event) =>
+                beginSavedTextResize(selected, handle, event)
+              }
+              onPointerMove={resizeSavedText}
+              onPointerUp={finishSavedTextResize}
+              onPointerCancel={finishSavedTextResize}
+            />
+          ))}
+        </div>
+      ) : null}
       {pending.map((item) => {
         if (item.kind !== "text") return null;
         const bounds = getAnnotationBounds(item.points);
@@ -1226,12 +1566,12 @@ export function AnnotationCanvas({
             placeholder="Type here"
             value={textDraft.text}
             style={{
-              color,
+              color: textDraft.color,
               fontSize: `${textEditorFontSize}px`,
-              fontFamily: textFontStack(textFormat.fontFamily),
-              fontWeight: textFormat.bold ? 700 : 400,
-              fontStyle: textFormat.italic ? "italic" : "normal",
-              textAlign: textFormat.textAlign,
+              fontFamily: textFontStack(textDraft.fontFamily),
+              fontWeight: textDraft.fontWeight,
+              fontStyle: textDraft.fontStyle,
+              textAlign: textDraft.textAlign,
             }}
             onPointerDown={(event) => event.stopPropagation()}
             onChange={(event) =>
@@ -1279,6 +1619,216 @@ export function AnnotationCanvas({
               onPointerCancel={finishTextResize}
             />
           ))}
+        </div>
+      ) : null}
+      {contextualText && contextualTextBounds ? (
+        <div
+          className={styles.textContextToolbar}
+          data-placement={textToolbarAbove ? "above" : "below"}
+          data-text-settings="true"
+          data-text-context-controls="true"
+          role="toolbar"
+          aria-label="Text formatting"
+          style={{
+            top: `${
+              (textToolbarAbove
+                ? contextualTextBounds.y
+                : contextualTextBounds.y + contextualTextBounds.height) * 100
+            }%`,
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          {!textDraft && selected?.kind === "text" ? (
+            <button
+              type="button"
+              aria-label="Edit text"
+              title="Edit text"
+              onClick={() => beginTextEdit(selected)}
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m4 13.5-.5 3 3-.5L15 7.5 12.5 5 4 13.5ZM11.5 6l2.5 2.5" />
+              </svg>
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={styles.contextColor}
+            aria-label="Choose text color"
+            title="Text color"
+            aria-expanded={textPaletteOpen}
+            onClick={() => setTextPaletteOpen((open) => !open)}
+          >
+            <span
+              aria-hidden="true"
+              style={{ backgroundColor: contextualText.color }}
+            />
+          </button>
+          <label className={styles.contextFont}>
+            <span className={styles.srOnly}>Font</span>
+            <select
+              value={contextualText.fontFamily}
+              aria-label="Font"
+              style={{ fontFamily: textFontStack(contextualText.fontFamily) }}
+              onChange={(event) =>
+                updateContextualTextStyle({
+                  fontFamily: event.target.value as TextFormat["fontFamily"],
+                })
+              }
+            >
+              {textFontFamilies.map((font) => (
+                <option
+                  key={font}
+                  value={font}
+                  style={{ fontFamily: textFontStack(font) }}
+                >
+                  {font[0].toUpperCase() + font.slice(1)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div
+            className={styles.contextSize}
+            role="group"
+            aria-label="Text size"
+          >
+            <button
+              type="button"
+              aria-label="Decrease text size"
+              onClick={() =>
+                updateContextualTextStyle({
+                  fontSize: Math.max(0.01, contextualText.fontSize - 0.002),
+                })
+              }
+            >
+              −
+            </button>
+            <output aria-live="polite">
+              {Math.round(contextualText.fontSize * 842)}
+            </output>
+            <button
+              type="button"
+              aria-label="Increase text size"
+              onClick={() =>
+                updateContextualTextStyle({
+                  fontSize: Math.min(0.0855, contextualText.fontSize + 0.002),
+                })
+              }
+            >
+              +
+            </button>
+          </div>
+          <button
+            type="button"
+            className={styles.contextFormat}
+            aria-label="Bold"
+            title="Bold"
+            aria-pressed={contextualText.fontWeight === 700}
+            onClick={() =>
+              updateContextualTextStyle({
+                fontWeight: contextualText.fontWeight === 700 ? 400 : 700,
+              })
+            }
+          >
+            <strong>B</strong>
+          </button>
+          <button
+            type="button"
+            className={styles.contextFormat}
+            aria-label="Italic"
+            title="Italic"
+            aria-pressed={contextualText.fontStyle === "italic"}
+            onClick={() =>
+              updateContextualTextStyle({
+                fontStyle:
+                  contextualText.fontStyle === "italic" ? "normal" : "italic",
+              })
+            }
+          >
+            <em>I</em>
+          </button>
+          <div
+            className={styles.contextAlignment}
+            role="group"
+            aria-label="Text alignment"
+          >
+            {(["left", "center", "right"] as const).map((alignment) => (
+              <button
+                type="button"
+                key={alignment}
+                aria-label={`Align ${alignment}`}
+                title={`Align ${alignment}`}
+                aria-pressed={contextualText.textAlign === alignment}
+                onClick={() =>
+                  updateContextualTextStyle({ textAlign: alignment })
+                }
+              >
+                <span data-align={alignment} aria-hidden="true">
+                  ≡
+                </span>
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className={styles.contextDelete}
+            aria-label="Delete text box"
+            title="Delete text box"
+            disabled={operations > 0}
+            onClick={deleteContextualText}
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M4.5 5.5h11M8 3.5h4M6.5 5.5l.6 10h5.8l.6-10M8.5 8v5M11.5 8v5" />
+            </svg>
+          </button>
+        </div>
+      ) : null}
+      {contextualText && contextualTextBounds && textPaletteOpen ? (
+        <div
+          className={styles.textContextPalette}
+          data-placement={textToolbarAbove ? "above" : "below"}
+          data-text-settings="true"
+          data-text-context-controls="true"
+          role="dialog"
+          aria-label="Text color palette"
+          style={{
+            top: `${
+              (textToolbarAbove
+                ? contextualTextBounds.y
+                : contextualTextBounds.y + contextualTextBounds.height) * 100
+            }%`,
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <h2>Text color</h2>
+          <div className={styles.contextPaletteGrid}>
+            {annotationPalette.map((paletteColor) => (
+              <button
+                type="button"
+                key={paletteColor}
+                className={styles.contextSwatch}
+                style={{ backgroundColor: paletteColor }}
+                aria-label={`Use ${paletteColor}`}
+                title={paletteColor}
+                aria-pressed={contextualText.color === paletteColor}
+                onClick={() => {
+                  updateContextualTextStyle({ color: paletteColor });
+                  setTextPaletteOpen(false);
+                }}
+              />
+            ))}
+          </div>
+          <label className={styles.contextCustomColor}>
+            <span className={styles.contextColorWheel} aria-hidden="true" />
+            <span>Custom color</span>
+            <input
+              type="color"
+              value={contextualText.color}
+              aria-label="Choose a custom text color"
+              onChange={(event) =>
+                updateContextualTextStyle({ color: event.target.value })
+              }
+            />
+          </label>
         </div>
       ) : null}
       {error || failed.length ? (

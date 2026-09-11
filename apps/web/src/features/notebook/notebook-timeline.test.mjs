@@ -11,7 +11,13 @@ import {
   scaleNotebookZoom,
   selectionAfterNoteDeletion,
   rememberExpandedDocument,
+  timelineHash,
 } from "./notebook-timeline.ts";
+
+test("timeline hashes preserve the exact visible notebook entry", () => {
+  assert.equal(timelineHash("note:page-2"), "#note%3Apage-2");
+  assert.equal(timelineHash("pdf:document-1:9"), "#pdf%3Adocument-1%3A9");
+});
 
 const note = (id, position, extra = {}) => ({
   id,

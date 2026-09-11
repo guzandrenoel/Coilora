@@ -66,13 +66,43 @@ export function getAnnotationBounds(points: AnnotationPoint[], padding = 0) {
 export function createTextBoxPoints(
   anchor: AnnotationPoint,
   width = 0.32,
-  height = 0.12,
+  height = 0.06,
 ): [AnnotationPoint, AnnotationPoint] {
   const x = Math.min(anchor.x, 1 - width);
   const y = Math.min(anchor.y, 1 - height);
   return [
     { x, y },
     { x: x + width, y: y + height },
+  ];
+}
+
+export function resizeTextBoxPoints(
+  points: AnnotationPoint[],
+  handle: "left" | "right",
+  deltaX: number,
+  deltaY: number,
+  minimumWidth = 0.08,
+  minimumHeight = 0.05,
+): [AnnotationPoint, AnnotationPoint] {
+  const bounds = getAnnotationBounds(points);
+  const right = bounds.x + bounds.width;
+  const bottom = bounds.y + bounds.height;
+  const left =
+    handle === "left"
+      ? Math.max(0, Math.min(right - minimumWidth, bounds.x + deltaX))
+      : bounds.x;
+  const resizedRight =
+    handle === "right"
+      ? Math.min(1, Math.max(left + minimumWidth, right + deltaX))
+      : right;
+  const resizedBottom = Math.min(
+    1,
+    Math.max(bounds.y + minimumHeight, bottom + deltaY),
+  );
+
+  return [
+    { x: left, y: bounds.y },
+    { x: resizedRight, y: resizedBottom },
   ];
 }
 

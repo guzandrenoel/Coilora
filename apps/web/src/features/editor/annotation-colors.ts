@@ -1,0 +1,17 @@
+export const annotationPalette = [
+  "#111111",
+  "#666666",
+  "#a3a3a3",
+  "#d4d4d4",
+  "#ffffff",
+  "#ff1f1f",
+  "#9c36a4",
+  "#ff5d62",
+  "#ff9aa2",
+  "#ff9e2c",
+  "#1687ea",
+  "#155a9c",
+  "#119c6b",
+  "#76c442",
+  "#fff36a",
+] as const;

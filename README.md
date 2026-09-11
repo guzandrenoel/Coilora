@@ -62,7 +62,7 @@ Collapsing a document group hides its sidebar thumbnails, not its pages in the c
 - Authenticated delete and restore requests with owner checks. Deleted pages are excluded from normal page lists and cannot be edited through the API.
 - Notes can be placed before the first PDF page or after a selected PDF page.
 - Pen, pencil, highlighter, partial eraser, stroke eraser, and typed text tools for note pages and PDFs.
-- Typed text boxes support five font choices, text sizing, color, bold, italic, alignment, resizing, and an optional pinned text tool for adding several boxes.
+- Typed text boxes support five font choices, text sizing, color, bold, italic, alignment, compact contextual controls, width resizing with automatic line wrapping, and deletion.
 - Select and drag saved strokes while keeping them within page boundaries.
 - Undo and redo the latest 100 annotation creates, moves, and erases from the current viewer session, including standard keyboard shortcuts.
 - Icon-only drawing tools with a responsive contextual settings dock.
