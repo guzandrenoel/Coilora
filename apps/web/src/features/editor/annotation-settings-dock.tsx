@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { HighlighterIcon, PenIcon, TextIcon } from "@/components/ui/icons";
 import {
   selectDrawingColor,
@@ -13,6 +8,12 @@ import {
   type DrawingTool,
 } from "./annotation-tool-settings";
 import styles from "./annotation-settings-dock.module.css";
+import {
+  defaultTextFormat,
+  textFontFamilies,
+  textFontStack,
+  type TextFormat,
+} from "./text-format";
 
 const palette = [
   "#111111",
@@ -64,11 +65,19 @@ export function AnnotationSettingsDock({
   style,
   sidebarOpen,
   onChange,
+  textFormat = defaultTextFormat,
+  textPinned = false,
+  onTextFormatChange,
+  onTextPinnedChange,
 }: {
   tool: DrawingTool;
   style: DrawingStyle;
   sidebarOpen: boolean;
   onChange: (style: DrawingStyle) => void;
+  textFormat?: TextFormat;
+  textPinned?: boolean;
+  onTextFormatChange?: (format: TextFormat) => void;
+  onTextPinnedChange?: (pinned: boolean) => void;
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -106,16 +115,22 @@ export function AnnotationSettingsDock({
       ref={shellRef}
       className={styles.shell}
       data-sidebar-open={sidebarOpen}
+      data-text-settings={tool === "text" || undefined}
     >
       <div
         className={styles.dock}
+        data-text-toolbar={tool === "text" || undefined}
         role="group"
         aria-label={`${tool} settings`}
       >
         <div
           className={styles.toolMarker}
           title={
-            tool === "ink" ? "Pen" : tool === "highlight" ? "Highlighter" : "Text"
+            tool === "ink"
+              ? "Pen"
+              : tool === "highlight"
+                ? "Highlighter"
+                : "Text"
           }
         >
           {tool === "ink" ? (
@@ -127,90 +142,238 @@ export function AnnotationSettingsDock({
           )}
         </div>
         <div className={styles.divider} />
-        <div
-          className={styles.widths}
-          role="group"
-          aria-label={tool === "text" ? "Text size" : "Stroke thickness"}
-        >
-          {widths[tool].map((option) => (
+        {tool === "text" ? (
+          <>
             <button
               type="button"
-              key={option.value}
-              aria-label={
-                tool === "text"
-                  ? `Use ${option.label.toLowerCase()} text`
-                  : `Use ${option.label.toLowerCase()} ${tool === "ink" ? "pen" : "highlighter"} thickness`
-              }
-              title={`${option.label} ${tool === "text" ? "text" : "thickness"}`}
-              aria-pressed={style.width === option.value}
-              onClick={() => onChange({ ...style, width: option.value })}
-            >
-              {tool === "text" ? (
-                <span
-                  className={styles.textSizeSample}
-                  style={{ fontSize: `${option.sample}px` }}
-                >
-                  A
-                </span>
-              ) : (
-                <span
-                  className={styles.widthSample}
-                  style={
-                    { "--sample-width": `${option.sample}px` } as CSSProperties
-                  }
-                />
-              )}
-            </button>
-          ))}
-        </div>
-        {tool === "highlight" ? (
-          <>
-            <div className={styles.divider} />
+              className={styles.currentColor}
+              style={{ backgroundColor: style.color }}
+              aria-label="Choose text color"
+              title="Text color"
+              aria-expanded={paletteOpen}
+              onClick={() => setPaletteOpen((open) => !open)}
+            />
             <div
-              className={styles.opacities}
+              className={styles.textSize}
               role="group"
-              aria-label="Highlighter opacity"
+              aria-label="Text size"
             >
-              {highlighterOpacities.map((option) => (
+              <button
+                type="button"
+                aria-label="Decrease text size"
+                onClick={() =>
+                  onChange({
+                    ...style,
+                    width: Math.max(
+                      0.01,
+                      Math.round((style.width - 0.002) * 1000) / 1000,
+                    ),
+                  })
+                }
+              >
+                −
+              </button>
+              <output aria-live="polite">
+                {Math.round(style.width * 842)}
+              </output>
+              <input
+                type="range"
+                min="10"
+                max="72"
+                step="1"
+                value={Math.round(style.width * 842)}
+                aria-label="Text size"
+                onChange={(event) =>
+                  onChange({
+                    ...style,
+                    width: Number(event.target.value) / 842,
+                  })
+                }
+              />
+              <button
+                type="button"
+                aria-label="Increase text size"
+                onClick={() =>
+                  onChange({
+                    ...style,
+                    width: Math.min(
+                      0.0855,
+                      Math.round((style.width + 0.002) * 1000) / 1000,
+                    ),
+                  })
+                }
+              >
+                +
+              </button>
+            </div>
+            <label className={styles.fontPicker}>
+              <span className={styles.srOnly}>Font</span>
+              <select
+                value={textFormat.fontFamily}
+                aria-label="Font"
+                style={{ fontFamily: textFontStack(textFormat.fontFamily) }}
+                onChange={(event) =>
+                  onTextFormatChange?.({
+                    ...textFormat,
+                    fontFamily: event.target.value as TextFormat["fontFamily"],
+                  })
+                }
+              >
+                {textFontFamilies.map((font) => (
+                  <option key={font} value={font}>
+                    {font[0].toUpperCase() + font.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className={styles.formatButton}
+              aria-label="Bold"
+              title="Bold"
+              aria-pressed={textFormat.bold}
+              onClick={() =>
+                onTextFormatChange?.({ ...textFormat, bold: !textFormat.bold })
+              }
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              type="button"
+              className={styles.formatButton}
+              aria-label="Italic"
+              title="Italic"
+              aria-pressed={textFormat.italic}
+              onClick={() =>
+                onTextFormatChange?.({
+                  ...textFormat,
+                  italic: !textFormat.italic,
+                })
+              }
+            >
+              <em>I</em>
+            </button>
+            <div
+              className={styles.alignment}
+              role="group"
+              aria-label="Text alignment"
+            >
+              {(["left", "center", "right"] as const).map((alignment) => (
                 <button
                   type="button"
-                  key={option.value}
-                  aria-label={`Use ${option.label.toLowerCase()} highlighter opacity`}
-                  title={`${option.label} opacity`}
-                  aria-pressed={style.opacity === option.value}
-                  onClick={() => onChange({ ...style, opacity: option.value })}
+                  key={alignment}
+                  aria-label={`Align ${alignment}`}
+                  title={`Align ${alignment}`}
+                  aria-pressed={textFormat.textAlign === alignment}
+                  onClick={() =>
+                    onTextFormatChange?.({
+                      ...textFormat,
+                      textAlign: alignment,
+                    })
+                  }
                 >
-                  <span style={{ opacity: option.value }} />
+                  <span data-align={alignment} aria-hidden="true">
+                    ≡
+                  </span>
                 </button>
               ))}
             </div>
-          </>
-        ) : null}
-        <div className={styles.divider} />
-        <div className={styles.quickColors} role="group" aria-label="Recent colors">
-          {style.recentColors.map((color) => (
+            <div className={styles.divider} />
             <button
               type="button"
-              key={color}
-              className={styles.swatch}
-              style={{ backgroundColor: color }}
-              aria-label={`Use ${color}`}
-              title={color}
-              aria-pressed={style.color === color}
-              onClick={() => chooseColor(color)}
-            />
-          ))}
-          <button
-            type="button"
-            className={styles.paletteTrigger}
-            aria-label="Choose another color"
-            title="Choose another color"
-            aria-expanded={paletteOpen}
-            onClick={() => setPaletteOpen((open) => !open)}
-          >
-            <span aria-hidden="true">+</span>
-          </button>
-        </div>
+              className={styles.pinButton}
+              aria-label={textPinned ? "Unpin text tool" : "Pin text tool"}
+              title={textPinned ? "Unpin text tool" : "Pin text tool"}
+              aria-pressed={textPinned}
+              onClick={() => onTextPinnedChange?.(!textPinned)}
+            >
+              <span aria-hidden="true">⌖</span>
+              <span>{textPinned ? "Pinned" : "Pin"}</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <div
+              className={styles.widths}
+              role="group"
+              aria-label="Stroke thickness"
+            >
+              {widths[tool].map((option) => (
+                <button
+                  type="button"
+                  key={option.value}
+                  aria-label={`Use ${option.label.toLowerCase()} ${tool === "ink" ? "pen" : "highlighter"} thickness`}
+                  title={`${option.label} thickness`}
+                  aria-pressed={style.width === option.value}
+                  onClick={() => onChange({ ...style, width: option.value })}
+                >
+                  <span
+                    className={styles.widthSample}
+                    style={
+                      {
+                        "--sample-width": `${option.sample}px`,
+                      } as CSSProperties
+                    }
+                  />
+                </button>
+              ))}
+            </div>
+            {tool === "highlight" ? (
+              <>
+                <div className={styles.divider} />
+                <div
+                  className={styles.opacities}
+                  role="group"
+                  aria-label="Highlighter opacity"
+                >
+                  {highlighterOpacities.map((option) => (
+                    <button
+                      type="button"
+                      key={option.value}
+                      aria-label={`Use ${option.label.toLowerCase()} highlighter opacity`}
+                      title={`${option.label} opacity`}
+                      aria-pressed={style.opacity === option.value}
+                      onClick={() =>
+                        onChange({ ...style, opacity: option.value })
+                      }
+                    >
+                      <span style={{ opacity: option.value }} />
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+            <div className={styles.divider} />
+            <div
+              className={styles.quickColors}
+              role="group"
+              aria-label="Recent colors"
+            >
+              {style.recentColors.map((color) => (
+                <button
+                  type="button"
+                  key={color}
+                  className={styles.swatch}
+                  style={{ backgroundColor: color }}
+                  aria-label={`Use ${color}`}
+                  title={color}
+                  aria-pressed={style.color === color}
+                  onClick={() => chooseColor(color)}
+                />
+              ))}
+              <button
+                type="button"
+                className={styles.paletteTrigger}
+                aria-label="Choose another color"
+                title="Choose another color"
+                aria-expanded={paletteOpen}
+                onClick={() => setPaletteOpen((open) => !open)}
+              >
+                <span aria-hidden="true">+</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
       {paletteOpen ? (
         <div

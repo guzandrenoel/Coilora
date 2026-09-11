@@ -13,6 +13,15 @@ import {
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const colorPattern = /^#[0-9a-f]{6}$/i;
+const fontFamilies = [
+  "modern",
+  "classic",
+  "rounded",
+  "typewriter",
+  "handwritten",
+] as const;
+const fontStyles = ["normal", "italic"] as const;
+const textAlignments = ["left", "center", "right"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -70,8 +79,21 @@ function isAnnotation(
         typeof value.font_size === "number" &&
         Number.isFinite(value.font_size) &&
         value.font_size >= 0.01 &&
-        value.font_size <= 0.12
-      : value.text_content === null && value.font_size === null) &&
+        value.font_size <= 0.12 &&
+        fontFamilies.includes(
+          value.font_family as (typeof fontFamilies)[number],
+        ) &&
+        (value.font_weight === 400 || value.font_weight === 700) &&
+        fontStyles.includes(value.font_style as (typeof fontStyles)[number]) &&
+        textAlignments.includes(
+          value.text_align as (typeof textAlignments)[number],
+        )
+      : value.text_content === null &&
+        value.font_size === null &&
+        value.font_family === null &&
+        value.font_weight === null &&
+        value.font_style === null &&
+        value.text_align === null) &&
     typeof value.z_index === "number" &&
     Number.isSafeInteger(value.z_index) &&
     value.z_index > 0 &&
@@ -151,8 +173,21 @@ export async function createDocumentPageAnnotation(
         typeof input.fontSize !== "number" ||
         !Number.isFinite(input.fontSize) ||
         input.fontSize < 0.01 ||
-        input.fontSize > 0.12
-      : input.text !== undefined || input.fontSize !== undefined)
+        input.fontSize > 0.12 ||
+        !fontFamilies.includes(
+          input.fontFamily as (typeof fontFamilies)[number],
+        ) ||
+        (input.fontWeight !== 400 && input.fontWeight !== 700) ||
+        !fontStyles.includes(input.fontStyle as (typeof fontStyles)[number]) ||
+        !textAlignments.includes(
+          input.textAlign as (typeof textAlignments)[number],
+        )
+      : input.text !== undefined ||
+        input.fontSize !== undefined ||
+        input.fontFamily !== undefined ||
+        input.fontWeight !== undefined ||
+        input.fontStyle !== undefined ||
+        input.textAlign !== undefined)
   ) {
     throw new Error("Choose a valid annotation.");
   }
@@ -202,14 +237,21 @@ export async function updateDocumentPageAnnotation(
     !Array.isArray(input.points) ||
     input.points.length < 2 ||
     input.points.length > 4096 ||
-    !input.points.every(isPoint)
-    || (input.text !== undefined &&
-      (input.text.trim().length < 1 || input.text.length > 2000))
-    || (input.fontSize !== undefined &&
+    !input.points.every(isPoint) ||
+    (input.text !== undefined &&
+      (input.text.trim().length < 1 || input.text.length > 2000)) ||
+    (input.fontSize !== undefined &&
       (!Number.isFinite(input.fontSize) ||
         input.fontSize < 0.01 ||
-        input.fontSize > 0.12))
-    || (input.color !== undefined && !colorPattern.test(input.color))
+        input.fontSize > 0.12)) ||
+    (input.color !== undefined && !colorPattern.test(input.color)) ||
+    (input.fontFamily !== undefined &&
+      !fontFamilies.includes(input.fontFamily)) ||
+    (input.fontWeight !== undefined &&
+      input.fontWeight !== 400 &&
+      input.fontWeight !== 700) ||
+    (input.fontStyle !== undefined && !fontStyles.includes(input.fontStyle)) ||
+    (input.textAlign !== undefined && !textAlignments.includes(input.textAlign))
   ) {
     throw new Error("Choose a valid annotation position.");
   }

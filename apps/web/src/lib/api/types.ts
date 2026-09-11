@@ -103,6 +103,11 @@ export type PageAnnotation = {
   opacity: number;
   text_content: string | null;
   font_size: number | null;
+  font_family:
+    "modern" | "classic" | "rounded" | "typewriter" | "handwritten" | null;
+  font_weight: 400 | 700 | null;
+  font_style: "normal" | "italic" | null;
+  text_align: "left" | "center" | "right" | null;
   z_index: number;
   revision: number;
   created_at: string;
@@ -118,6 +123,10 @@ export type CreateAnnotationInput = {
   opacity: number;
   text?: string;
   fontSize?: number;
+  fontFamily?: "modern" | "classic" | "rounded" | "typewriter" | "handwritten";
+  fontWeight?: 400 | 700;
+  fontStyle?: "normal" | "italic";
+  textAlign?: "left" | "center" | "right";
 };
 
 export type UpdateAnnotationInput = {
@@ -126,4 +135,8 @@ export type UpdateAnnotationInput = {
   text?: string;
   fontSize?: number;
   color?: string;
+  fontFamily?: "modern" | "classic" | "rounded" | "typewriter" | "handwritten";
+  fontWeight?: 400 | 700;
+  fontStyle?: "normal" | "italic";
+  textAlign?: "left" | "center" | "right";
 };

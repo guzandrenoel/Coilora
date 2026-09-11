@@ -46,6 +46,9 @@ export type Database = {
           document_id: string | null;
           document_page_number: number | null;
           font_size: number | null;
+          font_family: string | null;
+          font_weight: number | null;
+          font_style: string | null;
           id: string;
           kind: string;
           notebook_page_id: string | null;
@@ -54,6 +57,7 @@ export type Database = {
           points: Json;
           revision: number;
           text_content: string | null;
+          text_align: string | null;
           updated_at: string;
           width: number;
           z_index: number;
@@ -64,6 +68,9 @@ export type Database = {
           document_id?: string | null;
           document_page_number?: number | null;
           font_size?: number | null;
+          font_family?: string | null;
+          font_weight?: number | null;
+          font_style?: string | null;
           id?: string;
           kind: string;
           notebook_page_id?: string | null;
@@ -72,6 +79,7 @@ export type Database = {
           points: Json;
           revision?: number;
           text_content?: string | null;
+          text_align?: string | null;
           updated_at?: string;
           width: number;
           z_index?: number;
@@ -82,6 +90,9 @@ export type Database = {
           document_id?: string | null;
           document_page_number?: number | null;
           font_size?: number | null;
+          font_family?: string | null;
+          font_weight?: number | null;
+          font_style?: string | null;
           id?: string;
           kind?: string;
           notebook_page_id?: string | null;
@@ -90,6 +101,7 @@ export type Database = {
           points?: Json;
           revision?: number;
           text_content?: string | null;
+          text_align?: string | null;
           updated_at?: string;
           width?: number;
           z_index?: number;

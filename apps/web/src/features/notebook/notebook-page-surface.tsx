@@ -6,6 +6,7 @@ import {
 } from "@/features/editor/annotation-canvas";
 import type { AnnotationHistoryEntry } from "@/lib/api/annotation-target-client";
 import type { EraserMode } from "@/features/editor/eraser-settings";
+import type { TextFormat } from "@/features/editor/text-format";
 import { PdfPageCanvas } from "./pdf-page-canvas";
 import type { NotebookPdfPool } from "./notebook-pdf-pool";
 import type { PageSize, TimelineRow } from "./notebook-timeline";
@@ -21,12 +22,15 @@ export function NotebookPageSurface({
   color,
   strokeWidth,
   opacity,
+  textFormat,
   visible,
   onSize,
   onBusy,
   annotationRefreshVersion,
   editorDisabled,
   onAnnotationCommit,
+  onTextStyleSelect,
+  onTextFinished,
 }: {
   row: TimelineRow;
   notebookId: string;
@@ -37,12 +41,19 @@ export function NotebookPageSurface({
   color: string;
   strokeWidth: number;
   opacity: number;
+  textFormat: TextFormat;
   visible: boolean;
   onSize: (key: string, size: PageSize) => void;
   onBusy: (key: string, busy: boolean) => void;
   annotationRefreshVersion: number;
   editorDisabled: boolean;
   onAnnotationCommit: (entry: AnnotationHistoryEntry) => void;
+  onTextStyleSelect: (style: {
+    color: string;
+    fontSize: number;
+    format: TextFormat;
+  }) => void;
+  onTextFinished: () => void;
 }) {
   const entry = row.entry;
   const [pdfReady, setPdfReady] = useState(false);
@@ -104,10 +115,13 @@ export function NotebookPageSurface({
             color={color}
             strokeWidth={strokeWidth}
             opacity={opacity}
+            textFormat={textFormat}
             disabled={editorDisabled}
             refreshVersion={annotationRefreshVersion}
             onBusyChange={reportBusy}
             onCommit={onAnnotationCommit}
+            onTextStyleSelect={onTextStyleSelect}
+            onTextFinished={onTextFinished}
           />
         ) : null}
       </div>

@@ -25,11 +25,12 @@ begin
 
   insert into public.annotations (
     owner_id, notebook_page_id, kind, points, color, width, opacity,
-    text_content, font_size
+    text_content, font_size, font_family, font_weight, font_style, text_align
   ) values (
     test_owner, test_page, 'text',
     '[{"x":0.2,"y":0.2},{"x":0.52,"y":0.32}]',
-    '#173f5f', 0.002, 1, 'Key finding', 0.025
+    '#173f5f', 0.002, 1, 'Key finding', 0.025,
+    'classic', 700, 'italic', 'center'
   ) returning id into text_annotation;
 
   if not exists (
@@ -39,6 +40,10 @@ begin
       and owner_id = test_owner
       and text_content = 'Key finding'
       and font_size = 0.025
+      and font_family = 'classic'
+      and font_weight = 700
+      and font_style = 'italic'
+      and text_align = 'center'
   ) then
     raise exception 'Text annotation was not stored for its owner';
   end if;

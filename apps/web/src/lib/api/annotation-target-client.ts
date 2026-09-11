@@ -51,6 +51,10 @@ export function annotationCreateInput(
       ? {
           text: annotation.text_content ?? "",
           fontSize: annotation.font_size ?? 0.025,
+          fontFamily: annotation.font_family ?? "modern",
+          fontWeight: annotation.font_weight ?? 400,
+          fontStyle: annotation.font_style ?? "normal",
+          textAlign: annotation.text_align ?? "left",
         }
       : {}),
   };

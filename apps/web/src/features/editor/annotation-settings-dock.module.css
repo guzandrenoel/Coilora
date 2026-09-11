@@ -44,6 +44,98 @@
 .dock button[aria-pressed="true"] {
   background: #e7ecea;
 }
+.dock[data-text-toolbar="true"] {
+  min-height: 50px;
+  padding: 0.3rem 0.45rem;
+  border-radius: 16px;
+}
+.dock[data-text-toolbar="true"] button {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+}
+.dock .currentColor {
+  width: 28px;
+  height: 28px;
+  margin-inline: 0.15rem;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line-strong);
+}
+.textSize {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 0.2rem;
+}
+.textSize output {
+  min-width: 24px;
+  color: var(--ink);
+  text-align: center;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.textSize input {
+  width: 82px;
+  accent-color: var(--blue);
+}
+.fontPicker {
+  flex: none;
+}
+.fontPicker select {
+  min-width: 104px;
+  height: 36px;
+  padding: 0 1.8rem 0 0.65rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.fontPicker select:hover {
+  background-color: #e7ecea;
+}
+.formatButton {
+  font-family: Georgia, serif;
+  font-size: 1rem;
+}
+.alignment {
+  display: flex;
+  flex: none;
+  gap: 0.1rem;
+}
+.alignment span {
+  display: block;
+  width: 18px;
+  overflow: hidden;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.alignment span[data-align="left"] {
+  text-align: left;
+}
+.alignment span[data-align="center"] {
+  text-align: center;
+}
+.alignment span[data-align="right"] {
+  text-align: right;
+}
+.dock .pinButton {
+  display: inline-flex;
+  width: auto;
+  padding-inline: 0.55rem;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .toolMarker {
   display: inline-grid;
   place-items: center;

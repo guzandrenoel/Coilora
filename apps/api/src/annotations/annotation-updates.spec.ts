@@ -126,15 +126,13 @@ describe('annotation updates', () => {
       text: 'Updated explanation',
       fontSize: 0.03,
       color: '#173f5f',
+      fontFamily: 'rounded',
+      fontWeight: 700,
+      fontStyle: 'italic',
+      textAlign: 'right',
     };
 
-    await notes.update(
-      user,
-      notebookId,
-      pageId,
-      annotationId,
-      textUpdate,
-    );
+    await notes.update(user, notebookId, pageId, annotationId, textUpdate);
 
     expect(annotation.update).toHaveBeenCalledWith({
       points: input.points,
@@ -142,6 +140,10 @@ describe('annotation updates', () => {
       text_content: 'Updated explanation',
       font_size: 0.03,
       color: '#173f5f',
+      font_family: 'rounded',
+      font_weight: 700,
+      font_style: 'italic',
+      text_align: 'right',
     });
   });
 

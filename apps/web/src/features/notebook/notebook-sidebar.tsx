@@ -17,6 +17,7 @@ import {
 import { PdfPageCanvas } from "./pdf-page-canvas";
 import { NotebookPageMenu } from "./notebook-page-menu";
 import { NotebookTrash } from "./notebook-trash";
+import { textFontStack } from "@/features/editor/text-format";
 import styles from "./notebook-viewer.module.css";
 
 type Props = {
@@ -450,6 +451,10 @@ function ThumbnailAnnotations({
                 style={{
                   color: annotation.color,
                   fontSize: `${annotation.font_size ?? 0.025}px`,
+                  fontFamily: textFontStack(annotation.font_family ?? "modern"),
+                  fontWeight: annotation.font_weight ?? 400,
+                  fontStyle: annotation.font_style ?? "normal",
+                  textAlign: annotation.text_align ?? "left",
                   opacity: annotation.opacity,
                 }}
               >

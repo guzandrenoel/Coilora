@@ -8,6 +8,16 @@ export const annotationKindSchema = z.enum([
 ]);
 
 const normalizedCoordinateSchema = z.number().finite().min(0).max(1);
+const fontFamilySchema = z.enum([
+  'modern',
+  'classic',
+  'rounded',
+  'typewriter',
+  'handwritten',
+]);
+const fontWeightSchema = z.union([z.literal(400), z.literal(700)]);
+const fontStyleSchema = z.enum(['normal', 'italic']);
+const textAlignSchema = z.enum(['left', 'center', 'right']);
 
 export const annotationPointSchema = z
   .object({
@@ -31,6 +41,10 @@ export const createAnnotationSchema = z
     opacity: z.number().finite().min(0).max(1).default(1),
     text: z.string().trim().min(1).max(2000).optional(),
     fontSize: z.number().finite().min(0.01).max(0.12).optional(),
+    fontFamily: fontFamilySchema.optional(),
+    fontWeight: fontWeightSchema.optional(),
+    fontStyle: fontStyleSchema.optional(),
+    textAlign: textAlignSchema.optional(),
   })
   .strict()
   .superRefine((input, context) => {
@@ -49,7 +63,27 @@ export const createAnnotationSchema = z
           message: 'Choose a text size.',
         });
       }
-    } else if (input.text !== undefined || input.fontSize !== undefined) {
+      for (const [field, value] of [
+        ['fontFamily', input.fontFamily],
+        ['fontWeight', input.fontWeight],
+        ['fontStyle', input.fontStyle],
+        ['textAlign', input.textAlign],
+      ] as const) {
+        if (value === undefined)
+          context.addIssue({
+            code: 'custom',
+            path: [field],
+            message: 'Choose complete text formatting.',
+          });
+      }
+    } else if (
+      input.text !== undefined ||
+      input.fontSize !== undefined ||
+      input.fontFamily !== undefined ||
+      input.fontWeight !== undefined ||
+      input.fontStyle !== undefined ||
+      input.textAlign !== undefined
+    ) {
       context.addIssue({
         code: 'custom',
         path: ['kind'],
@@ -71,6 +105,10 @@ export const updateAnnotationSchema = z
       .string()
       .regex(/^#[0-9a-f]{6}$/i, 'Choose a valid annotation color.')
       .optional(),
+    fontFamily: fontFamilySchema.optional(),
+    fontWeight: fontWeightSchema.optional(),
+    fontStyle: fontStyleSchema.optional(),
+    textAlign: textAlignSchema.optional(),
   })
   .strict();
 

@@ -39,12 +39,20 @@ describe('annotation schemas', () => {
         kind: 'text',
         text: '  Important detail  ',
         fontSize: 0.025,
+        fontFamily: 'modern',
+        fontWeight: 400,
+        fontStyle: 'normal',
+        textAlign: 'left',
       }),
     ).toEqual({
       ...stroke,
       kind: 'text',
       text: 'Important detail',
       fontSize: 0.025,
+      fontFamily: 'modern',
+      fontWeight: 400,
+      fontStyle: 'normal',
+      textAlign: 'left',
     });
   });
 

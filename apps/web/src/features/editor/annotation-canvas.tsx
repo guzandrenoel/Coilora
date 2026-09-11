@@ -3,6 +3,7 @@ import { PencilStroke } from "@/features/editor/pencil-stroke";
 
 import {
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -35,6 +36,11 @@ import styles from "./annotation-canvas.module.css";
 import { eraseAtPoint, strokeIntersectsEraser } from "./annotation-eraser";
 import type { EraserMode } from "./eraser-settings";
 import { annotationCreateInput } from "@/lib/api/annotation-target-client";
+import {
+  defaultTextFormat,
+  textFontStack,
+  type TextFormat,
+} from "./text-format";
 
 export type EditorTool = AnnotationKind | "eraser" | "select";
 
@@ -49,11 +55,22 @@ type TextDraft = {
   text: string;
   color: string;
   fontSize: number;
+  fontFamily: TextFormat["fontFamily"];
+  fontWeight: 400 | 700;
+  fontStyle: "normal" | "italic";
+  textAlign: TextFormat["textAlign"];
 };
 
 type MoveGesture = {
   annotation: PageAnnotation;
   start: { x: number; y: number };
+};
+
+type ResizeGesture = {
+  handle: "left" | "right";
+  pointerId: number;
+  start: { x: number; y: number };
+  bounds: ReturnType<typeof getAnnotationBounds>;
 };
 
 const sorted = (items: PageAnnotation[]) =>
@@ -82,10 +99,13 @@ export function AnnotationCanvas({
   color,
   strokeWidth,
   opacity,
+  textFormat = defaultTextFormat,
   disabled = false,
   refreshVersion = 0,
   onBusyChange,
   onCommit,
+  onTextStyleSelect,
+  onTextFinished,
 }: {
   notebookId?: string;
   pageId?: string;
@@ -99,10 +119,17 @@ export function AnnotationCanvas({
   color: string;
   strokeWidth: number;
   opacity: number;
+  textFormat?: TextFormat;
   disabled?: boolean;
   refreshVersion?: number;
   onBusyChange?: (busy: boolean) => void;
   onCommit?: (entry: AnnotationHistoryEntry) => void;
+  onTextStyleSelect?: (style: {
+    color: string;
+    fontSize: number;
+    format: TextFormat;
+  }) => void;
+  onTextFinished?: () => void;
 }) {
   const target = useMemo<AnnotationTarget>(
     () =>
@@ -133,15 +160,28 @@ export function AnnotationCanvas({
   const [operations, setOperations] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const textEditorFrameRef = useRef<HTMLDivElement>(null);
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
   const activePointer = useRef<number | null>(null);
   const stroke = useRef<PendingAnnotation | null>(null);
   const moveGesture = useRef<MoveGesture | null>(null);
+  const resizeGesture = useRef<ResizeGesture | null>(null);
+  const committedTextDraft = useRef<TextDraft | null>(null);
   const moveDraftRef = useRef<PageAnnotation | null>(null);
   const saving = useRef(new Set<string>());
   const erasing = useRef(new Set<string>());
   const wipeFrame = useRef<number | null>(null);
   const wipeQueue = useRef<{ x: number; y: number }[]>([]);
+  const textStyleRef = useRef({
+    color,
+    fontSize: strokeWidth,
+    fontFamily: textFormat.fontFamily,
+    fontWeight: (textFormat.bold ? 700 : 400) as 400 | 700,
+    fontStyle: (textFormat.italic ? "italic" : "normal") as
+      | "normal"
+      | "italic",
+    textAlign: textFormat.textAlign,
+  });
   useEffect(
     () => () => {
       if (wipeFrame.current !== null) cancelAnimationFrame(wipeFrame.current);
@@ -173,6 +213,17 @@ export function AnnotationCanvas({
   useEffect(() => {
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
+
+  useLayoutEffect(() => {
+    textStyleRef.current = {
+      color,
+      fontSize: strokeWidth,
+      fontFamily: textFormat.fontFamily,
+      fontWeight: textFormat.bold ? 700 : 400,
+      fontStyle: textFormat.italic ? "italic" : "normal",
+      textAlign: textFormat.textAlign,
+    };
+  }, [color, strokeWidth, textFormat]);
 
   useLayoutEffect(() => {
     if (!textDraft) return;
@@ -291,6 +342,10 @@ export function AnnotationCanvas({
         text: "",
         color,
         fontSize: strokeWidth,
+        fontFamily: textFormat.fontFamily,
+        fontWeight: textFormat.bold ? 700 : 400,
+        fontStyle: textFormat.italic ? "italic" : "normal",
+        textAlign: textFormat.textAlign,
       });
       return;
     }
@@ -464,9 +519,15 @@ export function AnnotationCanvas({
   }
 
   async function commitText(draftToSave: TextDraft) {
+    if (committedTextDraft.current === draftToSave) return;
+    committedTextDraft.current = draftToSave;
+    draftToSave = { ...draftToSave, ...textStyleRef.current };
     const text = draftToSave.text.trim();
     setTextDraft(null);
-    if (!text) return;
+    if (!text) {
+      if (tool === "text") onTextFinished?.();
+      return;
+    }
 
     if (!draftToSave.annotation) {
       const pendingText: PendingAnnotation = {
@@ -478,10 +539,15 @@ export function AnnotationCanvas({
         opacity: 1,
         text,
         fontSize: draftToSave.fontSize,
+        fontFamily: draftToSave.fontFamily,
+        fontWeight: draftToSave.fontWeight,
+        fontStyle: draftToSave.fontStyle,
+        textAlign: draftToSave.textAlign,
       };
       setPending((items) => [...items, pendingText]);
       setError(null);
       void save(pendingText);
+      if (tool === "text") onTextFinished?.();
       return;
     }
 
@@ -489,19 +555,33 @@ export function AnnotationCanvas({
     if (
       before.text_content === text &&
       before.color === draftToSave.color &&
-      before.font_size === draftToSave.fontSize
+      before.font_size === draftToSave.fontSize &&
+      before.font_family === draftToSave.fontFamily &&
+      before.font_weight === draftToSave.fontWeight &&
+      before.font_style === draftToSave.fontStyle &&
+      before.text_align === draftToSave.textAlign &&
+      before.points.every(
+        (item, index) =>
+          item.x === draftToSave.points[index]?.x &&
+          item.y === draftToSave.points[index]?.y,
+      )
     ) {
+      if (tool === "text") onTextFinished?.();
       return;
     }
     setOperations((value) => value + 1);
     setError(null);
     try {
       const updated = await updateTargetAnnotation(target, before.id, {
-        points: before.points,
+        points: draftToSave.points,
         revision: before.revision,
         text,
         fontSize: draftToSave.fontSize,
         color: draftToSave.color,
+        fontFamily: draftToSave.fontFamily,
+        fontWeight: draftToSave.fontWeight,
+        fontStyle: draftToSave.fontStyle,
+        textAlign: draftToSave.textAlign,
       });
       setAnnotations((current) =>
         sorted(
@@ -517,7 +597,120 @@ export function AnnotationCanvas({
       );
     } finally {
       setOperations((value) => Math.max(0, value - 1));
+      if (tool === "text") onTextFinished?.();
     }
+  }
+
+  const commitCurrentText = useEffectEvent((draftToSave: TextDraft) => {
+    void commitText(draftToSave);
+  });
+
+  useEffect(() => {
+    if (!textDraft) return;
+
+    function commitWhenLeavingEditor(event: PointerEvent) {
+      if (!(event.target instanceof Element)) return;
+      if (
+        textEditorFrameRef.current?.contains(event.target) ||
+        event.target.closest('[data-text-settings="true"]')
+      ) {
+        return;
+      }
+      commitCurrentText(textDraft as TextDraft);
+    }
+
+    document.addEventListener("pointerdown", commitWhenLeavingEditor, true);
+    return () =>
+      document.removeEventListener(
+        "pointerdown",
+        commitWhenLeavingEditor,
+        true,
+      );
+  }, [textDraft]);
+
+  function beginTextEdit(annotation: PageAnnotation) {
+    const format: TextFormat = {
+      fontFamily: annotation.font_family ?? "modern",
+      bold: annotation.font_weight === 700,
+      italic: annotation.font_style === "italic",
+      textAlign: annotation.text_align ?? "left",
+    };
+    onTextStyleSelect?.({
+      color: annotation.color,
+      fontSize: annotation.font_size ?? defaultTextFontSize,
+      format,
+    });
+    setSelectedId(annotation.id);
+    setTextDraft({
+      annotation,
+      points: annotation.points,
+      text: annotation.text_content ?? "",
+      color: annotation.color,
+      fontSize: annotation.font_size ?? defaultTextFontSize,
+      fontFamily: format.fontFamily,
+      fontWeight: format.bold ? 700 : 400,
+      fontStyle: format.italic ? "italic" : "normal",
+      textAlign: format.textAlign,
+    });
+  }
+
+  function beginTextResize(
+    handle: ResizeGesture["handle"],
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) {
+    if (!textDraft || !textDraftBounds || event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    resizeGesture.current = {
+      handle,
+      pointerId: event.pointerId,
+      start: point(event.clientX, event.clientY),
+      bounds: textDraftBounds,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function resizeText(event: ReactPointerEvent<HTMLButtonElement>) {
+    const gesture = resizeGesture.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const current = point(event.clientX, event.clientY);
+    const deltaX = current.x - gesture.start.x;
+    const deltaY = current.y - gesture.start.y;
+    const right = gesture.bounds.x + gesture.bounds.width;
+    const bottom = gesture.bounds.y + gesture.bounds.height;
+    const left =
+      gesture.handle === "left"
+        ? Math.max(0, Math.min(right - 0.08, gesture.bounds.x + deltaX))
+        : gesture.bounds.x;
+    const resizedRight =
+      gesture.handle === "right"
+        ? Math.min(1, Math.max(left + 0.08, right + deltaX))
+        : right;
+    const resizedBottom = Math.min(
+      1,
+      Math.max(gesture.bounds.y + 0.05, bottom + deltaY),
+    );
+    setTextDraft((draftValue) =>
+      draftValue
+        ? {
+            ...draftValue,
+            points: [
+              { x: left, y: gesture.bounds.y },
+              { x: resizedRight, y: resizedBottom },
+            ],
+          }
+        : draftValue,
+    );
+  }
+
+  function finishTextResize(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (resizeGesture.current?.pointerId !== event.pointerId) return;
+    resizeGesture.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    textEditorRef.current?.focus();
   }
 
   function finish(event: ReactPointerEvent<SVGSVGElement>) {
@@ -811,7 +1004,7 @@ export function AnnotationCanvas({
     ? getAnnotationBounds(textDraft.points)
     : null;
   const textEditorFontSize = textDraft
-    ? Math.max(12, textDraft.fontSize * pageHeight)
+    ? Math.max(12, strokeWidth * pageHeight)
     : 16;
 
   return (
@@ -949,6 +1142,10 @@ export function AnnotationCanvas({
               width: `${bounds.width * 100}%`,
               height: `${bounds.height * 100}%`,
               color: annotation.color,
+              fontFamily: textFontStack(annotation.font_family ?? "modern"),
+              fontWeight: annotation.font_weight ?? 400,
+              fontStyle: annotation.font_style ?? "normal",
+              textAlign: annotation.text_align ?? "left",
               fontSize: `${Math.max(
                 12,
                 (annotation.font_size ?? defaultTextFontSize) * pageHeight,
@@ -956,25 +1153,24 @@ export function AnnotationCanvas({
               opacity: annotation.opacity,
               pointerEvents:
                 tool === "select" ||
+                tool === "text" ||
                 (tool === "eraser" && eraserMode === "stroke")
                   ? "auto"
                   : "none",
             }}
             onPointerDown={(event) => {
               if (tool === "eraser") void erase(annotation, event);
-              else beginMove(annotation, event);
+              else if (tool === "text") {
+                event.preventDefault();
+                event.stopPropagation();
+                beginTextEdit(annotation);
+              } else beginMove(annotation, event);
             }}
             onDoubleClick={(event) => {
               if (tool !== "select" || disabled || operations > 0) return;
               event.preventDefault();
               event.stopPropagation();
-              setTextDraft({
-                annotation,
-                points: annotation.points,
-                text: annotation.text_content ?? "",
-                color: annotation.color,
-                fontSize: annotation.font_size ?? defaultTextFontSize,
-              });
+              beginTextEdit(annotation);
             }}
           >
             {annotation.text_content}
@@ -994,6 +1190,10 @@ export function AnnotationCanvas({
               width: `${bounds.width * 100}%`,
               height: `${bounds.height * 100}%`,
               color: item.color,
+              fontFamily: textFontStack(item.fontFamily ?? "modern"),
+              fontWeight: item.fontWeight ?? 400,
+              fontStyle: item.fontStyle ?? "normal",
+              textAlign: item.textAlign ?? "left",
               fontSize: `${Math.max(
                 12,
                 (item.fontSize ?? defaultTextFontSize) * pageHeight,
@@ -1007,43 +1207,79 @@ export function AnnotationCanvas({
         );
       })}
       {textDraft && textDraftBounds ? (
-        <textarea
-          ref={textEditorRef}
-          className={styles.textEditor}
-          autoFocus
-          maxLength={2000}
-          aria-label="Text annotation"
-          placeholder="Type here"
-          value={textDraft.text}
+        <div
+          ref={textEditorFrameRef}
+          className={styles.textEditorFrame}
           style={{
             left: `${textDraftBounds.x * 100}%`,
             top: `${textDraftBounds.y * 100}%`,
             width: `${textDraftBounds.width * 100}%`,
             height: `${textDraftBounds.height * 100}%`,
-            color: textDraft.color,
-            fontSize: `${textEditorFontSize}px`,
           }}
-          onPointerDown={(event) => event.stopPropagation()}
-          onChange={(event) =>
-            setTextDraft((current) =>
-              current ? { ...current, text: event.target.value } : current,
-            )
-          }
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              event.stopPropagation();
-              setTextDraft(null);
-            } else if (
-              event.key === "Enter" &&
-              (event.ctrlKey || event.metaKey)
-            ) {
-              event.preventDefault();
-              event.currentTarget.blur();
+        >
+          <textarea
+            ref={textEditorRef}
+            className={styles.textEditor}
+            autoFocus
+            maxLength={2000}
+            aria-label="Text annotation"
+            placeholder="Type here"
+            value={textDraft.text}
+            style={{
+              color,
+              fontSize: `${textEditorFontSize}px`,
+              fontFamily: textFontStack(textFormat.fontFamily),
+              fontWeight: textFormat.bold ? 700 : 400,
+              fontStyle: textFormat.italic ? "italic" : "normal",
+              textAlign: textFormat.textAlign,
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onChange={(event) =>
+              setTextDraft((current) =>
+                current ? { ...current, text: event.target.value } : current,
+              )
             }
-          }}
-          onBlur={() => void commitText(textDraft)}
-        />
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                setTextDraft(null);
+                if (tool === "text") onTextFinished?.();
+              } else if (
+                event.key === "Enter" &&
+                (event.ctrlKey || event.metaKey)
+              ) {
+                event.preventDefault();
+                event.currentTarget.blur();
+              }
+            }}
+            onBlur={(event) => {
+              const next = event.relatedTarget;
+              if (
+                next instanceof Element &&
+                (next.closest('[data-text-settings="true"]') ||
+                  next.closest('[data-text-resize-handle="true"]'))
+              ) {
+                return;
+              }
+              void commitText(textDraft);
+            }}
+          />
+          {(["left", "right"] as const).map((handle) => (
+            <button
+              type="button"
+              key={handle}
+              className={styles.textResizeHandle}
+              data-handle={handle}
+              data-text-resize-handle="true"
+              aria-label={`Resize text box from ${handle}`}
+              onPointerDown={(event) => beginTextResize(handle, event)}
+              onPointerMove={resizeText}
+              onPointerUp={finishTextResize}
+              onPointerCancel={finishTextResize}
+            />
+          ))}
+        </div>
       ) : null}
       {error || failed.length ? (
         <div className={styles.error}>

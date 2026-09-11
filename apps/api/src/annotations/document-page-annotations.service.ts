@@ -6,6 +6,15 @@ import {
 } from '@nestjs/common';
 
 import type { AuthenticatedUser } from '../auth/auth.types.js';
+import type {
+  AnnotationRecord,
+  LegacyAnnotationRecord,
+} from './annotation-format-compatibility.js';
+import {
+  isMissingAnnotationFormat,
+  legacyAnnotationSelection,
+  withLegacyTextFormat,
+} from './annotation-format-compatibility.js';
 import { UserDatabaseClientFactory } from '../database/user-database-client.factory.js';
 import type {
   CreateAnnotationInput,
@@ -24,6 +33,10 @@ const annotationSelection = [
   'opacity',
   'text_content',
   'font_size',
+  'font_family',
+  'font_weight',
+  'font_style',
+  'text_align',
   'z_index',
   'revision',
   'created_at',
@@ -48,7 +61,7 @@ export class DocumentPageAnnotationsService {
       documentPageNumber,
     );
     const offset = page * pageSize;
-    const { data, error } = await client
+    let { data, error } = await client
       .from('annotations')
       .select(annotationSelection)
       .eq('owner_id', user.id)
@@ -56,7 +69,23 @@ export class DocumentPageAnnotationsService {
       .eq('document_page_number', documentPageNumber)
       .is('notebook_page_id', null)
       .order('z_index', { ascending: true })
-      .range(offset, offset + pageSize);
+      .range(offset, offset + pageSize)
+      .returns<AnnotationRecord[]>();
+
+    if (isMissingAnnotationFormat(error)) {
+      const legacy = await client
+        .from('annotations')
+        .select(legacyAnnotationSelection(annotationSelection))
+        .eq('owner_id', user.id)
+        .eq('document_id', documentId)
+        .eq('document_page_number', documentPageNumber)
+        .is('notebook_page_id', null)
+        .order('z_index', { ascending: true })
+        .range(offset, offset + pageSize)
+        .returns<LegacyAnnotationRecord[]>();
+      error = legacy.error;
+      data = legacy.data?.map(withLegacyTextFormat) ?? null;
+    }
 
     if (error || !data) {
       throw new ServiceUnavailableException(
@@ -95,7 +124,14 @@ export class DocumentPageAnnotationsService {
         width: input.width,
         opacity: input.opacity,
         ...(input.kind === 'text'
-          ? { text_content: input.text, font_size: input.fontSize }
+          ? {
+              text_content: input.text,
+              font_size: input.fontSize,
+              font_family: input.fontFamily,
+              font_weight: input.fontWeight,
+              font_style: input.fontStyle,
+              text_align: input.textAlign,
+            }
           : {}),
       })
       .select(annotationSelection)
@@ -177,6 +213,18 @@ export class DocumentPageAnnotationsService {
         ...(input.text !== undefined ? { text_content: input.text } : {}),
         ...(input.fontSize !== undefined ? { font_size: input.fontSize } : {}),
         ...(input.color !== undefined ? { color: input.color } : {}),
+        ...(input.fontFamily !== undefined
+          ? { font_family: input.fontFamily }
+          : {}),
+        ...(input.fontWeight !== undefined
+          ? { font_weight: input.fontWeight }
+          : {}),
+        ...(input.fontStyle !== undefined
+          ? { font_style: input.fontStyle }
+          : {}),
+        ...(input.textAlign !== undefined
+          ? { text_align: input.textAlign }
+          : {}),
       })
       .eq('id', annotationId)
       .eq('owner_id', user.id)

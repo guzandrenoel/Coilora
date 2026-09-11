@@ -68,8 +68,6 @@
   overflow: hidden;
   cursor: grab;
   color: var(--navy);
-  font-family: Arial, sans-serif;
-  font-weight: 500;
   line-height: 1.25;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -80,21 +78,54 @@
   cursor: grabbing;
 }
 
-.textEditor {
+.textEditorFrame {
   position: absolute;
   z-index: 3;
+  box-sizing: border-box;
+  border: 2px solid var(--blue);
+  border-radius: 0.35rem;
+  box-shadow: 0 3px 12px rgb(18 61 86 / 16%);
+}
+
+.textEditor {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   resize: none;
   box-sizing: border-box;
   padding: 0.35rem 0.45rem;
-  border: 2px solid var(--blue);
-  border-radius: 0.35rem;
+  border: 0;
+  border-radius: inherit;
   outline: 0;
   background: rgb(255 255 255 / 94%);
-  box-shadow: 0 3px 12px rgb(18 61 86 / 16%);
   font-family: Arial, sans-serif;
-  font-weight: 500;
   line-height: 1.25;
   touch-action: manipulation;
+}
+
+.textResizeHandle {
+  position: absolute;
+  bottom: -7px;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 1px 4px rgb(18 61 86 / 25%);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.textResizeHandle[data-handle="left"] {
+  left: -7px;
+  cursor: nesw-resize;
+}
+
+.textResizeHandle[data-handle="right"] {
+  right: -7px;
 }
 
 .error {

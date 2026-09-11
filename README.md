@@ -18,7 +18,7 @@ The intended learning loop is:
 
 **Import → Annotate → Highlight → Understand → Practice → Review**
 
-The project is in active development. Authentication, notebook organization, private uploads, document previews, continuous notebook reading, freehand annotations, and bookmarks are implemented. Document processing and smart study features remain planned.
+The project is in active development. Authentication, notebook organization, private uploads, document previews, continuous notebook reading, freehand and typed annotations, and bookmarks are implemented. Document processing and smart study features remain planned.
 
 ## Current features
 
@@ -61,7 +61,8 @@ Collapsing a document group hides its sidebar thumbnails, not its pages in the c
 - Separately confirmed permanent deletion, limited to pages already in Trash.
 - Authenticated delete and restore requests with owner checks. Deleted pages are excluded from normal page lists and cannot be edited through the API.
 - Notes can be placed before the first PDF page or after a selected PDF page.
-- Freehand pen, highlighter, and eraser tools for note pages and PDFs.
+- Pen, pencil, highlighter, partial eraser, stroke eraser, and typed text tools for note pages and PDFs.
+- Typed text boxes support five font choices, text sizing, color, bold, italic, alignment, resizing, and an optional pinned text tool for adding several boxes.
 - Select and drag saved strokes while keeping them within page boundaries.
 - Undo and redo the latest 100 annotation creates, moves, and erases from the current viewer session, including standard keyboard shortcuts.
 - Icon-only drawing tools with a responsive contextual settings dock.
@@ -78,7 +79,7 @@ Pending strokes are held in memory, not in an offline outbox. Keep the viewer op
 
 Deleting a note moves it to notebook Trash, preserving its content, source position, annotations, and bookmark. Trash is available from the notebook overview and reader sidebar. Pages can be restored individually or in a selected group. Permanent deletion is available for individual pages, selected pages, or the full Trash contents, and always requires confirmation. The viewer blocks deletion while a page has active or unsaved ink, then selects a remaining page if necessary. Deleting the last active page returns to the notebook overview.
 
-Apply `20260910120000_manage_notebook_pages.sql` before using permanent deletion. Database regression coverage is in `supabase/tests/notebook_page_management.sql`.
+Apply `20260910120000_manage_notebook_pages.sql` before using permanent deletion. Apply `20260910180000_add_text_annotation_formatting.sql` before using formatted text annotations. Database regression coverage is in `supabase/tests/notebook_page_management.sql` and `supabase/tests/text_annotations.sql`.
 
 The `20260903110334_add_notebook_page_soft_delete.sql` migration adds the soft-delete column and database protections. In environments where it has not been applied, existing page reads and renaming remain compatible, while delete/restore return an explicit unavailable error without removing anything. Code commits and Git pushes do not apply database migrations. The API/web type snapshots include the soft-delete column.
 

@@ -31,6 +31,9 @@ function setup() {
   const annotation = {
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi.fn().mockReturnThis(),
+    returns: vi.fn(),
     eq: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({ data: null, error: { code: '23505' } }),
@@ -99,6 +102,95 @@ function setup() {
 }
 
 describe('annotation save retries', () => {
+  it.each(['notes', 'pdf'] as const)(
+    'loads existing %s annotations before the font migration',
+    async (target) => {
+      const fixture = setup();
+      fixture.annotation.returns
+        .mockResolvedValueOnce({
+          data: null,
+          error: {
+            code: '42703',
+            message: 'column annotations.font_family does not exist',
+          },
+        })
+        .mockResolvedValueOnce({
+          data: [
+            { ...input },
+            {
+              ...input,
+              kind: 'text',
+              text_content: 'Saved note',
+              font_size: 0.025,
+            },
+          ],
+          error: null,
+        });
+      const result =
+        target === 'notes'
+          ? await fixture.notes.list(user, notebookId, pageId, 0)
+          : await fixture.pdf.list(user, documentId, 7, 0);
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          kind: 'ink',
+          font_family: null,
+          font_weight: null,
+          font_style: null,
+          text_align: null,
+        }),
+        expect.objectContaining({
+          kind: 'text',
+          text_content: 'Saved note',
+          font_family: 'modern',
+          font_weight: 400,
+          font_style: 'normal',
+          text_align: 'left',
+        }),
+      ]);
+      expect(fixture.annotation.range).toHaveBeenCalledTimes(2);
+      expect(fixture.annotation.eq).toHaveBeenCalledWith('owner_id', user.id);
+      const selections = fixture.annotation.select.mock.calls.map(
+        ([selection]) => selection,
+      );
+      expect(selections[0]).toContain('font_family');
+      expect(selections[1]).not.toContain('font_family');
+      if (target === 'notes') {
+        expect(fixture.annotation.eq).toHaveBeenCalledWith(
+          'notebook_page_id',
+          pageId,
+        );
+        expect(fixture.annotation.is).toHaveBeenCalledWith('document_id', null);
+      } else {
+        expect(fixture.annotation.eq).toHaveBeenCalledWith(
+          'document_id',
+          documentId,
+        );
+        expect(fixture.annotation.eq).toHaveBeenCalledWith(
+          'document_page_number',
+          7,
+        );
+        expect(fixture.annotation.is).toHaveBeenCalledWith(
+          'notebook_page_id',
+          null,
+        );
+      }
+    },
+  );
+
+  it('does not mask unrelated annotation load failures', async () => {
+    const { notes, annotation } = setup();
+    annotation.returns.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: '42703',
+        message: 'column annotations.points does not exist',
+      },
+    });
+    await expect(notes.list(user, notebookId, pageId, 0)).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+    expect(annotation.range).toHaveBeenCalledTimes(1);
+  });
   it('blocks annotation reads, saves and erasing when the notebook page is trashed', async () => {
     const { notes, pages, client } = setup();
     pages.get.mockRejectedValue(
@@ -140,12 +232,20 @@ describe('annotation save retries', () => {
       kind: 'text',
       text: 'Key finding',
       fontSize: 0.025,
+      fontFamily: 'classic',
+      fontWeight: 700,
+      fontStyle: 'italic',
+      textAlign: 'center',
     };
     annotation.single.mockResolvedValueOnce({
       data: {
         ...textInput,
         text_content: textInput.text,
         font_size: textInput.fontSize,
+        font_family: textInput.fontFamily,
+        font_weight: textInput.fontWeight,
+        font_style: textInput.fontStyle,
+        text_align: textInput.textAlign,
       },
       error: null,
     });
@@ -157,6 +257,10 @@ describe('annotation save retries', () => {
         kind: 'text',
         text_content: 'Key finding',
         font_size: 0.025,
+        font_family: 'classic',
+        font_weight: 700,
+        font_style: 'italic',
+        text_align: 'center',
       }),
     );
   });

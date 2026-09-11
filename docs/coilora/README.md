@@ -17,9 +17,9 @@ The first product is a responsive web application. It validates whether students
 
 ## Implementation snapshot
 
-The current repository implements account authentication, a responsive library, course and notebook organization, user-selected course and notebook colors, private uploads, visual document cards, authenticated PDF read sessions, and a connected notebook and PDF workspace. Named notebook pages support five paper styles, freehand annotation, renaming, bookmarks, bookmark filtering, and a responsive thumbnail sidebar. PDF pages support lazy thumbnails, freehand annotation, bookmarks, and linked notebook pages inserted after a selected PDF page.
+The current repository implements account authentication, a responsive library, course and notebook organization, user-selected course and notebook colors, private uploads, visual document cards, authenticated PDF read sessions, and a connected notebook and PDF workspace. Named notebook pages support five paper styles, freehand and formatted typed annotations, renaming, bookmarks, bookmark filtering, and a responsive thumbnail sidebar. PDF pages support lazy thumbnails, freehand and formatted typed annotations, bookmarks, and linked notebook pages inserted after a selected PDF page.
 
-Pen, highlighter, and eraser annotations are stored separately from page backgrounds and uploaded PDFs, so originals remain unchanged. Undo and redo, text extraction, OCR, retrieval, and study-generation features are not implemented yet.
+Pen, pencil, highlighter, eraser, and typed text annotations are stored separately from page backgrounds and uploaded PDFs, so originals remain unchanged. Text extraction, OCR, retrieval, and study-generation features are not implemented yet.
 
 ## Current product decision
 

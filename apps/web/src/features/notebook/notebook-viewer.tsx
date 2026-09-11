@@ -27,9 +27,16 @@ import {
   annotationPreferencesStorageKey,
   defaultAnnotationToolPreferences,
   parseAnnotationToolPreferences,
+  selectDrawingColor,
   type DrawingStyle,
   type DrawingTool,
 } from "@/features/editor/annotation-tool-settings";
+import {
+  defaultTextFormat,
+  parseTextFormat,
+  textFormatStorageKey,
+  type TextFormat,
+} from "@/features/editor/text-format";
 import { PagePanelToggle } from "@/features/editor/page-panel-toggle";
 import type { EditorTool } from "@/features/editor/annotation-canvas";
 import {
@@ -149,6 +156,15 @@ export function NotebookViewer({
   const [tool, setTool] = useState<EditorTool>("select");
   const [eraserMode, setEraserMode] = useState<EraserMode>("partial");
   const [eraserRadius, setEraserRadius] = useState(12);
+  const [textPinned, setTextPinned] = useState(false);
+  const [textFormat, setTextFormat] = useState(() => {
+    if (typeof window === "undefined") return defaultTextFormat;
+    try {
+      return parseTextFormat(window.localStorage.getItem(textFormatStorageKey));
+    } catch {
+      return defaultTextFormat;
+    }
+  });
   const [toolPreferences, setToolPreferences] = useState(() => {
     if (typeof window === "undefined")
       return defaultAnnotationToolPreferences();
@@ -215,6 +231,16 @@ export function NotebookViewer({
       // Tool settings remain usable for the current viewer session.
     }
   }, [toolPreferences]);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        textFormatStorageKey,
+        JSON.stringify(textFormat),
+      );
+    } catch {
+      // Text settings remain usable for the current viewer session.
+    }
+  }, [textFormat]);
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -588,6 +614,10 @@ export function NotebookViewer({
                         text: desired.text_content ?? "",
                         fontSize: desired.font_size ?? 0.025,
                         color: desired.color,
+                        fontFamily: desired.font_family ?? "modern",
+                        fontWeight: desired.font_weight ?? 400,
+                        fontStyle: desired.font_style ?? "normal",
+                        textAlign: desired.text_align ?? "left",
                       }
                     : {}),
                 },
@@ -829,6 +859,22 @@ export function NotebookViewer({
     }));
   }
 
+  function selectTextStyle(style: {
+    color: string;
+    fontSize: number;
+    format: TextFormat;
+  }) {
+    setTool("text");
+    setTextFormat(style.format);
+    setToolPreferences((current) => ({
+      ...current,
+      text: {
+        ...selectDrawingColor(current.text, style.color),
+        width: style.fontSize,
+      },
+    }));
+  }
+
   return (
     <main
       className={styles.viewer}
@@ -994,6 +1040,10 @@ export function NotebookViewer({
             style={drawingStyle}
             sidebarOpen={sidebarOpen}
             onChange={updateDrawingStyle}
+            textFormat={textFormat}
+            textPinned={textPinned}
+            onTextFormatChange={setTextFormat}
+            onTextPinnedChange={setTextPinned}
           />
         ) : null}
         <div
@@ -1067,6 +1117,7 @@ export function NotebookViewer({
                   eraserMode={eraserMode}
                   eraserRadius={eraserRadius}
                   opacity={activeDrawingStyle.opacity}
+                  textFormat={textFormat}
                   visible={
                     row.top + row.height >= scrollTop - 400 &&
                     row.top <= scrollTop + viewport.height + 400
@@ -1078,6 +1129,10 @@ export function NotebookViewer({
                   }
                   editorDisabled={historyBusy}
                   onAnnotationCommit={recordHistory}
+                  onTextStyleSelect={selectTextStyle}
+                  onTextFinished={() => {
+                    if (!textPinned) setTool("select");
+                  }}
                 />
               ) : null,
             )}

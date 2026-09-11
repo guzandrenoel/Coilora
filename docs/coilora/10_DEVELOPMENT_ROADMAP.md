@@ -20,11 +20,11 @@ Implemented:
 
 Next implementation slice:
 
-1. Add typed page notes and text-selection highlights.
+1. Add text-selection highlights.
 2. Add PDF search and citation navigation.
 3. Continue document processing, OCR, and retrieval work.
 
-Since the progress snapshot above, annotation undo/redo and shortcuts, and notebook Trash/Restore with confirmed permanent deletion have been implemented. Permanent deletion requires the page-management migration.
+Since the progress snapshot above, formatted typed text annotations, annotation undo/redo and shortcuts, and notebook Trash/Restore with confirmed permanent deletion have been implemented. Permanent deletion and formatted text require their respective migrations.
 
 Document processing, OCR, retrieval, cited assistance, study generation, and review scheduling remain later roadmap work.
 
